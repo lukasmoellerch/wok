@@ -1,0 +1,24 @@
+{
+  "name": "selvet",
+  "version": "1.0.0",
+  "description": "A WASM compiler",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LukasM01/Selvet.git"
+  },
+  "keywords": [
+    "compiler",
+    "wasm",
+    "reactive"
+  ],
+  "author": "Lukas Möller",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LukasM01/Selvet/issues"
+  },
+  "homepage": "https://github.com/LukasM01/Selvet#readme"
+}
