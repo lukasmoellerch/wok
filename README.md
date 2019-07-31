@@ -3,8 +3,7 @@
 This project is supposed to be a compiler similar to svelte, compiling typed code into WASM.
 
 # Roadmap
-
-- [ ] Basic emitting of WASM code as a hello world of compilers
+- [ ] Basic emitting of WASM code as a hello world of compilers
 - [ ] read basic functions from an input file, emit simple unoptimized WASM
 - [ ] Setup testing
 - [ ] Write basic tests
