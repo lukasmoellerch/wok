@@ -62,13 +62,18 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     this.set(this.index, data);
   }
   set(position: number, data: number): void {
-    if (position >= this.array.byteLength) {
-      this.grow();
-    }
+    this.ensureSize(position + 1);
     this.array[position] = data & 0xff;
   }
-  grow(): void {
-    const newArray = new Uint8Array(this.array.byteLength * this.growFactor);
+  ensureSize(minimumSize: number): void {
+    let newSize = this.array.byteLength;
+    if (minimumSize <= newSize) {
+      return;
+    }
+    while (newSize < minimumSize) {
+      newSize *= this.growFactor;
+    }
+    const newArray = new Uint8Array(newSize);
     newArray.set(this.array);
     this.array = newArray;
   }
@@ -76,5 +81,11 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     const clean = new Uint8Array(this.writtenBytes);
     clean.set(this.array.subarray(0, clean.length));
     return clean;
+  }
+  append(buffer: IBytestreamConsumer): void {
+    let otherClean = buffer.cleanArray;
+    this.ensureSize(this.index + otherClean.length);
+    this.array.set(otherClean, this.index);
+    this.index += otherClean.length;
   }
 }
