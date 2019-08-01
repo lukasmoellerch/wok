@@ -6,4 +6,7 @@ export interface IBytestreamConsumer {
   writeAt(position: number, data: number): void;
   writeAt(position: number, data: number[]): void;
   writeAt(position: number, data: number[], size: number): void;
+
+  cleanArray: Uint8Array;
+  append(buffer: IBytestreamConsumer): void;
 }
