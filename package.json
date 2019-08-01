@@ -20,5 +20,8 @@
   "bugs": {
     "url": "https://github.com/LukasM01/Selvet/issues"
   },
-  "homepage": "https://github.com/LukasM01/Selvet#readme"
+  "homepage": "https://github.com/LukasM01/Selvet#readme",
+  "devDependencies": {
+    "tsc": "^1.20150623.0"
+  }
 }
