@@ -65,3 +65,6 @@ dist
 
 #Generated code coverage
 ./coverage
+
+#Mac file
+.DS_Store
