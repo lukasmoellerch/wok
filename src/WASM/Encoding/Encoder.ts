@@ -34,4 +34,22 @@ export class Encoder {
       consumer.write(byte);
     }
   }
+  encodeFloat32(n: number, consumer: IBytestreamConsumer): void {
+    const array = new Float32Array([n]);
+    const bytes = new Uint8Array(array.buffer);
+    consumer.write([...bytes], 4);
+  }
+  encodeFloat64(n: number, consumer: IBytestreamConsumer): void {
+    const array = new Float64Array([n]);
+    const bytes = new Uint8Array(array.buffer);
+    consumer.write([...bytes], 8);
+  }
+  encodeUInt8(n: number, consumer: IBytestreamConsumer): void {
+    consumer.write([n], 1);
+  }
+  encodeSInt8(n: number, consumer: IBytestreamConsumer): void {
+    const array = new Int8Array([n]);
+    const bytes = new Uint8Array(array.buffer);
+    consumer.write([...bytes], 1);
+  }
 }

@@ -48,3 +48,49 @@ test("should encode unsigned numbers using LEB128", () => {
     expect(result).toEqual(expectedArray);
   }
 });
+test("should be able to encode 32-bit floats correctly", () => {
+  const encoder = new Encoder();
+  const encode = (n: number) => {
+    const buffer = new TypedArrayBytestreamConsumer();
+    encoder.encodeFloat32(n, buffer);
+    return [...buffer.cleanArray];
+  };
+  expect(encode(12)).toEqual([0x00, 0x00, 0x40, 0x41]);
+  expect(encode(820)).toEqual([0x00, 0x00, 0x4d, 0x44]);
+});
+test("should be able to encode 64-bit floats correctly", () => {
+  const encoder = new Encoder();
+  const encode = (n: number) => {
+    const buffer = new TypedArrayBytestreamConsumer();
+    encoder.encodeFloat64(n, buffer);
+    return [...buffer.cleanArray];
+  };
+  expect(encode(200)).toEqual([0, 0, 0, 0, 0, 0, 105, 64]);
+  expect(encode(202340)).toEqual([0, 0, 0, 0, 32, 179, 8, 65]);
+  expect(encode(234.23412612)).toEqual([67, 145, 15, 246, 125, 71, 109, 64]);
+});
+test("should be able to encode 8-bit unsigned integers correctly", () => {
+  const encoder = new Encoder();
+  const encode = (n: number) => {
+    const buffer = new TypedArrayBytestreamConsumer();
+    encoder.encodeUInt8(n, buffer);
+    return [...buffer.cleanArray];
+  };
+  expect(encode(3)).toEqual([3]);
+  expect(encode(149)).toEqual([149]);
+  expect(encode(42)).toEqual([42]);
+  expect(encode(-12)).toEqual([244]);
+});
+
+test("should be able to encode 8-bit signed integers correctly", () => {
+  const encoder = new Encoder();
+  const encode = (n: number) => {
+    const buffer = new TypedArrayBytestreamConsumer();
+    encoder.encodeSInt8(n, buffer);
+    return [...buffer.cleanArray];
+  };
+  expect(encode(3)).toEqual([3]);
+  expect(encode(149)).toEqual([149]);
+  expect(encode(42)).toEqual([42]);
+  expect(encode(-12)).toEqual([244]);
+});
