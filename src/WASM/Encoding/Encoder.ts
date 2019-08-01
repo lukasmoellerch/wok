@@ -1,5 +1,3 @@
-namespace WASM.Encoding {
-  export class Encoder {
-    constructor() {}
-  }
+export class Encoder {
+  constructor() {}
 }
