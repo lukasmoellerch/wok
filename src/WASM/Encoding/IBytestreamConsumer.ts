@@ -3,7 +3,7 @@ namespace WASM.Encoding {
     write(data: number): void;
     write(data: number[]): void;
     write(data: number[], size: number): void;
-    reserveByte(amount: number): T;
+    reserveBytes(amount: number): T;
     write(position: T, data: number): void;
     write(position: T, data: number[]): void;
     write(position: T, data: number[], size: number): void;
