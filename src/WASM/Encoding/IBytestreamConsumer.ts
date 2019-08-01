@@ -1,9 +1,9 @@
-export interface IBytestreamConsumer<T> {
+export interface IBytestreamConsumer {
   write(data: number): void;
   write(data: number[]): void;
   write(data: number[], size: number): void;
-  reserveBytes(amount: number): T;
-  writeAt(position: T, data: number): void;
-  writeAt(position: T, data: number[]): void;
-  writeAt(position: T, data: number[], size: number): void;
+  reserveBytes(amount: number): number;
+  writeAt(position: number, data: number): void;
+  writeAt(position: number, data: number[]): void;
+  writeAt(position: number, data: number[], size: number): void;
 }
