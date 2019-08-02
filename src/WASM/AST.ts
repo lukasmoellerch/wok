@@ -9,14 +9,14 @@ export type Section =
   | IFunctionSection
   | ITypeSection
   | IImportSection
-  | IFunctionSection
   | IMemorySection
   | ITableSection
   | IGlobalSection
   | IExportSection
   | IStartSection
   | IElementSection
-  | ICodeSection;
+  | ICodeSection
+  | IDataSection;
 export interface ICustomSection extends IGenericSection {
   sectionId: Constants.Section.custom;
   name: string; // Custom section name
@@ -157,4 +157,13 @@ export type InstructionSequence = Uint8Array;
 export interface IMemoryArgument {
   align: number;
   offset: number;
+}
+export interface IDataSegment {
+  x: number;
+  offset: Expression;
+  data: Uint8Array;
+}
+export interface IDataSection extends IGenericSection {
+  sectionId: Constants.Section.data;
+  segments: IDataSegment[];
 }
