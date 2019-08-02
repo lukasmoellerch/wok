@@ -133,11 +133,14 @@ export interface IStartSection extends IGenericSection {
   sectionId: Constants.Section.start;
   start: number; // Function Index
 }
-export interface IElementSection extends IGenericSection {
-  sectionId: Constants.Section.element;
+export interface IElement {
   table: number; // Table index (0)
   offset: Expression;
   init: number[]; // Function indices
+}
+export interface IElementSection extends IGenericSection {
+  sectionId: Constants.Section.element;
+  elements: IElement[];
 }
 export interface ILocal {
   n: number;
