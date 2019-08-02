@@ -94,3 +94,7 @@ export interface ICodeSection extends IGenericSection {
 }
 export type Expression = Uint8Array;
 export type InstructionSequence = Uint8Array;
+export interface IMemoryArgument {
+  align: number;
+  offset: number;
+}
