@@ -13,6 +13,7 @@ export type Section =
   | ITypeSection
   | IImportSection
   | IFunctionSection
+  | IMemorySection
   | ITableSection
   | IGlobalSection
   | IExportSection
@@ -36,9 +37,13 @@ export interface IFunctionImport {
   type: Constants.ImportDescription.function;
   functionType: number;
 }
+export interface ITableType {
+  elementType: TableType;
+  limits: Limit;
+}
 export interface ITableImport {
   type: Constants.ImportDescription.table;
-  tableType: TableType;
+  tableType: ITableType;
 }
 export interface IMemoryImport {
   type: Constants.ImportDescription.memory;
@@ -68,7 +73,7 @@ export interface IFunctionSection extends IGenericSection {
 }
 export interface ITableSection extends IGenericSection {
   sectionId: Constants.Section.table;
-  table: Constants.TableType[];
+  table: ITableType[];
 }
 export interface ILimitWithoutMaximum {
   kind: LimitType.minimum;
