@@ -1,13 +1,24 @@
 import * as Constants from "./Encoding/Constants";
 import { Expression } from "@babel/types";
+import { TableType, Limit as LimitType } from "./Encoding/Constants";
 export interface IModule {
-  sections: Section;
+  sections: Section[];
 }
 export interface IGenericSection {
-  sectionId: Constants.Section;
   sizeInBytes: number;
 }
-export type Section = ICustomSection | IFunctionSection | ITypeSection;
+export type Section =
+  | ICustomSection
+  | IFunctionSection
+  | ITypeSection
+  | IImportSection
+  | IFunctionSection
+  | ITableSection
+  | IGlobalSection
+  | IExportSection
+  | IStartSection
+  | IElementSection
+  | ICodeSection;
 export interface ICustomSection extends IGenericSection {
   sectionId: Constants.Section.custom;
   name: string; // Custom section name
@@ -21,10 +32,31 @@ export interface ITypeSection extends IGenericSection {
   sectionId: Constants.Section.type;
   types: IFunctionType[];
 }
+export interface IFunctionImport {
+  type: Constants.ImportDescription.function;
+  functionType: number;
+}
+export interface ITableImport {
+  type: Constants.ImportDescription.table;
+  tableType: TableType;
+}
+export interface IMemoryImport {
+  type: Constants.ImportDescription.memory;
+  memoryType: Limit;
+}
+export interface IGlobalImport {
+  type: Constants.ImportDescription.global;
+  globalType: IGlobalType;
+}
+export type ImportDescription =
+  | IFunctionImport
+  | ITableImport
+  | IMemoryImport
+  | IGlobalImport;
 export interface IImport {
   module: string;
   name: string;
-  description: Constants.ImportDescription;
+  description: ImportDescription;
 }
 export interface IImportSection extends IGenericSection {
   sectionId: Constants.Section.import;
@@ -35,23 +67,29 @@ export interface IFunctionSection extends IGenericSection {
   functions: number[];
 }
 export interface ITableSection extends IGenericSection {
-  sectionId: Constants.Section.custom;
+  sectionId: Constants.Section.table;
   table: Constants.TableType[];
 }
 export interface ILimitWithoutMaximum {
-  max: number;
+  kind: LimitType.minimum;
+  min: number;
 }
 export interface ILimit {
+  kind: LimitType.minimumAndMaximum;
   min: number;
   max: number;
 }
-type Limit = ILimitWithoutMaximum | ILimit;
+export type Limit = ILimitWithoutMaximum | ILimit;
 export interface IMemorySection extends IGenericSection {
   sectionId: Constants.Section.custom;
   memories: Limit[];
 }
+export interface IGlobalType {
+  type: Constants.ValueType;
+  mutability: Constants.GlobalTypeMutability;
+}
 export interface IGlobal {
-  type: Constants.GlobalTypeMutability;
+  type: IGlobalType;
   expression: Expression;
 }
 export interface IGlobalSection extends IGenericSection {
