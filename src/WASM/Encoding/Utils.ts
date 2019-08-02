@@ -73,3 +73,19 @@ export function encodeUTF8String(
     }
   }
 }
+export function encodeName(
+  string: string,
+  consumer: IBytestreamConsumer
+): void {
+  if (textEncoder) {
+    const array = textEncoder.encode(string);
+    encodeNumberAsUnsignedLEB128(array.length, consumer);
+    consumer.write([...array]);
+  } else {
+    encodeNumberAsUnsignedLEB128(string.length, consumer);
+    for (let i = 0; i < string.length; i++) {
+      const charCode = string.charCodeAt(i);
+      consumer.write(charCode);
+    }
+  }
+}
