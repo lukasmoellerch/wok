@@ -7,17 +7,17 @@ export const versionNumber = 0x0100_0000;
 // Sections
 export enum Section {
   custom = 0,
-  type,
-  import,
-  function,
-  table,
-  memory,
-  global,
-  export,
-  start,
-  element,
-  code,
-  data
+  type = 1,
+  import = 2,
+  function = 3,
+  table = 4,
+  memory = 5,
+  global = 6,
+  export = 7,
+  start = 8,
+  element = 9,
+  code = 10,
+  data = 11
 }
 // Types
 export enum ValueType {
