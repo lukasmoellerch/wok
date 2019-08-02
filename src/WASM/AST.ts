@@ -148,13 +148,9 @@ export interface IFunction {
   locals: ILocal[];
   expression: Expression;
 }
-export interface ICode {
-  size: number;
-  code: IFunction;
-}
 export interface ICodeSection extends IGenericSection {
   sectionId: Constants.Section.code;
-  codeEntries: ICode[];
+  codeEntries: IFunction[];
 }
 export type Expression = Uint8Array;
 export type InstructionSequence = Uint8Array;
