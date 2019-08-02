@@ -1,5 +1,4 @@
 import * as Constants from "./Encoding/Constants";
-import { Expression } from "@babel/types";
 import { TableType, Limit as LimitType } from "./Encoding/Constants";
 export interface IModule {
   sections: Section[];
@@ -86,7 +85,7 @@ export interface ILimit {
 }
 export type Limit = ILimitWithoutMaximum | ILimit;
 export interface IMemorySection extends IGenericSection {
-  sectionId: Constants.Section.custom;
+  sectionId: Constants.Section.memory;
   memories: Limit[];
 }
 export interface IGlobalType {
@@ -101,9 +100,30 @@ export interface IGlobalSection extends IGenericSection {
   sectionId: Constants.Section.global;
   globals: IGlobal[];
 }
+export interface IFunctionExport {
+  type: Constants.ExportDescription.function;
+  index: number;
+}
+export interface ITableExport {
+  type: Constants.ExportDescription.table;
+  index: number;
+}
+export interface IMemoryExport {
+  type: Constants.ExportDescription.memory;
+  index: number;
+}
+export interface IGlobalExport {
+  type: Constants.ExportDescription.global;
+  index: number;
+}
+export type Export =
+  | IFunctionExport
+  | ITableExport
+  | IMemoryExport
+  | IGlobalExport;
 export interface IExport {
   name: string;
-  description: Constants.ExportDescription;
+  description: Export;
 }
 export interface IExportSection extends IGenericSection {
   sectionId: Constants.Section.export;
