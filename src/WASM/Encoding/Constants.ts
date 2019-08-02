@@ -35,7 +35,7 @@ export enum Limit {
   minimum = 0x00,
   minimumAndMaximum = 0x01
 }
-export enum Table {
+export enum TableType {
   funcref = 0x70
 }
 export enum GlobalTypeMutability {
@@ -235,4 +235,16 @@ export enum Instruction {
   i64ReinterpretF64 = 0xbd,
   f32ReinterpretI32 = 0xbe,
   f64ReinterpretI64 = 0xbf
+}
+export enum ImportDescription {
+  function = 0x00,
+  table,
+  memory,
+  global
+}
+export enum ExportDescription {
+  function = 0x00,
+  table,
+  memory,
+  global
 }
