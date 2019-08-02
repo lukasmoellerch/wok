@@ -3,7 +3,7 @@ import { IBytestreamConsumer } from "./IBytestreamConsumer";
 export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
   private array: Uint8Array;
   private index: number; // position not written to yet
-  private get writtenBytes(): number {
+  public get writtenBytes(): number {
     return this.index;
   }
 
