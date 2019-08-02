@@ -7,7 +7,7 @@ import {
   encodeUInt8,
   encodeSInt8,
   encodeUTF8String
-} from "./Encoder";
+} from "./Utils";
 test("should encode signed numbers using LEB128", () => {
   const cases: Array<[number, number[]]> = [
     [0, [0]],
