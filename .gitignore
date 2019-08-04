@@ -68,3 +68,5 @@ dist
 
 #Mac file
 .DS_Store
+
+.vscode
