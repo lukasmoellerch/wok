@@ -1,32 +1,13 @@
-import {
-  IFunctionType,
-  IGlobalType,
-  IModule,
-  ITableType,
-  Limit,
-  Section
-} from "../AST";
-import {
-  functionByte,
-  ImportDescription,
-  Limit as LimitType,
-  magicString,
-  ResultType,
-  Section as SectionId,
-  version
-} from "./Constants";
+import { IFunctionType, IGlobalType, IModule, ITableType, Limit, Section } from "../AST";
+import { functionByte, ImportDescription, Limit as LimitType, magicString, ResultType, Section as SectionId, version } from "./Constants";
 import { IBytestreamConsumer } from "./IBytestreamConsumer";
 import { TypedArrayBytestreamConsumer } from "./TypedArrayBytestreamConsumer";
-import {
-  encodeName,
-  encodeNumberAsUnsignedLEB128,
-  encodeUTF8String
-} from "./Utils";
+import { encodeName, encodeNumberAsUnsignedLEB128, encodeUTF8String } from "./Utils";
 export function encodeModule(module: IModule, consumer: IBytestreamConsumer) {
   encodeUTF8String(magicString, consumer);
   consumer.write([version], 4);
 
-  for (let section of module.sections) {
+  for (const section of module.sections) {
     encodeSection(section, consumer);
   }
 }
@@ -39,11 +20,11 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
     sectionBuffer.write([...section.content]);
   } else if (section.sectionId === SectionId.type) {
     encodeNumberAsUnsignedLEB128(section.types.length, sectionBuffer);
-    for (let type of section.types) {
+    for (const type of section.types) {
       encodeFunctionType(type, sectionBuffer);
     }
   } else if (section.sectionId === SectionId.import) {
-    for (let imp of section.imports) {
+    for (const imp of section.imports) {
       encodeName(imp.name, sectionBuffer);
       encodeName(imp.module, sectionBuffer);
       const description = imp.description;
@@ -60,28 +41,28 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
     }
   } else if (section.sectionId === SectionId.function) {
     encodeNumberAsUnsignedLEB128(section.functions.length, sectionBuffer);
-    for (let fun of section.functions) {
+    for (const fun of section.functions) {
       encodeNumberAsUnsignedLEB128(fun, sectionBuffer);
     }
   } else if (section.sectionId === SectionId.table) {
     encodeNumberAsUnsignedLEB128(section.table.length, sectionBuffer);
-    for (let t of section.table) {
+    for (const t of section.table) {
       encodeTableType(t, sectionBuffer);
     }
   } else if (section.sectionId === SectionId.memory) {
     encodeNumberAsUnsignedLEB128(section.memories.length, sectionBuffer);
-    for (let mem of section.memories) {
+    for (const mem of section.memories) {
       encodeLimits(mem, sectionBuffer);
     }
   } else if (section.sectionId === SectionId.global) {
     encodeNumberAsUnsignedLEB128(section.globals.length, sectionBuffer);
-    for (let g of section.globals) {
+    for (const g of section.globals) {
       encodeGlobalType(g.type, sectionBuffer);
       sectionBuffer.write([...g.expression]);
     }
   } else if (section.sectionId === SectionId.export) {
     encodeNumberAsUnsignedLEB128(section.exports.length, sectionBuffer);
-    for (let e of section.exports) {
+    for (const e of section.exports) {
       encodeName(e.name, sectionBuffer);
       const description = e.description;
       sectionBuffer.write(description.type);
@@ -91,20 +72,20 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
     encodeNumberAsUnsignedLEB128(section.start, sectionBuffer);
   } else if (section.sectionId === SectionId.element) {
     encodeNumberAsUnsignedLEB128(section.elements.length, sectionBuffer);
-    for (let element of section.elements) {
+    for (const element of section.elements) {
       encodeNumberAsUnsignedLEB128(element.table, sectionBuffer);
       sectionBuffer.write([...element.init]);
       encodeNumberAsUnsignedLEB128(element.init.length, sectionBuffer);
-      for (let index of element.init) {
+      for (const index of element.init) {
         encodeNumberAsUnsignedLEB128(index, sectionBuffer);
       }
     }
   } else if (section.sectionId === SectionId.code) {
     encodeNumberAsUnsignedLEB128(section.codeEntries.length, sectionBuffer);
-    for (let code of section.codeEntries) {
-      let buffer = new TypedArrayBytestreamConsumer();
+    for (const code of section.codeEntries) {
+      const buffer = new TypedArrayBytestreamConsumer();
       encodeNumberAsUnsignedLEB128(code.locals.length, buffer);
-      for (let local of code.locals) {
+      for (const local of code.locals) {
         encodeNumberAsUnsignedLEB128(local.n, buffer);
         buffer.write(local.type);
       }
@@ -114,7 +95,7 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
     }
   } else if (section.sectionId === SectionId.data) {
     encodeNumberAsUnsignedLEB128(section.segments.length, sectionBuffer);
-    for (let segment of section.segments) {
+    for (const segment of section.segments) {
       encodeNumberAsUnsignedLEB128(segment.x, sectionBuffer);
       sectionBuffer.write([...segment.offset]);
       sectionBuffer.write([...segment.data]);
@@ -125,27 +106,27 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
 }
 export function encodeResultType(
   type: ResultType,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   consumer.write(type);
 }
 export function encodeFunctionType(
   type: IFunctionType,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   consumer.write(functionByte);
   encodeNumberAsUnsignedLEB128(type.arguments.length, consumer);
-  for (let argumentType of type.arguments) {
+  for (const argumentType of type.arguments) {
     consumer.write(argumentType);
   }
   encodeNumberAsUnsignedLEB128(type.results.length, consumer);
-  for (let resultType of type.results) {
+  for (const resultType of type.results) {
     consumer.write(resultType);
   }
 }
 export function encodeLimits(
   limit: Limit,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   consumer.write(limit.kind);
   if (limit.kind === LimitType.minimum) {
@@ -157,14 +138,14 @@ export function encodeLimits(
 }
 export function encodeTableType(
   tableType: ITableType,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   consumer.write(tableType.elementType);
   encodeLimits(tableType.limits, consumer);
 }
 export function encodeGlobalType(
   globalType: IGlobalType,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   consumer.write(globalType.type);
   consumer.write(globalType.mutability);
