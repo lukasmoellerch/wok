@@ -17,30 +17,30 @@ export enum Section {
   start = 8,
   element = 9,
   code = 10,
-  data = 11
+  data = 11,
 }
 // Types
 export enum ValueType {
   i32 = 0x7f,
   i64 = 0x7e,
   f32 = 0x7d,
-  f64 = 0x7c
+  f64 = 0x7c,
 }
 export enum NonValueResultType {
-  empty = 0x40
+  empty = 0x40,
 }
 export type ResultType = ValueType | NonValueResultType;
 export const functionByte = 0x60;
 export enum Limit {
   minimum = 0x00,
-  minimumAndMaximum = 0x01
+  minimumAndMaximum = 0x01,
 }
 export enum TableType {
-  funcref = 0x70
+  funcref = 0x70,
 }
 export enum GlobalTypeMutability {
   constant = 0x00,
-  variable = 0x01
+  variable = 0x01,
 }
 // Instructions
 export enum Instruction {
@@ -234,17 +234,17 @@ export enum Instruction {
   i32ReinterpretF32 = 0xbc,
   i64ReinterpretF64 = 0xbd,
   f32ReinterpretI32 = 0xbe,
-  f64ReinterpretI64 = 0xbf
+  f64ReinterpretI64 = 0xbf,
 }
 export enum ImportDescription {
   function = 0x00,
   table,
   memory,
-  global
+  global,
 }
 export enum ExportDescription {
   function = 0x00,
   table,
   memory,
-  global
+  global,
 }
