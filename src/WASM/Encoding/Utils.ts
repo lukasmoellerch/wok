@@ -1,10 +1,10 @@
-import { IBytestreamConsumer } from "./IBytestreamConsumer";
 import { TextEncoder } from "util";
+import { IBytestreamConsumer } from "./IBytestreamConsumer";
 const textEncoder =
   typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
 export function encodeNumberAsSignedLEB128(
   n: number,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   const buffer = [];
 
@@ -26,7 +26,7 @@ export function encodeNumberAsSignedLEB128(
 }
 export function encodeNumberAsUnsignedLEB128(
   n: number,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   const buffer = [];
   do {
@@ -37,7 +37,7 @@ export function encodeNumberAsUnsignedLEB128(
     }
     buffer.push(byte);
   } while (n !== 0);
-  for (let byte of buffer) {
+  for (const byte of buffer) {
     consumer.write(byte);
   }
 }
@@ -61,7 +61,7 @@ export function encodeSInt8(n: number, consumer: IBytestreamConsumer): void {
 }
 export function encodeUTF8String(
   string: string,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   if (textEncoder) {
     const array = textEncoder.encode(string);
@@ -75,7 +75,7 @@ export function encodeUTF8String(
 }
 export function encodeName(
   string: string,
-  consumer: IBytestreamConsumer
+  consumer: IBytestreamConsumer,
 ): void {
   if (textEncoder) {
     const array = textEncoder.encode(string);
