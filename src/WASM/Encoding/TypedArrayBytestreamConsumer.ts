@@ -13,12 +13,11 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     this.growFactor = growFactor;
     this.index = 0;
   }
-  write(data: number): void;
-  write(data: number[]): void;
-  write(data: number[], size: number): void;
-  write(data: number | number[], size?: number) {
+  public write(data: number): void;
+  public write(data: number[], size?: number): void;
+  public write(data: number | number[], size?: number) {
     if (typeof data === "number") {
-      //Writes only the smallest byte to the buffer
+      // Writes only the smallest byte to the buffer
       this.setIndexValueAndAdvance(data);
     } else {
       const numBytes = size || data.length;
@@ -31,17 +30,16 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
       }
     }
   }
-  reserveBytes(amount: number): number {
-    let position = this.index;
+  public reserveBytes(amount: number): number {
+    const position = this.index;
     this.index += amount;
     return position;
   }
-  writeAt(position: number, data: number): void;
-  writeAt(position: number, data: number[]): void;
-  writeAt(position: number, data: number[], size: number): void;
-  writeAt(position: number, data: number | number[], size?: number) {
+  public writeAt(position: number, data: number): void;
+  public writeAt(position: number, data: number[], size?: number): void;
+  public writeAt(position: number, data: number | number[], size?: number) {
     if (typeof data === "number") {
-      //Writes only the smallest byte to the buffer
+      // Writes only the smallest byte to the buffer
       this.set(position, data);
     } else {
       const numBytes = size || data.length;
@@ -54,18 +52,18 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
       }
     }
   }
-  setIndexValueAndAdvance(data: number): void {
+  public setIndexValueAndAdvance(data: number): void {
     this.setIndexValue(data);
     this.index++;
   }
-  setIndexValue(data: number): void {
+  public setIndexValue(data: number): void {
     this.set(this.index, data);
   }
-  set(position: number, data: number): void {
+  public set(position: number, data: number): void {
     this.ensureSize(position + 1);
     this.array[position] = data & 0xff;
   }
-  ensureSize(minimumSize: number): void {
+  public ensureSize(minimumSize: number): void {
     let newSize = this.array.byteLength;
     if (minimumSize <= newSize) {
       return;
@@ -82,8 +80,8 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     clean.set(this.array.subarray(0, clean.length));
     return clean;
   }
-  append(buffer: IBytestreamConsumer): void {
-    let otherClean = buffer.cleanArray;
+  public append(buffer: IBytestreamConsumer): void {
+    const otherClean = buffer.cleanArray;
     this.ensureSize(this.index + otherClean.length);
     this.array.set(otherClean, this.index);
     this.index += otherClean.length;
