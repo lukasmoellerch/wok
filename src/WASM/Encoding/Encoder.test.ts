@@ -1,19 +1,14 @@
 import { IFunctionType, ILocal, Section } from "../AST";
-import {
-  ExportDescription,
-  Section as SectionId,
-  Instruction,
-  ValueType
-} from "./Constants";
+import { ExportDescription, Instruction, Section as SectionId, ValueType } from "./Constants";
 import { encodeModule } from "./Encoder";
-import { TypedArrayBytestreamConsumer } from "./TypedArrayBytestreamConsumer";
 import { InstructionSequenceBuilder } from "./InstructionSequenceBuilder";
+import { TypedArrayBytestreamConsumer } from "./TypedArrayBytestreamConsumer";
 declare const WebAssembly: any;
 async function encodeInstructionSequenceAsMainExport(
   functionType: IFunctionType,
   locals: ILocal[],
   sequence: Uint8Array,
-  additionalSections: Section[] = []
+  additionalSections: Section[] = [],
 ) {
   const consumer = new TypedArrayBytestreamConsumer();
   encodeModule(
@@ -21,34 +16,34 @@ async function encodeInstructionSequenceAsMainExport(
       sections: [
         {
           sectionId: SectionId.type,
-          types: [functionType]
+          types: [functionType],
         },
         {
           sectionId: SectionId.function,
-          functions: [0]
+          functions: [0],
         },
         {
           sectionId: SectionId.export,
           exports: [
             {
               name: "main",
-              description: { type: ExportDescription.function, index: 0 }
-            }
-          ]
+              description: { type: ExportDescription.function, index: 0 },
+            },
+          ],
         },
         {
           sectionId: SectionId.code,
           codeEntries: [
             {
-              locals: locals,
-              expression: sequence
-            }
-          ]
+              locals,
+              expression: sequence,
+            },
+          ],
         },
-        ...additionalSections
-      ]
+        ...additionalSections,
+      ],
     },
-    consumer
+    consumer,
   );
   const buffer = consumer.cleanArray;
   const result = await WebAssembly.instantiate(buffer);
@@ -62,13 +57,13 @@ test("Can encode a basic working add function", async () => {
   builder.consumer.write(Instruction.blockend);
   const type: IFunctionType = {
     arguments: [ValueType.i32, ValueType.i32],
-    results: [ValueType.i32]
+    results: [ValueType.i32],
   };
   const locals: ILocal[] = [];
   const exports = await encodeInstructionSequenceAsMainExport(
     type,
     locals,
-    builder.instructions
+    builder.instructions,
   );
   expect(exports.main(12, 52)).toEqual(64);
   expect(exports.main(91235, 3251)).toEqual(94486);
@@ -82,7 +77,7 @@ test("Can encode a module with a custom section that still works correctly", asy
   builder.consumer.write(Instruction.blockend);
   const type: IFunctionType = {
     arguments: [ValueType.i32, ValueType.i32],
-    results: [ValueType.i32]
+    results: [ValueType.i32],
   };
   const locals: ILocal[] = [];
   const exports = await encodeInstructionSequenceAsMainExport(
@@ -93,9 +88,9 @@ test("Can encode a module with a custom section that still works correctly", asy
       {
         sectionId: SectionId.custom,
         name: "custom section :D",
-        content: new Uint8Array([12, 53, 12, 53])
-      }
-    ]
+        content: new Uint8Array([12, 53, 12, 53]),
+      },
+    ],
   );
   expect(exports.main(12, 52)).toEqual(64);
   expect(exports.main(91235, 3251)).toEqual(94486);
