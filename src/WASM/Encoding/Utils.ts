@@ -60,31 +60,31 @@ export function encodeSInt8(n: number, consumer: IBytestreamConsumer): void {
   consumer.write([...bytes], 1);
 }
 export function encodeUTF8String(
-  string: string,
+  str: string,
   consumer: IBytestreamConsumer,
 ): void {
   if (textEncoder) {
-    const array = textEncoder.encode(string);
+    const array = textEncoder.encode(str);
     consumer.write([...array]);
   } else {
-    for (let i = 0; i < string.length; i++) {
-      const charCode = string.charCodeAt(i);
+    for (let i = 0; i < str.length; i++) {
+      const charCode = str.charCodeAt(i);
       consumer.write(charCode);
     }
   }
 }
 export function encodeName(
-  string: string,
+  str: string,
   consumer: IBytestreamConsumer,
 ): void {
   if (textEncoder) {
-    const array = textEncoder.encode(string);
+    const array = textEncoder.encode(str);
     encodeNumberAsUnsignedLEB128(array.length, consumer);
     consumer.write([...array]);
   } else {
-    encodeNumberAsUnsignedLEB128(string.length, consumer);
-    for (let i = 0; i < string.length; i++) {
-      const charCode = string.charCodeAt(i);
+    encodeNumberAsUnsignedLEB128(str.length, consumer);
+    for (let i = 0; i < str.length; i++) {
+      const charCode = str.charCodeAt(i);
       consumer.write(charCode);
     }
   }
