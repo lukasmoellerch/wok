@@ -1,13 +1,5 @@
 import { TypedArrayBytestreamConsumer } from "./TypedArrayBytestreamConsumer";
-import {
-  encodeNumberAsSignedLEB128,
-  encodeNumberAsUnsignedLEB128,
-  encodeFloat32,
-  encodeFloat64,
-  encodeUInt8,
-  encodeSInt8,
-  encodeUTF8String
-} from "./Utils";
+import { encodeFloat32, encodeFloat64, encodeNumberAsSignedLEB128, encodeNumberAsUnsignedLEB128, encodeSInt8, encodeUInt8, encodeUTF8String } from "./Utils";
 test("should encode signed numbers using LEB128", () => {
   const cases: Array<[number, number[]]> = [
     [0, [0]],
@@ -20,14 +12,14 @@ test("should encode signed numbers using LEB128", () => {
     [-2, [0x7e]],
     [-127, [0x81, 0x7f]],
     [-128, [0x80, 0x7f]],
-    [-129, [0xff, 0x7e]]
+    [-129, [0xff, 0x7e]],
   ];
-  for (let testCase of cases) {
-    let [n, expected] = testCase;
-    let consumer = new TypedArrayBytestreamConsumer();
+  for (const testCase of cases) {
+    const [n, expected] = testCase;
+    const consumer = new TypedArrayBytestreamConsumer();
     encodeNumberAsSignedLEB128(n, consumer);
-    let result = consumer.cleanArray;
-    let expectedArray = new Uint8Array(expected);
+    const result = consumer.cleanArray;
+    const expectedArray = new Uint8Array(expected);
     expect(result).toEqual(expectedArray);
   }
 });
@@ -43,14 +35,14 @@ test("should encode unsigned numbers using LEB128", () => {
     [12857, [0xb9, 0x64]],
     [16256, [0x80, 0x7f]],
     [0x40c, [0x8c, 0x08]],
-    [624485, [0xe5, 0x8e, 0x26]]
+    [624485, [0xe5, 0x8e, 0x26]],
   ];
-  for (let testCase of cases) {
-    let [n, expected] = testCase;
-    let consumer = new TypedArrayBytestreamConsumer();
+  for (const testCase of cases) {
+    const [n, expected] = testCase;
+    const consumer = new TypedArrayBytestreamConsumer();
     encodeNumberAsUnsignedLEB128(n, consumer);
-    let result = consumer.cleanArray;
-    let expectedArray = new Uint8Array(expected);
+    const result = consumer.cleanArray;
+    const expectedArray = new Uint8Array(expected);
     expect(result).toEqual(expectedArray);
   }
 });
@@ -130,6 +122,6 @@ test("should be able to encode strings as utf-8", () => {
     0x20,
     0x71,
     0x75,
-    0x78
+    0x78,
   ]);
 });
