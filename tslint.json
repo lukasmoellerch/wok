@@ -5,7 +5,8 @@
   "rules": {
     "semicolon": [true, "always"],
     "max-line-length": false,
-    "object-literal-sort-keys": false
+    "object-literal-sort-keys": false,
+    "no-bitwise": false
   },
   "rulesDirectory": []
 }
