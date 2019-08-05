@@ -9,6 +9,8 @@ export enum Type {
   si32,
   ui64,
   si64,
+  f32,
+  f64,
   ptr,
   funcptr,
 }
@@ -30,7 +32,9 @@ export interface IExternalFunctionDeclaration {
   type: FunctionType;
 }
 export interface IInternalFunctionDefinition {
+  identifier: FunctionIdentifier;
   variableTypes: Type[];
+  code: Block[];
 }
 export enum InstructionType {
   phi,
@@ -103,6 +107,7 @@ export type SSAStatement =
   | [InstructionType.lessEqual, Variable, Variable, Variable]
   | [InstructionType.greaterEqual, Variable, Variable, Variable]
   | [InstructionType.countLeadingZeroes, Variable, Variable, Variable]
+  | [InstructionType.countTrailingZeroes, Variable, Variable, Variable]
   | [InstructionType.add, Variable, Variable, Variable]
   | [InstructionType.subtract, Variable, Variable, Variable]
   | [InstructionType.multiply, Variable, Variable, Variable]
@@ -128,4 +133,16 @@ export enum BlockType {
   loop,
   breakble,
 }
-export type Block = [BlockType, SSAStatement[]];
+export type Block = IBasicBlock | ILoopBlock | IBreakableBlock;
+export interface IBasicBlock {
+  type: BlockType.basic;
+  statements: SSAStatement[];
+}
+export interface ILoopBlock {
+  type: BlockType.loop;
+  blocks: Block[];
+}
+export interface IBreakableBlock {
+  type: BlockType.breakble;
+  blocks: Block[];
+}
