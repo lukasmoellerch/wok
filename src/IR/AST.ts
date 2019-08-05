@@ -13,16 +13,24 @@ export enum Type {
   funcptr,
 }
 export interface IGLobalMutableGlobal {
-
+  identifier: GlobalIdentifier;
+  type: Type;
 }
 export interface IInternalFunctionDeclaration {
-
+  identifier: FunctionIdentifier;
+  type: FunctionType;
+  inlinable: boolean;
+  exportedAs?: string;
+  tableElement: boolean;
+  globalStateMutating: boolean;
 }
 export interface IExternalFunctionDeclaration {
-
+  identifier: FunctionIdentifier;
+  externalName: string;
+  type: FunctionType;
 }
 export interface IInternalFunctionDefinition {
-
+  variableTypes: Type[];
 }
 export enum InstructionType {
   phi,
@@ -115,3 +123,9 @@ export type SSAStatement =
   | [InstructionType.sqrt, Variable, Variable]
   | [InstructionType.minimum, Variable, Variable]
   | [InstructionType.maximum, Variable, Variable];
+export enum BlockType {
+  basic,
+  loop,
+  breakble,
+}
+export type Block = [BlockType, SSAStatement[]];
