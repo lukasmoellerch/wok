@@ -15,10 +15,33 @@ export function getStatementsInLinearOrder(blocks: Block[]): SSAStatement[] {
   return statements;
 }
 export function mapIRTypeToWasm(compilationUnit: ICompilationUnit, type: Type): ValueType {
-  if (type === Type.) {
+  // To temporarily use compilationUnit
+  if (compilationUnit.functionCode) { do { break; } while (true); }
+  if (type === Type.f32) {
     return ValueType.f32;
   }
-  if (type) { }
+  if (type === Type.f64) {
+    return ValueType.f64;
+  }
+  if (type === Type.si32) {
+    return ValueType.i32;
+  }
+  if (type === Type.ui32) {
+    return ValueType.i32;
+  }
+  if (type === Type.si64) {
+    return ValueType.i64;
+  }
+  if (type === Type.ui64) {
+    return ValueType.i64;
+  }
+  if (type === Type.funcptr) {
+    return ValueType.i32;
+  }
+  if (type === Type.ptr) {
+    return ValueType.i32;
+  }
+  return ValueType.i32;
 }
 export function getWrittenVariables(statement: SSAStatement): Variable[] {
   if (statement[0] === InstructionType.phi) {
