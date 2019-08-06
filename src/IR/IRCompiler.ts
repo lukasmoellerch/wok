@@ -238,6 +238,36 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       while (stack.length > loadingStart) {
         clearTos(environment.statementIndex);
       }
+      // START | NOT FINISHED
+      let j = 0;
+      let stackVariablesToBeSaved = 0;
+      while (j < top.length) {
+        const variable = stack[stack.length - j - 1];
+        const bucketIndex = bucketOf(variable);
+        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex)) {
+          stackVariablesToBeSaved = j + 1;
+        }
+        j++;
+      }
+      for (let i = stack.length - 1; i > stack.length - stackVariablesToBeSaved; i--) {
+        const variable = stack[i];
+        const bucket = bucketOf(variable);
+        builder.localSet(bucket);
+        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+      }
+      if (stackVariablesToBeSaved > 0) {
+        const variable = stack[stack.length - stackVariablesToBeSaved];
+        const bucket = bucketOf(variable);
+        builder.localTee(bucket);
+        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+      }
+      for (let i = stack.length - stackVariablesToBeSaved + 1; i < stack.length; i++) {
+        const variable = stack[i];
+        const bucket = bucketOf(variable);
+        builder.localGet(bucket);
+      }
+      // END
+
       for (let i = loadingStart; i < top.length; i++) {
         const variable = top[i];
         const bucketIndex = bucketOf(variable);
@@ -267,6 +297,37 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
       }
+      // START
+      let j = 0;
+      let stackVariablesToBeSaved = 0;
+      while (j < (top.length - loadingStart) && j < stack.length) {
+        const variable = stack[stack.length - j - 1];
+        const bucketIndex = bucketOf(variable);
+        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex)) {
+          stackVariablesToBeSaved = j + 1;
+        }
+        j++;
+      }
+      for (let i = stack.length - 1; i > stack.length - stackVariablesToBeSaved; i--) {
+        const variable = stack[i];
+        const bucket = bucketOf(variable);
+        builder.localSet(bucket);
+        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+      }
+      if (stackVariablesToBeSaved > 0) {
+        const variable = stack[stack.length - stackVariablesToBeSaved];
+        const bucket = bucketOf(variable);
+        builder.localTee(bucket);
+        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+      }
+      for (let i = stack.length - stackVariablesToBeSaved + 1; i < stack.length; i++) {
+        const variable = stack[i];
+        const bucket = bucketOf(variable);
+        builder.localGet(bucket);
+      }
+
+      // END
+
       for (let i = loadingStart; i < top.length; i++) {
         const variable = top[i];
         const type = environment.variableTypeArray[variable];
@@ -285,6 +346,11 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
 
         stack.push(variable);
       }
+    }
+    let a = 0;
+    while (a < top.length) {
+      stack.pop();
+      a++;
     }
   }
   if (block.type === BlockType.basic) {
@@ -309,7 +375,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       if (statement[0] === InstructionType.breakIf) {
         const [, condition] = statement;
         prepareStack([condition], true);
-        prepareVariableUsage(1);
         builder.brIf(0);
       }
       if (statement[0] === InstructionType.breakIfFalse) {
@@ -326,7 +391,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         } else {
           throw new Error("Floats cannot be used as break condition");
         }
-        prepareVariableUsage(1);
         builder.brIf(0);
       }
       if (statement[0] === InstructionType.call) {
@@ -347,7 +411,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         }
         // Additional typechecks
         prepareStack(args);
-        prepareVariableUsage(args.length);
         builder.call(index);
 
         if (functionType[1].length === 1) {
@@ -415,7 +478,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const wasmType = convertToWasmType(type);
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
-        prepareVariableUsage(2);
         if (f) {
           if (wasmType === ValueType.f32) {
             builder.numeric(Instruction.f32Less);
@@ -466,7 +528,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const wasmType = convertToWasmType(type);
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
-        prepareVariableUsage(2);
         if (f) {
           if (wasmType === ValueType.f32) {
             builder.numeric(Instruction.f32Add);
