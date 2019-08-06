@@ -1,7 +1,13 @@
 import { ValueType } from "../WASM/Encoding/Constants";
-import { FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Variable } from './AST';
+import { FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Variable } from "./AST";
 import { getReadVariables, getStatementsInLinearOrder, getWrittenVariables, mapIRTypeToWasm } from "./Utils";
-export type UsageSpanMapping = Map<ValueType, Array<{ variables: Variable[], usage: Array<[number, number]>, total: [number, number] }>>;
+export interface IBucket {
+  variables: Variable[];
+  usage: Array<[number, number]>;
+  total: [number, number];
+  index: number;
+}
+export type UsageSpanMapping = Map<ValueType, IBucket[]>;
 export interface IVirtualRegisterAllocationResult {
   usageSpanMappings: Map<FunctionIdentifier, UsageSpanMapping>;
 }
@@ -27,6 +33,10 @@ export function allocateVirtualRegistersToVariables(ir: ICompilationUnit): IVirt
     const firstUsed: Map<Variable, number> = new Map();
     const lastUsed: Map<Variable, number> = new Map();
 
+    for (const [argumentIndex] of functionType[0].entries()) {
+      buckets.push([argumentIndex]);
+      firstUsed.set(argumentIndex, -1);
+    }
     let i = 0;
     for (const statement of statements) {
       if (statement[0] === InstructionType.phi) {
@@ -50,7 +60,7 @@ export function allocateVirtualRegistersToVariables(ir: ICompilationUnit): IVirt
       const phiNodeOperands: Variable[] = phiNode[1];
       phiNodeOperands.push(phiNode[0]);
       let newBucketContents: Variable[] = [];
-      let i = 0;
+      let j = 0;
       for (const bucket of buckets) {
         let containsPhiNodeOperand = false;
         for (const bucketContent of bucket) {
@@ -61,18 +71,19 @@ export function allocateVirtualRegistersToVariables(ir: ICompilationUnit): IVirt
         }
         if (containsPhiNodeOperand) {
           newBucketContents = newBucketContents.concat(bucket);
-          buckets.splice(i, 1);
+          buckets.splice(j, 1);
         }
-        i++;
+        j++;
       }
       buckets.push(newBucketContents);
     }
 
-    const usageSpanMapping: Map<ValueType, Array<{ variables: Variable[], usage: Array<[number, number]>, total: [number, number] }>> = new Map();
+    const usageSpanMapping: Map<ValueType, IBucket[]> = new Map();
+    let bucketIndex = 0;
     for (const bucket of buckets) {
       const first = bucket[0];
       const type = mapIRTypeToWasm(ir, variableTypeArray[first]);
-      let bucketsWithSameType: Array<{ variables: Variable[], usage: Array<[number, number]>, total: [number, number] }> = [];
+      let bucketsWithSameType: IBucket[] = [];
       const savedValue = usageSpanMapping.get(type);
       if (savedValue) {
         bucketsWithSameType = savedValue;
@@ -101,8 +112,10 @@ export function allocateVirtualRegistersToVariables(ir: ICompilationUnit): IVirt
           Math.min(...usage.map((a) => a[0])),
           Math.max(...usage.map((a) => a[1])),
         ],
-      } as { variables: Variable[], usage: Array<[number, number]>, total: [number, number] };
+        index: bucketIndex,
+      } as IBucket;
       bucketsWithSameType.push(obj);
+      bucketIndex++;
     }
     usageSpanMappings.set(fn.identifier, usageSpanMapping);
   }
