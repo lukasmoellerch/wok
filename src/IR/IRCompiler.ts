@@ -448,6 +448,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       }
       if (statement[0] === InstructionType.copy) {
         const [, target, arg] = statement;
+        prepareStack([arg]);
+        stack.push(target);
       }
       if (statement[0] === InstructionType.load) {
         const [, target, position, type] = statement;
@@ -523,7 +525,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           const s = isSigned(environment.compilationUnit, type);
           if (s) {
             if (wasmType === ValueType.i32) {
-              builder.numeric(Instruction.i32UnsignedGreater);
+              builder.numeric(Instruction.i32SignedGreater);
             } else {
               builder.numeric(Instruction.i64SignedGreater);
             }
@@ -595,11 +597,11 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
             if (wasmType === ValueType.i32) {
               builder.numeric(Instruction.i32SignedGreaterEqual);
             } else {
-              builder.numeric(Instruction.i32SignedGreaterEqual);
+              builder.numeric(Instruction.i64SignedGreaterEqual);
             }
           } else {
             if (wasmType === ValueType.i32) {
-              builder.numeric(Instruction.i64UnsignedLessEqual);
+              builder.numeric(Instruction.i32UnsignedLessEqual);
             } else {
               builder.numeric(Instruction.i64UnsignedLessEqual);
             }
