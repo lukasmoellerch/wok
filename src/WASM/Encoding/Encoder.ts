@@ -24,9 +24,10 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
       encodeFunctionType(type, sectionBuffer);
     }
   } else if (section.sectionId === SectionId.import) {
+    encodeNumberAsUnsignedLEB128(section.imports.length, sectionBuffer);
     for (const imp of section.imports) {
-      encodeName(imp.name, sectionBuffer);
       encodeName(imp.module, sectionBuffer);
+      encodeName(imp.name, sectionBuffer);
       const description = imp.description;
       sectionBuffer.write(description.type);
       if (description.type === ImportDescription.function) {
