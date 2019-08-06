@@ -276,12 +276,12 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(variable);
       }
     } else {
-      const firstVariableIndex = stack.map((a) => bucketOf(a)).indexOf(bucketOf(top[0]));
+      const firstVariableIndex = stack.map((q) => bucketOf(q)).indexOf(bucketOf(top[0]));
       let loadingStart = -1;
       if (firstVariableIndex === -1) {
         loadingStart = 0;
         for (const v of top) {
-          while (stack.map((a) => bucketOf(a)).indexOf(bucketOf(v)) !== -1) {
+          while (stack.map((q) => bucketOf(q)).indexOf(bucketOf(v)) !== -1) {
             clearTos(environment.statementIndex);
           }
         }
@@ -336,8 +336,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         if (typeMapping === undefined) {
           throw new Error();
         }
-        const bucketInformation = typeMapping.find((a) => {
-          return a.variables.indexOf(variable) !== -1;
+        const bucketInformation = typeMapping.find((q) => {
+          return q.variables.indexOf(variable) !== -1;
         });
         if (bucketInformation === undefined) {
           throw new Error();
@@ -490,11 +490,11 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
             if (wasmType === ValueType.i32) {
               builder.numeric(Instruction.i32SignedLess);
             } else {
-              builder.numeric(Instruction.i32UnsignedLess);
+              builder.numeric(Instruction.i64SignedLess);
             }
           } else {
             if (wasmType === ValueType.i32) {
-              builder.numeric(Instruction.i64SignedLess);
+              builder.numeric(Instruction.i32UnsignedLess);
             } else {
               builder.numeric(Instruction.i64UnsignedLess);
             }
@@ -504,12 +504,108 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       }
       if (statement[0] === InstructionType.greater) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Greater);
+          } else {
+            builder.numeric(Instruction.f64Greater);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32UnsignedGreater);
+            } else {
+              builder.numeric(Instruction.i64SignedGreater);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32UnsignedGreater);
+            } else {
+              builder.numeric(Instruction.i64UnsignedGreater);
+            }
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.lessEqual) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32LessEqual);
+          } else {
+            builder.numeric(Instruction.f64LessEqual);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32SignedLessEqual);
+            } else {
+              builder.numeric(Instruction.i64SignedLessEqual);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32UnsignedLessEqual);
+            } else {
+              builder.numeric(Instruction.i64UnsignedLessEqual);
+            }
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.greaterEqual) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32GreaterEqual);
+          } else {
+            builder.numeric(Instruction.f64GreaterEqual);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32SignedGreaterEqual);
+            } else {
+              builder.numeric(Instruction.i32SignedGreaterEqual);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i64UnsignedLessEqual);
+            } else {
+              builder.numeric(Instruction.i64UnsignedLessEqual);
+            }
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.countLeadingZeroes) {
         const [, target, arg] = statement;
@@ -545,12 +641,90 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       }
       if (statement[0] === InstructionType.subtract) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Subtract);
+          } else {
+            builder.numeric(Instruction.f64Subtract);
+          }
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32Subtract);
+          } else {
+            builder.numeric(Instruction.i64Subtract);
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.multiply) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Multiply);
+          } else {
+            builder.numeric(Instruction.f64Multiply);
+          }
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32Multiply);
+          } else {
+            builder.numeric(Instruction.i64Multiply);
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.divide) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Divide);
+          } else {
+            builder.numeric(Instruction.f64Divide);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32DivideSigned);
+            } else {
+              builder.numeric(Instruction.i64DivideSigned);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32DivideUnsigned);
+            } else {
+              builder.numeric(Instruction.i64DivideUnsigned);
+            }
+          }
+        }
+        stack.push(target);
       }
       if (statement[0] === InstructionType.remainder) {
         const [, target, lhs, rhs] = statement;
