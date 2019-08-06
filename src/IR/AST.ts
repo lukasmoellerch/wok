@@ -126,8 +126,8 @@ export type SSAStatement =
   | [InstructionType.truncate, Variable, Variable]
   | [InstructionType.nearest, Variable, Variable]
   | [InstructionType.sqrt, Variable, Variable]
-  | [InstructionType.minimum, Variable, Variable]
-  | [InstructionType.maximum, Variable, Variable];
+  | [InstructionType.minimum, Variable, Variable, Variable]
+  | [InstructionType.maximum, Variable, Variable, Variable];
 export enum BlockType {
   basic,
   loop,
