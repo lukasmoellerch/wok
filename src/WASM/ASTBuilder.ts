@@ -1,6 +1,6 @@
 import { Expression, ICodeSection, ICustomSection, IDataSection, IDataSegment, IElement, IElementSection, IExport, IExportSection, IFunction, IFunctionSection, IFunctionType, IGlobal, IGlobalSection, IImport, IImportSection, ILocal, IModule, IStartSection, ITableSection, ITableType, ITypeSection, Section } from "./AST";
 import { functionTypesAreEqual } from "./ASTUtils";
-import { ExportDescription, GlobalTypeMutability, Instruction, Section as SectionId, ValueType } from "./Encoding/Constants";
+import { ExportDescription, GlobalTypeMutability, ImportDescription, Instruction, Section as SectionId, ValueType } from "./Encoding/Constants";
 import { encodeModule } from "./Encoding/Encoder";
 import { InstructionSequenceBuilder } from "./Encoding/InstructionSequenceBuilder";
 import { TypedArrayBytestreamConsumer } from "./Encoding/TypedArrayBytestreamConsumer";
@@ -95,9 +95,8 @@ export class ASTBuilder {
     this.sections.push(section);
     return section;
   }
-  public addFunction(exportedAs: string | null, type: number, locals: ILocal[], expression: Uint8Array): number {
+  public addFunction(i: number, exportedAs: string | null, type: number, locals: ILocal[], expression: Uint8Array): number {
     const functionSection = this.defaultFunctionSection || this.addFunctionSection();
-    const i = this.defaultCodeSection === null ? 0 : this.defaultCodeSection.codeEntries.length;
     if (exportedAs !== null) {
       const exportSection = this.defaultExportSection || this.addExportSection();
       exportSection.exports.push({
@@ -127,6 +126,17 @@ export class ASTBuilder {
     }
     this.sections.push(section);
     return section;
+  }
+  public addFunctionImport(module: string, name: string, type: number) {
+    const section = this.defaultImportSection || this.addImportSection();
+    section.imports.push({
+      module,
+      name,
+      description: {
+        type: ImportDescription.function,
+        functionType: type,
+      },
+    });
   }
   public addTableSection(table: ITableType[] = []): ITableSection {
     const section: ITableSection = {
