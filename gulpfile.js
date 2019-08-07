@@ -10,9 +10,9 @@ gulp.task("generateParsers", function() {
       pegjs({
         format: "commonjs",
         exportVar: "parser",
-        plugins: [tspegjs]
+        plugins: []
       })
     )
-    .pipe(ext_replace(".ts"))
+    .pipe(ext_replace(".js"))
     .pipe(gulp.dest("dist"));
 });
