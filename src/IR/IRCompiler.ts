@@ -244,7 +244,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       while (j < top.length) {
         const variable = stack[stack.length - j - 1];
         const bucketIndex = bucketOf(variable);
-        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex)) {
+        const bucket = environment.buckets[bucketIndex];
+        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex) && (bucket.variables.length > 1 || bucket.total[1] > environment.statementIndex + 1)) {
           stackVariablesToBeSaved = j + 1;
         }
         j++;
@@ -303,7 +304,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       while (j < (top.length - loadingStart) && j < stack.length) {
         const variable = stack[stack.length - j - 1];
         const bucketIndex = bucketOf(variable);
-        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex)) {
+        const bucket = environment.buckets[bucketIndex];
+        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex) && (bucket.variables.length > 1 || bucket.total[1] > environment.statementIndex + 1)) {
           stackVariablesToBeSaved = j + 1;
         }
         j++;
