@@ -706,6 +706,34 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(target);
       } else if (statement[0] === InstructionType.remainder) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("Remainder operations is not defined for floating pointer operands");
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32RemainderSigned);
+            } else {
+              builder.numeric(Instruction.i64RemainderSigned);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32RemainderUnsigned);
+            } else {
+              builder.numeric(Instruction.i64RemainderUnsigned);
+            }
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.and) {
         const [, target, lhs, rhs] = statement;
       } else if (statement[0] === InstructionType.or) {
@@ -736,6 +764,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const [, target, lhs, rhs] = statement;
       } else if (statement[0] === InstructionType.maximum) {
         const [, target, lhs, rhs] = statement;
+      } else if (statement[0] === InstructionType.return) {
+        const [, returnValue] = statement;
       }
       if (!isPhiNode(statement)) {
         const writtenVars = getWrittenVariables(statement);
