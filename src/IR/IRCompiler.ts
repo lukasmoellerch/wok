@@ -736,10 +736,67 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(target);
       } else if (statement[0] === InstructionType.and) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("And operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32And);
+          } else {
+            builder.numeric(Instruction.i64And);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.or) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("And operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32Or);
+          } else {
+            builder.numeric(Instruction.i64Or);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.xor) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("And operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32Xor);
+          } else {
+            builder.numeric(Instruction.i64Xor);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.shiftLeft) {
         const [, target, arg] = statement;
       } else if (statement[0] === InstructionType.shiftRight) {
