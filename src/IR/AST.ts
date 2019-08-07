@@ -79,6 +79,7 @@ export enum InstructionType {
   sqrt,
   minimum,
   maximum,
+  return,
 }
 export type FunctionType = [Type[], Type[]]; // arguments, results
 export type Variable = number;
@@ -116,10 +117,10 @@ export type SSAStatement =
   | [InstructionType.and, Variable, Variable, Variable]
   | [InstructionType.or, Variable, Variable, Variable]
   | [InstructionType.xor, Variable, Variable, Variable]
-  | [InstructionType.shiftLeft, Variable, Variable]
-  | [InstructionType.shiftRight, Variable, Variable]
-  | [InstructionType.rotateleft, Variable, Variable]
-  | [InstructionType.rotateRight, Variable, Variable]
+  | [InstructionType.shiftLeft, Variable, Variable, Variable]
+  | [InstructionType.shiftRight, Variable, Variable, Variable]
+  | [InstructionType.rotateleft, Variable, Variable, Variable]
+  | [InstructionType.rotateRight, Variable, Variable, Variable]
   | [InstructionType.absolute, Variable, Variable]
   | [InstructionType.negate, Variable, Variable]
   | [InstructionType.floor, Variable, Variable]
@@ -127,7 +128,8 @@ export type SSAStatement =
   | [InstructionType.nearest, Variable, Variable]
   | [InstructionType.sqrt, Variable, Variable]
   | [InstructionType.minimum, Variable, Variable, Variable]
-  | [InstructionType.maximum, Variable, Variable, Variable];
+  | [InstructionType.maximum, Variable, Variable, Variable]
+  | [InstructionType.return, Variable];
 export enum BlockType {
   basic,
   loop,
