@@ -150,9 +150,12 @@ export interface IBreakableBlock {
 }
 export interface IIfBlock {
   type: BlockType.if;
+  condition: Variable;
   blocks: Block[];
 }
 export interface IIfElseBlock {
   type: BlockType.ifelse;
-  blocks: Block[];
+  condition: Variable;
+  true: Block[];
+  false: Block[];
 }
