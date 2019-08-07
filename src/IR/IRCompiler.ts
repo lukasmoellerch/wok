@@ -788,7 +788,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("And operation is not defined for floating pointer operands");
+          throw new Error("Xor operation is not defined for floating pointer operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32Xor);
