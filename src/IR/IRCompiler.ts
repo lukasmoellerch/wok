@@ -798,13 +798,98 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         }
         stack.push(target);
       } else if (statement[0] === InstructionType.shiftLeft) {
-        const [, target, arg] = statement;
+        const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("Shift operations operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32ShiftLeft);
+          } else {
+            builder.numeric(Instruction.i64ShiftLeft);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.shiftRight) {
-        const [, target, arg] = statement;
+        const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("Shift operations operation is not defined for floating pointer operands");
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32ShiftRightSigned);
+            } else {
+              builder.numeric(Instruction.i64ShiftRightSigned);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32ShiftRightUnsigned);
+            } else {
+              builder.numeric(Instruction.i64ShiftRightUnsigned);
+            }
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.rotateleft) {
-        const [, target, arg] = statement;
+        const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("Shift operations operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32RotateLeft);
+          } else {
+            builder.numeric(Instruction.i64RotateRight);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.rotateRight) {
-        const [, target, arg] = statement;
+        const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          throw new Error("Shift operations operation is not defined for floating pointer operands");
+        } else {
+          if (wasmType === ValueType.i32) {
+            builder.numeric(Instruction.i32RotateRight);
+          } else {
+            builder.numeric(Instruction.i64RotateRight);
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.absolute) {
         const [, target, arg] = statement;
       } else if (statement[0] === InstructionType.negate) {
