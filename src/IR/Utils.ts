@@ -8,8 +8,14 @@ export function getStatementsInLinearOrder(blocks: Block[]): SSAStatement[] {
   for (const block of blocks) {
     if (block.type === BlockType.basic) {
       statements = statements.concat(block.statements);
-    } else {
+    } else if (block.type === BlockType.breakble) {
       statements = statements.concat(getStatementsInLinearOrder(block.blocks));
+    } else if (block.type === BlockType.loop) {
+      statements = statements.concat(getStatementsInLinearOrder(block.blocks));
+    } else if (block.type === BlockType.if) {
+      statements = statements.concat(getStatementsInLinearOrder(block.blocks));
+    } else if (block.type === BlockType.ifelse) {
+      statements = statements.concat(getStatementsInLinearOrder(block.true)).concat(getStatementsInLinearOrder(block.false));
     }
   }
   return statements;
@@ -234,6 +240,9 @@ export function getWrittenVariables(statement: SSAStatement): Variable[] {
   if (statement[0] === InstructionType.maximum) {
     return [statement[1]];
   }
+  if (statement[0] === InstructionType.return) {
+    return [];
+  }
   return [];
 }
 export function getReadVariables(statement: SSAStatement): Variable[] {
@@ -362,6 +371,9 @@ export function getReadVariables(statement: SSAStatement): Variable[] {
   }
   if (statement[0] === InstructionType.maximum) {
     return [statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.return) {
+    return [statement[1]];
   }
   return [];
 }
