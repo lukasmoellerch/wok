@@ -51,7 +51,7 @@ BasicBlock
 LoopBlock
   = _ "loop" _ "{" _ blocks:BlockArray _ "}" _ {
     return {
-      type: 2,
+      type: 1,
       blocks,
     }
   }
@@ -65,34 +65,34 @@ BreakableBlock
 Statement
   = a:Variable _ "=" _ "phi" _ "(" _ b:VariableList _ ")" NL  {return [0,a,b]}
   / "break" NL  {return [1]}
-  / "breakIf" _ v:Variable NL  {return [2, v]}
   / "breakIfFalse" _ v:Variable NL  {return [3, v]}
-  / "(" _ targets:VariableList _ ")" _ "=" _ identifier:Identifier _ "(" _ args:Variable _ ")" NL  {return [4, identifier, targets, args]}
+  / "breakIfTrue" _ v:Variable NL  {return [2, v]}
+  / "(" _ targets:VariableList _ ")" _ "=" _ identifier:Identifier _ "(" _ args:VariableList _ ")" NL  {return [4, identifier, targets, args]}
   / "(" _ targets:VariableList _ ")" _ "=" _ v:Variable _ "(" _ argTypes:TypeList _ ")" _ "->" _ "(" _ resultTypes:TypeList _ ")"  _ "(" _ args:Variable _ ")" NL  {return [5, v, [argType, resultTypes], targets, args]}
-  / a:Variable _ "=" _ num:Integer _ NL  {return [6,num]}
-  / a:Variable _ "=" _ identifier:Integer NL  {return [7,identifier]}
+  / a:Variable _ "=" _ "const" _ num:Integer NL  {return [6,a,num]}
+  / a:Variable _ "=" _ "&" identifier:Integer NL  {return [7,a,identifier]}
   / a:Variable _ "=" _ "$" num:Integer _ NL  {return [8,num]}
-  / a:Variable _ "=" _ b:Variable _ NL  {return [9,a,b]}
+  / a:Variable _ "=" _ "copy" _ id:Identifier _ NL  {return [9,a,b]}
   / a:Variable _ "=" _ "load" "(" _ b:Variable _ ")" _ "as" _ type:Type _ NL  {return [10,a,b,type]}
   / "store" "(" _ position:Variable _ "," _ val:Variable _ ")" _ "as" _ type:Type _ NL  {return [11,position,val,type]}
-  / a:Variable _ "=" _ b:Variable _ "as" _ type:Type NL  {return [12,a,b,type]}
-  / a:Variable _ "=" _ b:Variable _ "==" _ "0" NL  {return [13,a,b]}
-  / a:Variable _ "=" _ b:Variable _ "==" _ c:Variable NL  {return [14,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "!=" _ c:Variable NL  {return [15,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "<" _ c:Variable NL  {return [16,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ ">" _ c:Variable NL  {return [17,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "<=" _ c:Variable NL  {return [18,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ ">=" _ c:Variable NL  {return [19,a,b,c]}
+  / a:Variable _ "=" _ "convert" _ b:Variable _ "to" _ type:Type NL  {return [12,a,b,type]}
+  / a:Variable _ "=" _ "eqz" _ b:Variable NL  {return [13,a,b]}
+  / a:Variable _ "=" _ "eq" _ b:Variable _ c:Variable NL  {return [14,a,b,c]}
+  / a:Variable _ "=" _ "neq" _ b:Variable _ c:Variable NL  {return [15,a,b,c]}
+  / a:Variable _ "=" _ "less" _ b:Variable _ c:Variable NL  {return [16,a,b,c]}
+  / a:Variable _ "=" _ "greater" _ b:Variable _ c:Variable NL  {return [17,a,b,c]}
+  / a:Variable _ "=" _ "lessEqal" _ b:Variable _ c:Variable NL  {return [18,a,b,c]}
+  / a:Variable _ "=" _ "greaterEq" _ b:Variable _ c:Variable NL  {return [19,a,b,c]}
   / a:Variable _ "=" _ "clz" _ c:Variable NL  {return [20,a,b]}
   / a:Variable _ "=" _ "ctz" _ c:Variable NL  {return [21,a,b]}
-  / a:Variable _ "=" _ b:Variable _ "+" _ c:Variable NL  {return [22,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "-" _ c:Variable NL  {return [23,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "*" _ c:Variable NL  {return [24,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "/" _ c:Variable NL  {return [25,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "%" _ c:Variable NL  {return [26,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "&" _ c:Variable NL  {return [27,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "|" _ c:Variable NL  {return [28,a,b,c]}
-  / a:Variable _ "=" _ b:Variable _ "^" _ c:Variable NL  {return [29,a,b,c]}
+  / a:Variable _ "=" _ "add" _ b:Variable _ c:Variable NL  {return [22,a,b,c]}
+  / a:Variable _ "=" _ "sub" _ b:Variable _ c:Variable NL  {return [23,a,b,c]}
+  / a:Variable _ "=" _ "mul" _ b:Variable _ c:Variable NL  {return [24,a,b,c]}
+  / a:Variable _ "=" _ "div" _ b:Variable _ c:Variable NL  {return [25,a,b,c]}
+  / a:Variable _ "=" _ "rem" _ b:Variable _ c:Variable NL  {return [26,a,b,c]}
+  / a:Variable _ "=" _ "and" _ b:Variable _ c:Variable NL  {return [27,a,b,c]}
+  / a:Variable _ "=" _ "or" _ b:Variable _ c:Variable NL  {return [28,a,b,c]}
+  / a:Variable _ "=" _ "xor" _ b:Variable _ c:Variable NL  {return [29,a,b,c]}
   / a:Variable _ "=" _ "shl" _ b:Variable _ NL  {return [30,a,b]}
   / a:Variable _ "=" _ "shr" _ b:Variable _ NL  {return [31,a,b]}
   / a:Variable _ "=" _ "rotl" _ b:Variable _ NL  {return [32,a,b]}
@@ -171,6 +171,6 @@ Identifier "identifier"
 _ "whitespace"
   = [ \t\n\r]*
 NL "newline"
-  = [\n]+
+  = [\n\r]+
 
               
