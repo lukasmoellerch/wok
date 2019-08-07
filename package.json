@@ -24,6 +24,7 @@
   "devDependencies": {
     "@types/jest": "^24.0.16",
     "gulp": "^4.0.2",
+    "gulp-pegjs": "^0.1.0",
     "jest": "^24.8.0",
     "ts-jest": "^24.0.2",
     "tsc": "^1.20150623.0",
