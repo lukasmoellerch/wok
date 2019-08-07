@@ -370,16 +370,13 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       if (statement[0] === InstructionType.phi) {
         const [, target, args] = statement;
         // No actual compiled code generates from this.
-      }
-      if (statement[0] === InstructionType.break) {
+      } else if (statement[0] === InstructionType.break) {
         builder.br(1);
-      }
-      if (statement[0] === InstructionType.breakIf) {
+      } else if (statement[0] === InstructionType.breakIf) {
         const [, condition] = statement;
         prepareStack([condition], true);
         builder.brIf(0);
-      }
-      if (statement[0] === InstructionType.breakIfFalse) {
+      } else if (statement[0] === InstructionType.breakIfFalse) {
         const [, condition] = statement;
         const type = typeOf(condition);
         const wasmType = convertToWasmType(type);
@@ -394,8 +391,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           throw new Error("Floats cannot be used as break condition");
         }
         builder.brIf(0);
-      }
-      if (statement[0] === InstructionType.call) {
+      } else if (statement[0] === InstructionType.call) {
         const [, functionIdentifier, targets, args] = statement;
         const index = environment.functionIdentifierIndexMapping.get(functionIdentifier);
         const functionType = environment.functionIdentifierTypeMapping.get(functionIdentifier);
@@ -420,11 +416,9 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         } else {
           // not yet implemented
         }
-      }
-      if (statement[0] === InstructionType.callFunctionPointer) {
+      } else if (statement[0] === InstructionType.callFunctionPointer) {
         const [, functionType, functionPointer, targets, args] = statement;
-      }
-      if (statement[0] === InstructionType.setToConstant) {
+      } else if (statement[0] === InstructionType.setToConstant) {
         const [, target, constant] = statement;
         const type = environment.variableTypeArray[target];
         const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
@@ -441,37 +435,27 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           builder.f64Const(constant);
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.setToFunction) {
+      } else if (statement[0] === InstructionType.setToFunction) {
         const [, target, functionidentifier] = statement;
-      }
-      if (statement[0] === InstructionType.setToGlobal) {
+      } else if (statement[0] === InstructionType.setToGlobal) {
         const [, target, globalIdentifier] = statement;
-      }
-      if (statement[0] === InstructionType.copy) {
+      } else if (statement[0] === InstructionType.copy) {
         const [, target, arg] = statement;
         prepareStack([arg]);
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.load) {
+      } else if (statement[0] === InstructionType.load) {
         const [, target, position, type] = statement;
-      }
-      if (statement[0] === InstructionType.store) {
+      } else if (statement[0] === InstructionType.store) {
         const [, value, position, type] = statement;
-      }
-      if (statement[0] === InstructionType.convert) {
+      } else if (statement[0] === InstructionType.convert) {
         const [, target, arg, targetType] = statement;
-      }
-      if (statement[0] === InstructionType.equalToZero) {
+      } else if (statement[0] === InstructionType.equalToZero) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.equal) {
+      } else if (statement[0] === InstructionType.equal) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.notEqual) {
+      } else if (statement[0] === InstructionType.notEqual) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.less) {
+      } else if (statement[0] === InstructionType.less) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -505,8 +489,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.greater) {
+      } else if (statement[0] === InstructionType.greater) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -540,8 +523,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.lessEqual) {
+      } else if (statement[0] === InstructionType.lessEqual) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -575,8 +557,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.greaterEqual) {
+      } else if (statement[0] === InstructionType.greaterEqual) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -610,14 +591,11 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.countLeadingZeroes) {
+      } else if (statement[0] === InstructionType.countLeadingZeroes) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.countTrailingZeroes) {
+      } else if (statement[0] === InstructionType.countTrailingZeroes) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.add) {
+      } else if (statement[0] === InstructionType.add) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -642,8 +620,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.subtract) {
+      } else if (statement[0] === InstructionType.subtract) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -668,8 +645,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.multiply) {
+      } else if (statement[0] === InstructionType.multiply) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -694,8 +670,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.divide) {
+      } else if (statement[0] === InstructionType.divide) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
         const rhsType = typeOf(rhs);
@@ -729,53 +704,37 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
           }
         }
         stack.push(target);
-      }
-      if (statement[0] === InstructionType.remainder) {
+      } else if (statement[0] === InstructionType.remainder) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.and) {
+      } else if (statement[0] === InstructionType.and) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.or) {
+      } else if (statement[0] === InstructionType.or) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.xor) {
+      } else if (statement[0] === InstructionType.xor) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.shiftLeft) {
+      } else if (statement[0] === InstructionType.shiftLeft) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.shiftRight) {
+      } else if (statement[0] === InstructionType.shiftRight) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.rotateleft) {
+      } else if (statement[0] === InstructionType.rotateleft) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.rotateRight) {
+      } else if (statement[0] === InstructionType.rotateRight) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.absolute) {
+      } else if (statement[0] === InstructionType.absolute) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.negate) {
+      } else if (statement[0] === InstructionType.negate) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.floor) {
+      } else if (statement[0] === InstructionType.floor) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.truncate) {
+      } else if (statement[0] === InstructionType.truncate) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.nearest) {
+      } else if (statement[0] === InstructionType.nearest) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.sqrt) {
+      } else if (statement[0] === InstructionType.sqrt) {
         const [, target, arg] = statement;
-      }
-      if (statement[0] === InstructionType.minimum) {
+      } else if (statement[0] === InstructionType.minimum) {
         const [, target, lhs, rhs] = statement;
-      }
-      if (statement[0] === InstructionType.maximum) {
+      } else if (statement[0] === InstructionType.maximum) {
         const [, target, lhs, rhs] = statement;
       }
       if (!isPhiNode(statement)) {
@@ -823,5 +782,52 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
     }
     const parentBuilder = getSequenceBuilder();
     parentBuilder.loop(NonValueResultType.empty, builder);
+  } else if (block.type === BlockType.if) {
+    prepareStack([block.condition]);
+    environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
+    environment.stack.push([]);
+    for (const b of block.blocks) {
+      compileBlock(environment, b);
+    }
+    clearStack(environment.statementIndex);
+    const builder = environment.sequenceBuilderStack.pop();
+    const stack = environment.stack.pop();
+    if (builder === undefined) {
+      throw new Error();
+    }
+    if (stack === undefined) {
+      throw new Error();
+    }
+    const parentBuilder = getSequenceBuilder();
+    parentBuilder.if(NonValueResultType.empty, builder);
+  } else if (block.type === BlockType.ifelse) {
+    prepareStack([block.condition]);
+
+    environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
+    environment.stack.push([]);
+    for (const b of block.true) {
+      compileBlock(environment, b);
+    }
+    clearStack(environment.statementIndex);
+    const trueBuilder = environment.sequenceBuilderStack.pop();
+    environment.stack.pop();
+    if (trueBuilder === undefined) {
+      throw new Error();
+    }
+
+    environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
+    environment.stack.push([]);
+    for (const b of block.false) {
+      compileBlock(environment, b);
+    }
+    clearStack(environment.statementIndex);
+    const falseBuilder = environment.sequenceBuilderStack.pop();
+    environment.stack.pop();
+    if (falseBuilder === undefined) {
+      throw new Error();
+    }
+
+    const parentBuilder = getSequenceBuilder();
+    parentBuilder.ifElse(NonValueResultType.empty, trueBuilder, falseBuilder);
   }
 }
