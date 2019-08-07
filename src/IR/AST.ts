@@ -132,8 +132,10 @@ export enum BlockType {
   basic,
   loop,
   breakble,
+  if,
+  ifelse,
 }
-export type Block = IBasicBlock | ILoopBlock | IBreakableBlock;
+export type Block = IBasicBlock | ILoopBlock | IBreakableBlock | IIfBlock | IIfElseBlock;
 export interface IBasicBlock {
   type: BlockType.basic;
   statements: SSAStatement[];
@@ -144,5 +146,13 @@ export interface ILoopBlock {
 }
 export interface IBreakableBlock {
   type: BlockType.breakble;
+  blocks: Block[];
+}
+export interface IIfBlock {
+  type: BlockType.if;
+  blocks: Block[];
+}
+export interface IIfElseBlock {
+  type: BlockType.ifelse;
   blocks: Block[];
 }
