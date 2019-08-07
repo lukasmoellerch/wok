@@ -23,6 +23,7 @@
   "homepage": "https://github.com/LukasM01/Selvet#readme",
   "devDependencies": {
     "@types/jest": "^24.0.16",
+    "gulp": "^4.0.2",
     "jest": "^24.8.0",
     "ts-jest": "^24.0.2",
     "tsc": "^1.20150623.0",
