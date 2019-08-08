@@ -1,4 +1,4 @@
-import { Expression, ICodeSection, ICustomSection, IDataSection, IDataSegment, IElement, IElementSection, IExport, IExportSection, IFunction, IFunctionSection, IFunctionType, IGlobal, IGlobalSection, IImport, IImportSection, ILocal, IModule, IStartSection, ITableSection, ITableType, ITypeSection, Section } from "./AST";
+import { Expression, ICodeSection, ICustomSection, IDataSection, IDataSegment, IElement, IElementSection, IExport, IExportSection, IFunction, IFunctionSection, IFunctionType, IGlobal, IGlobalSection, IImport, IImportSection, ILimit, ILocal, IMemorySection, IModule, IStartSection, ITableSection, ITableType, ITypeSection, Section } from './AST';
 import { functionTypesAreEqual } from "./ASTUtils";
 import { ExportDescription, GlobalTypeMutability, ImportDescription, Instruction, Section as SectionId, ValueType } from "./Encoding/Constants";
 import { encodeModule } from "./Encoding/Encoder";
@@ -225,5 +225,13 @@ export class ASTBuilder {
     builder.consumer.write(Instruction.blockend);
     const buffer = builder.instructions;
     return this.addGlobal(ValueType.f64, mutabiltiy, buffer);
+  }
+  public addMemorySection(memories: ILimit[]): IMemorySection {
+    const section: IMemorySection = {
+      sectionId: SectionId.memory,
+      memories,
+    };
+    this.sections.push(section);
+    return section;
   }
 }
