@@ -1,9 +1,9 @@
 import * as Constants from "./Encoding/Constants";
-import { TableType, Limit as LimitType } from "./Encoding/Constants";
+import { Limit as LimitType, TableType } from "./Encoding/Constants";
 export interface IModule {
   sections: Section[];
 }
-export interface IGenericSection {}
+export interface IGenericSection { }
 export type Section =
   | ICustomSection
   | IFunctionSection
@@ -159,7 +159,7 @@ export interface IMemoryArgument {
   offset: number;
 }
 export interface IDataSegment {
-  x: number;
+  memIndex: number;
   offset: Expression;
   data: Uint8Array;
 }
