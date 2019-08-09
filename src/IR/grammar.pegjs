@@ -40,7 +40,7 @@ BlockArray
     return buildList(head, tail, 1)  
   }
 Block
-  = BasicBlock / BreakableBlock / LoopBlock
+  = BasicBlock / BreakableBlock / LoopBlock / IfBlock / IfElseBlock
 BasicBlock
   = _ head:Statement tail:(_ Statement)* {
     return {
@@ -60,6 +60,23 @@ BreakableBlock
     return {
       type: 2,
       blocks,
+    }
+  }
+IfBlock
+  = _ "if" _ condition:Variable _ "{" _ a:BlockArray _ "}" _ {
+    return {
+      type: 3,
+      condition,
+      blocks: a,
+    }
+  }
+IfElseBlock
+  = _ "ifelse" _ condition:Variable _ "{" _ a:BlockArray _ "}" _ "else" _ "{" _ b:BlockArray _ "}" {
+    return {
+      type: 4,
+      condition,
+      true: a,
+      false: b
     }
   }
 Statement
