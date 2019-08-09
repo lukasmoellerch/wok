@@ -1,16 +1,27 @@
+import { readFile, writeFile } from "fs";
+import { promisify } from "util";
+import { ICompilationUnit } from "./IR/AST";
+import { compileIR } from "./IR/IRCompiler";
+import { parse } from "./IR/Parser";
+import { encodeModule } from "./WASM/Encoding/Encoder";
+import { TypedArrayBytestreamConsumer } from "./WASM/Encoding/TypedArrayBytestreamConsumer";
+
 declare const WebAssembly: any;
 export default async function main() {
-
-  /*const builder = new ASTBuilder();
-  const i32 = ValueType.i32;
-  const mainFunction = new InstructionSequenceBuilder();
-  mainFunction.localGet(0);
-  mainFunction.localGet(1);
-  mainFunction.numeric(Instruction.i32DivideUnsigned);
-  mainFunction.consumer.write(Instruction.blockend);
-  builder.addFunction("main", builder.functionTypeIndex([i32, i32], i32), [], mainFunction.instructions);
-  console.log(builder.module);
-  const module = new WebAssembly.Module(builder.encodedModule);
-  const instance = new WebAssembly.Instance(module);
-  console.log(instance.exports.main(12, 2));*/
+  const content = await promisify(readFile)(process.argv[2]);
+  const ir: ICompilationUnit = parse(content.toString());
+  const wsamModule = compileIR(ir);
+  const consumer = new TypedArrayBytestreamConsumer();
+  encodeModule(wsamModule, consumer);
+  const encoded = consumer.cleanArray;
+  await promisify(writeFile)(process.argv[3], encoded);
+  const module = new WebAssembly.Module(encoded);
+  const instance = new WebAssembly.Instance(module, {
+    env: {
+      printInteger(i: number) {
+        console.log(i);
+      },
+    },
+  });
+  // instance.exports.main(12);
 }
