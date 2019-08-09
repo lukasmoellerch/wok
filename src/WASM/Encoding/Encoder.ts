@@ -97,8 +97,9 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
   } else if (section.sectionId === SectionId.data) {
     encodeNumberAsUnsignedLEB128(section.segments.length, sectionBuffer);
     for (const segment of section.segments) {
-      encodeNumberAsUnsignedLEB128(segment.x, sectionBuffer);
+      encodeNumberAsUnsignedLEB128(segment.memIndex, sectionBuffer);
       sectionBuffer.write([...segment.offset]);
+      encodeNumberAsUnsignedLEB128(segment.data.length, sectionBuffer);
       sectionBuffer.write([...segment.data]);
     }
   }
