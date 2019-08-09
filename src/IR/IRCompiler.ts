@@ -1,7 +1,9 @@
-import { ILocal, IModule } from "../WASM/AST";
+import { ILimit, ILocal, IModule } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
-import { Instruction, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
+import { Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
+import { TypedArrayBytestreamConsumer } from "../WASM/Encoding/TypedArrayBytestreamConsumer";
+import { encodeUTF8String } from '../WASM/Encoding/Utils';
 import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Type, Variable } from "./AST";
 import { getWrittenVariables, irFunctionTypesAreEqual, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
 import { allocateVirtualRegistersToVariables, IBucket } from "./VirtualRegisterAllocator";
@@ -28,6 +30,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
 
   const wasmFunctionTypes: Array<[FunctionType, number]> = [];
   const wasmBuilder = new ASTBuilder();
+
   for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
     const type = externalFunctionDeclaration.type;
     let index = -1;
@@ -50,6 +53,19 @@ export function compileIR(ir: ICompilationUnit): IModule {
     }
     wasmBuilder.addFunctionImport("env", externalFunctionDeclaration.externalName, index);
   }
+
+  wasmBuilder.addFunctionSection();
+
+  const memory: ILimit = {
+    kind: Limit.minimumAndMaximum,
+    min: 1,
+    max: 1,
+  };
+  wasmBuilder.addMemorySection([memory]);
+  const memoryIndex = 0;
+
+  const constantMemoryOffset = 0;
+  const dataSegments = new TypedArrayBytestreamConsumer();
 
   for (const fn of ir.functionCode) {
     const functionType = functionIdentifierTypeMapping.get(fn.identifier);
@@ -130,6 +146,18 @@ export function compileIR(ir: ICompilationUnit): IModule {
     }
     wasmBuilder.addFunction(wasmFunctionIndex, fn.identifier, index, locals, sequenceBuilder.instructions);
   }
+
+  encodeUTF8String("Hello World", dataSegments);
+
+  const dataSection = wasmBuilder.addDataSection();
+  const constantOffsetInstructionBuilder = new InstructionSequenceBuilder();
+  constantOffsetInstructionBuilder.i32Const(0);
+  constantOffsetInstructionBuilder.end();
+  dataSection.segments.push({
+    memIndex: 0,
+    offset: constantOffsetInstructionBuilder.instructions,
+    data: dataSegments.cleanArray,
+  });
   return wasmBuilder.module;
 }
 export interface ICompilationEnvironment {
@@ -892,16 +920,100 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(target);
       } else if (statement[0] === InstructionType.absolute) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Absolute);
+          } else {
+            builder.numeric(Instruction.f64Absolute);
+          }
+        } else {
+          throw new Error("Abs is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.negate) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Negate);
+          } else {
+            builder.numeric(Instruction.f64Negate);
+          }
+        } else {
+          throw new Error("Negate is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.floor) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Floor);
+          } else {
+            builder.numeric(Instruction.f64Floor);
+          }
+        } else {
+          throw new Error("Floor is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.truncate) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Truncate);
+          } else {
+            builder.numeric(Instruction.f64Truncate);
+          }
+        } else {
+          throw new Error("Truncate is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.nearest) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Nearest);
+          } else {
+            builder.numeric(Instruction.f64Nearest);
+          }
+        } else {
+          throw new Error("Nearest is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.sqrt) {
         const [, target, arg] = statement;
+        const type = typeOf(arg);
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([arg]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32SquareRoot);
+          } else {
+            builder.numeric(Instruction.f64SquareRoot);
+          }
+        } else {
+          throw new Error("Sqrt is not defined for integers right now.");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.minimum) {
         const [, target, lhs, rhs] = statement;
       } else if (statement[0] === InstructionType.maximum) {
