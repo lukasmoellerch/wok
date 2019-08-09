@@ -1,4 +1,4 @@
-import { Expression, ICodeSection, ICustomSection, IDataSection, IDataSegment, IElement, IElementSection, IExport, IExportSection, IFunction, IFunctionSection, IFunctionType, IGlobal, IGlobalSection, IImport, IImportSection, ILimit, ILocal, IMemorySection, IModule, IStartSection, ITableSection, ITableType, ITypeSection, Section } from './AST';
+import { Expression, ICodeSection, ICustomSection, IDataSection, IDataSegment, IElement, IElementSection, IExport, IExportSection, IFunction, IFunctionSection, IFunctionType, IGlobal, IGlobalSection, IImport, IImportSection, ILimit, ILocal, IMemorySection, IModule, IStartSection, ITableSection, ITableType, ITypeSection, Section } from "./AST";
 import { functionTypesAreEqual } from "./ASTUtils";
 import { ExportDescription, GlobalTypeMutability, ImportDescription, Instruction, Section as SectionId, ValueType } from "./Encoding/Constants";
 import { encodeModule } from "./Encoding/Encoder";
@@ -6,7 +6,7 @@ import { InstructionSequenceBuilder } from "./Encoding/InstructionSequenceBuilde
 import { TypedArrayBytestreamConsumer } from "./Encoding/TypedArrayBytestreamConsumer";
 
 export class ASTBuilder {
-  private sections: Section[] = [];
+  public sections: Section[] = [];
   private defaultTypeSection: ITypeSection | null = null;
   private defaultFunctionSection: IFunctionSection | null = null;
   private defaultCodeSection: ICodeSection | null = null;
@@ -67,7 +67,7 @@ export class ASTBuilder {
       sectionId: SectionId.function,
       functions,
     };
-    if (this.defaultTypeSection === null) {
+    if (this.defaultFunctionSection === null) {
       this.defaultFunctionSection = section;
     }
     this.sections.push(section);
