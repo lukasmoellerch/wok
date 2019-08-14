@@ -26,4 +26,10 @@ export class ASTNode implements IASTNode {
     }
     return attribute as IAttributeMap[T];
   }
+  public setAttribute(attribute: ITypeAttribute) {
+    this.attributes.set(attribute.kind, attribute);
+  }
+  public deleteAttribute<T extends keyof IAttributeMap>(kind: T) {
+    this.attributes.delete(kind);
+  }
 }
