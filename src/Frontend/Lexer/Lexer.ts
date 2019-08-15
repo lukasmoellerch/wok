@@ -72,7 +72,6 @@ export class Lexer {
   public dotOperator(): Token | undefined {
     return this.regexReturnToken(TokenTag.dotOperator, this.dotOperatorRegex);
   }
-
   public leftParenthesis(): Token | undefined {
     return this.regexReturnToken(TokenTag.dotOperator, this.leftParenthesisRegex);
   }
