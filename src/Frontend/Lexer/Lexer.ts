@@ -124,6 +124,9 @@ export class Lexer {
     const token = new Token(TokenTag.keyword, result, range);
     return token;
   }
+  public eof(): boolean {
+    return this.sourceStringOffset >= this.sourceString.length;
+  }
 
   private regex(regex: RegExp): string | undefined {
     regex.lastIndex = this.sourceStringOffset;
