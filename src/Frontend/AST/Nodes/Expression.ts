@@ -1,2 +1,2 @@
-import { Statement } from "./Statement";
-export class Expression extends Statement { }
+import { ASTNode } from "../ASTNode";
+export class Expression extends ASTNode { }
