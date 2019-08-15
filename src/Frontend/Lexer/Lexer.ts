@@ -109,6 +109,21 @@ export class Lexer {
   public numberSign(): Token | undefined {
     return this.regexReturnToken(TokenTag.dotOperator, this.numberSignRegex);
   }
+  public keyword(str: string): Token | undefined {
+    const start = this.getCurrentLocation();
+    const result = this.regex(this.identifierRegex);
+    if (result === undefined) {
+      return undefined;
+    }
+    if (result !== str) {
+      return undefined;
+    }
+    this.advance(result);
+    const end = this.getCurrentLocation();
+    const range = new SourceRange(start, end);
+    const token = new Token(TokenTag.keyword, result, range);
+    return token;
+  }
 
   private regex(regex: RegExp): string | undefined {
     regex.lastIndex = this.sourceStringOffset;
