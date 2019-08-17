@@ -1,0 +1,5 @@
+function a(i: String, b: Int) {
+  a + 34 * 64
+  b - 2
+  a(3 +5, b*2)
+}

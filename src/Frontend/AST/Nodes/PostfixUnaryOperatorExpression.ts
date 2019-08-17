@@ -7,5 +7,6 @@ export class PostfixUnaryOperatorExpression extends Expression {
     super();
     this.operand = operand;
     this.operator = operator;
+    this.children = [operand, operator];
   }
 }

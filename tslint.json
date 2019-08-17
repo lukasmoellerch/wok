@@ -6,7 +6,8 @@
     "semicolon": [true, "always"],
     "max-line-length": false,
     "object-literal-sort-keys": false,
-    "no-bitwise": false
+    "no-bitwise": false,
+    "max-classes-per-file": false
   },
   "rulesDirectory": []
 }

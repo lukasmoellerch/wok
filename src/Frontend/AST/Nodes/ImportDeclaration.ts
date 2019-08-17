@@ -8,5 +8,6 @@ export class ImportDelaraction extends ASTNode implements ITopLevelDeclaration {
   constructor(importKeyword: Token) {
     super();
     this.importKeyword = importKeyword;
+    this.children = [importKeyword];
   }
 }

@@ -1,13 +1,15 @@
 import { Token } from "../../Lexer/Token";
+import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
 import { ASTNode } from "../ASTNode";
-import { SpecializedTypeReference } from "./SpecializedTypeReference";
+import { TypeAttribute } from "../Attributes/TypeAttribute";
 export class FunctionArgumentDeclaration extends ASTNode {
   public name: Token;
-  public type: SpecializedTypeReference;
-  constructor(name: Token, type: SpecializedTypeReference) {
+  public type: TypeExpression;
+  constructor(name: Token, type: TypeExpression) {
     super();
     this.name = name;
     this.type = type;
-    this.children = [type];
+    this.children = [name, type];
+    this.setAttribute(new TypeAttribute(type));
   }
 }

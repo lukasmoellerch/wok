@@ -7,5 +7,6 @@ export class PrefixUnaryOperatorExpression extends Expression {
     super();
     this.operand = operand;
     this.operator = operator;
+    this.children = [operator, operand];
   }
 }

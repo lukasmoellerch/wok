@@ -1,21 +1,22 @@
+import * as chalk from "chalk";
+import { TokenContentAttribute } from "./Attributes/TokenContentAttribute";
+import { TypeAttribute } from "./Attributes/TypeAttribute";
+
+const astNodeNameStyle = chalk.default.red;
+
 export interface IASTNode {
   attributes: Map<keyof IAttributeMap, IAttribute>;
   children: IASTNode[];
+  toString(prefix: string, first: boolean, last: boolean): string;
 }
 interface IAttributeMap {
-  type: ITypeAttribute;
-  name: INameAttribute;
+  type: TypeAttribute;
+  tokenContent: TokenContentAttribute;
 }
-interface IAttribute {
+export interface IAttribute {
   kind: keyof IAttributeMap;
+  toString(): string;
 }
-interface ITypeAttribute extends IAttribute {
-  type: number;
-}
-interface INameAttribute extends IAttribute {
-  name: string;
-}
-
 export class ASTNode implements IASTNode {
   public attributes: Map<keyof IAttributeMap, IAttribute> = new Map();
   public children: IASTNode[] = [];
@@ -26,10 +27,58 @@ export class ASTNode implements IASTNode {
     }
     return attribute as IAttributeMap[T];
   }
-  public setAttribute(attribute: ITypeAttribute) {
+  public setAttribute(attribute: IAttribute) {
     this.attributes.set(attribute.kind, attribute);
   }
   public deleteAttribute<T extends keyof IAttributeMap>(kind: T) {
     this.attributes.delete(kind);
+  }
+  public toString(prefix: string, first: boolean, last: boolean): string {
+    let str = "";
+    str += prefix;
+
+    let newPrefix = prefix;
+    if (last) {
+      newPrefix += "   ";
+      if (this.children.length > 0) {
+        if (first) {
+          str += " └─ ";
+        } else {
+          str += " └─ ";
+        }
+      } else {
+        str += " └─ ";
+      }
+
+    } else {
+      newPrefix += " │  ";
+      if (this.children.length > 0) {
+        if (first) {
+          str += " ├─ ";
+        } else {
+          str += " ├─ ";
+        }
+
+      } else {
+        str += " ├─ ";
+      }
+    }
+
+    str += astNodeNameStyle(this.constructor.name);
+
+    str += " ";
+    for (const attribute of this.attributes.values()) {
+      str += attribute.toString();
+      str += " ";
+    }
+
+    str += "\n";
+
+    let i = 0;
+    for (const child of this.children) {
+      str += child.toString(newPrefix, i === 0, i === (this.children.length - 1));
+      i++;
+    }
+    return str;
   }
 }

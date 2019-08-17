@@ -8,6 +8,6 @@ export class ExpressionWrapper extends Statement {
   constructor(tokens: Token[]) {
     super();
     this.tokens = tokens;
-    this.children = [];
+    this.children = tokens;
   }
 }

@@ -9,5 +9,6 @@ export class BinaryOperatorExpression extends Expression {
     this.lhs = lhs;
     this.rhs = rhs;
     this.operator = operator;
+    this.children = [lhs, operator, rhs];
   }
 }

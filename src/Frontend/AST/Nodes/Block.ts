@@ -10,6 +10,6 @@ export class Block extends ASTNode {
     this.startToken = startToken;
     this.statemets = statements;
     this.endToken = endToken;
-    this.children = statements;
+    this.children = [startToken, ...statements, endToken];
   }
 }
