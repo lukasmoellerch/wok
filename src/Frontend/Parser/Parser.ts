@@ -246,7 +246,7 @@ export class Parser {
     }
     return undefined;
   }
-  public parseIfStatement(ifToken: Token) {
+  public parseIfStatement() {
     this.lexer.whitespace();
     const { tokens, leftCurlyBracket } = this.parseExpressionTokensUntilBlock();
     const expressionWrapper = new ExpressionWrapper(tokens);
