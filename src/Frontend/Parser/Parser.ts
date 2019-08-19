@@ -1,5 +1,6 @@
 import { ITopLevelDeclaration } from "../AST/AST";
 import { Block } from "../AST/Nodes/Block";
+import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/EpxressionWrapper";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { IfStatement } from "../AST/Nodes/IfStatement";
@@ -12,7 +13,7 @@ import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { Token, TokenTag } from "../Lexer/Token";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeReferenceExpression } from "../Type/UnresolvedType/TypeReferenceExpression";
-import { ParserError, WrongTokenError } from "./ParserError";
+import { ExpectedExpression, ParserError, WrongTokenError } from "./ParserError";
 export class Parser {
   public lexer: Lexer;
   public errors: ParserError[] = [];
@@ -273,8 +274,40 @@ export class Parser {
   public parseForStatement() {
 
   }
-  public parseConstantDeclaration() {
-
+  public parseConstantDeclaration(constantKeyword: Token): ConstantDeclaration {
+    this.lexer.whitespace();
+    const identifier = this.lexer.identifier() || new PlaceholderToken(this.lexer);
+    if (identifier instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(identifier.range, [TokenTag.identifier]));
+    }
+    this.lexer.whitespace();
+    const colon = this.lexer.colon();
+    if (colon !== undefined) {
+      this.lexer.whitespace();
+      const typeHint = this.parseType();
+      this.lexer.whitespace();
+      const assignmentOperator = this.lexer.assignment() || new PlaceholderToken(this.lexer);
+      if (assignmentOperator instanceof PlaceholderToken) {
+        this.errors.push(new WrongTokenError(assignmentOperator.range, [TokenTag.assignment]));
+      }
+      this.lexer.whitespace();
+      const value = this.parseExpressionWrapper() || new ExpressionWrapper([]);
+      if (value.tokens.length === 0) {
+        this.errors.push(new ExpectedExpression(new PlaceholderToken(this.lexer).range));
+      }
+      return new ConstantDeclaration(constantKeyword, identifier, colon, typeHint, assignmentOperator, value);
+    } else {
+      const assignmentOperator = this.lexer.assignment() || new PlaceholderToken(this.lexer);
+      if (assignmentOperator instanceof PlaceholderToken) {
+        this.errors.push(new WrongTokenError(assignmentOperator.range, [TokenTag.assignment]));
+      }
+      this.lexer.whitespace();
+      const value = this.parseExpressionWrapper() || new ExpressionWrapper([]);
+      if (value.tokens.length === 0) {
+        this.errors.push(new ExpectedExpression(new PlaceholderToken(this.lexer).range));
+      }
+      return new ConstantDeclaration(constantKeyword, identifier, undefined, undefined, assignmentOperator, value);
+    }
   }
   public parseVariableDeclaration() {
 

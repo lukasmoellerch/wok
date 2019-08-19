@@ -7,6 +7,14 @@ export class ParserError {
     return "unknown error";
   }
 }
+export class ExpectedExpression extends ParserError {
+  constructor(range: SourceRange) {
+    super(range);
+  }
+  public toString(): string {
+    return "Expected expression but no matching tokens were found";
+  }
+}
 export class WrongTokenError extends ParserError {
   constructor(range: SourceRange, public expected: Array<TokenTag | string>) {
     super(range);
