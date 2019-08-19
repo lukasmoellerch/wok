@@ -1,9 +1,16 @@
 import { readFile } from "fs";
 import { promisify } from "util";
 import { Lexer } from "./Frontend/Lexer/Lexer";
-import { ErrorFormatter } from './Frontend/Parser/ErrorFormatter';
+import { ErrorFormatter } from "./Frontend/Parser/ErrorFormatter";
 import { Parser } from "./Frontend/Parser/Parser";
 
+/*import { readFile } from "fs";
+import { promisify } from "util";
+import { Lexer } from "./Frontend/Lexer/Lexer";
+import { ErrorFormatter } from './Frontend/Parser/ErrorFormatter';
+import { Parser } from "./Frontend/Parser/Parser";
+import { BigUInt } from './Support/Math/BigUInt';
+*/
 declare const WebAssembly: any;
 export default async function main() {
   const path = process.argv[2];
@@ -14,5 +21,5 @@ export default async function main() {
   console.log(result.toString("", true, true));
   const errorFormatter = new ErrorFormatter(lexer.sourceString, path, parser.errors);
   console.log(errorFormatter.toString());
-  // instance.exports.main(12);
+  // instance.exports.main(12);*/
 }
