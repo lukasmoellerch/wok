@@ -6,6 +6,7 @@ import { IfStatement } from "../AST/Nodes/IfStatement";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { Statement } from "../AST/Nodes/Statement";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
+import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { Token, TokenTag } from "../Lexer/Token";
@@ -260,8 +261,14 @@ export class Parser {
     this.lexer.lineBreak();
     return new IfStatement(ifKeyword, condition, block);
   }
-  public parseWhileStatement() {
-
+  public parseWhileStatement(whileKeyword: Token): WhileStatement {
+    this.lexer.whitespace();
+    const { tokens, leftCurlyBracket } = this.parseExpressionTokensUntilBlock();
+    const condition = new ExpressionWrapper(tokens);
+    this.lexer.whitespace();
+    const block = this.parseBlock(leftCurlyBracket);
+    this.lexer.lineBreak();
+    return new WhileStatement(whileKeyword, condition, block);
   }
   public parseForStatement() {
 
