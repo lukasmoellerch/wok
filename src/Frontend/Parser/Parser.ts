@@ -2,6 +2,7 @@ import { ITopLevelDeclaration } from "../AST/AST";
 import { Block } from "../AST/Nodes/Block";
 import { ExpressionWrapper } from "../AST/Nodes/EpxressionWrapper";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
+import { IfStatement } from "../AST/Nodes/IfStatement";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { Statement } from "../AST/Nodes/Statement";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
@@ -127,6 +128,10 @@ export class Parser {
 
   }
   public parseStatement(): Statement | undefined {
+    const ifKeyword = this.lexer.keyword("if");
+    if (ifKeyword !== undefined) {
+      return this.parseIfStatement(ifKeyword);
+    }
     return this.parseExpressionWrapper();
   }
   public parseExpressionWrapper(): ExpressionWrapper | undefined {
@@ -246,14 +251,14 @@ export class Parser {
     }
     return undefined;
   }
-  public parseIfStatement() {
+  public parseIfStatement(ifKeyword: Token): IfStatement {
     this.lexer.whitespace();
     const { tokens, leftCurlyBracket } = this.parseExpressionTokensUntilBlock();
-    const expressionWrapper = new ExpressionWrapper(tokens);
+    const condition = new ExpressionWrapper(tokens);
     this.lexer.whitespace();
     const block = this.parseBlock(leftCurlyBracket);
     this.lexer.lineBreak();
-
+    return new IfStatement(ifKeyword, condition, block);
   }
   public parseWhileStatement() {
 
