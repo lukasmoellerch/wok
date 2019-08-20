@@ -19,34 +19,34 @@ export interface IGroupedString {
 
 export class Lexer {
   public sourceString: string;
-  private sourceStringOffset: number;
-  private sourcePath: string;
-  private line: number;
-  private column: number;
-  private newlineRegex = /(\r\n|\r|\n)/g;
-  private whitespaceRegex = /[ \t]+/g;
-  private lineBreakRegex = /(\r\n|\r|\n)+/g;
-  private commentRegex = /\/\*(\*(?!\/)|[^*])*\*\//g;
-  private identifierRegex = /[_a-zA-Z][_a-zA-Z0-9]*/g;
-  private integerLiteralRegex = /(0|[1-9][0-9]*|0[oO]?[0-7]+|0[xX][0-9a-fA-F]+|0[bB][01]+)[lL]?/g;
-  private floatingPointerLiteralRegex = /[+-]?([0-9]*[.])?[0-9]+/g;
-  private stringLiteralRegex = /\"(([^\"]|\\\")*[^\\])?\"/g;
-  private booleanLiteralRegex = /(true|false)/g;
-  private nilLiteralRegex = /nil/g;
-  private operatorRegex = /[=+!*%<>&|^~?-]+/g;
-  private dotOperatorRegex = /\./g;
-  private leftParenthesisRegex = /\(/g;
-  private rightParenthesisRegex = /\)/g;
-  private leftSquareBracketRegex = /\[/g;
-  private rightSquareBracketRegex = /\]/g;
-  private leftCurlyBracketRegex = /\{/g;
-  private rightCurlyBracketRegex = /\}/g;
-  private commaRegex = /\,/g;
-  private colonRegex = /\:/g;
-  private semicolonRegex = /\;/g;
-  private assignmentRegex = /=/g;
-  private atRegex = /@/g;
-  private numberSignRegex = /#/g;
+  public line: number;
+  public column: number;
+  protected whitespaceRegex = /[ \t]+/g;
+  protected sourceStringOffset: number;
+  protected sourcePath: string;
+  protected newlineRegex = /(\r\n|\r|\n)/g;
+  protected lineBreakRegex = /(\r\n|\r|\n)+/g;
+  protected commentRegex = /\/\*(\*(?!\/)|[^*])*\*\//g;
+  protected identifierRegex = /[_a-zA-Z][_a-zA-Z0-9]*/g;
+  protected integerLiteralRegex = /(0|[1-9][0-9]*|0[oO]?[0-7]+|0[xX][0-9a-fA-F]+|0[bB][01]+)[lL]?/g;
+  protected floatingPointerLiteralRegex = /[+-]?([0-9]*[.])?[0-9]+/g;
+  protected stringLiteralRegex = /\"(([^\"]|\\\")*[^\\])?\"/g;
+  protected booleanLiteralRegex = /(true|false)/g;
+  protected nilLiteralRegex = /nil/g;
+  protected operatorRegex = /[=+!*%<>&|^~?-]+/g;
+  protected dotOperatorRegex = /\./g;
+  protected leftParenthesisRegex = /\(/g;
+  protected rightParenthesisRegex = /\)/g;
+  protected leftSquareBracketRegex = /\[/g;
+  protected rightSquareBracketRegex = /\]/g;
+  protected leftCurlyBracketRegex = /\{/g;
+  protected rightCurlyBracketRegex = /\}/g;
+  protected commaRegex = /\,/g;
+  protected colonRegex = /\:/g;
+  protected semicolonRegex = /\;/g;
+  protected assignmentRegex = /=/g;
+  protected atRegex = /@/g;
+  protected numberSignRegex = /#/g;
   private tokenizationMethods: Array<[TokenTag, (() => Token | undefined)]> = [
     [TokenTag.whitespace, this.whitespace],
     [TokenTag.lineBreak, this.lineBreak],
