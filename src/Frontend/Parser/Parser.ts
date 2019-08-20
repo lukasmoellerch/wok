@@ -4,6 +4,9 @@ import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/EpxressionWrapper";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { IfStatement } from "../AST/Nodes/IfStatement";
+import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
+import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
+import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { Statement } from "../AST/Nodes/Statement";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
@@ -29,9 +32,27 @@ export class Parser {
       if (functionToken !== undefined) {
         const functionDeclaration = this.parseFunction(functionToken);
         topLevelDeclarations.push(functionDeclaration);
-      } else {
-        break;
+        continue;
       }
+      const prefixToken = this.lexer.keyword("prefix");
+      if (prefixToken !== undefined) {
+        const prefixOperatorDeclaration = this.parsePrefixOperatorDeclaration(prefixToken);
+        topLevelDeclarations.push(prefixOperatorDeclaration);
+        continue;
+      }
+      const infixToken = this.lexer.keyword("infix");
+      if (infixToken !== undefined) {
+        const infixOperatorDeclaration = this.parseInfixOperatorDeclaration(infixToken);
+        topLevelDeclarations.push(infixOperatorDeclaration);
+        continue;
+      }
+      const postfixToken = this.lexer.keyword("postfix");
+      if (postfixToken !== undefined) {
+        const postfixOperatorDeclaration = this.parsePostfixOperatorDeclaration(postfixToken);
+        topLevelDeclarations.push(postfixOperatorDeclaration);
+        continue;
+      }
+
     }
     const sourceFile = new SourceFile(topLevelDeclarations);
     return sourceFile;
@@ -356,5 +377,67 @@ export class Parser {
       }
       return new VariableDeclaration(variableKeyword, identifier, undefined, undefined, assignmentOperator, value);
     }
+  }
+  public parsePrefixOperatorDeclaration(keyword: Token): PrefixOperatorDeclaration {
+    this.lexer.whitespace();
+    const operatorKeyword = this.lexer.keyword("operator") || new PlaceholderToken(this.lexer);
+    if (operatorKeyword instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorKeyword.range, ["operator"]));
+    }
+    this.lexer.whitespace();
+    const operatorToken = this.lexer.operator() || new PlaceholderToken(this.lexer);
+    if (operatorToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorToken.range, [TokenTag.operator]));
+    }
+    const lineBreak = this.lexer.lineBreak() || new PlaceholderToken(this.lexer);
+    if (lineBreak instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(lineBreak.range, [TokenTag.lineBreak]));
+    }
+    return new PrefixOperatorDeclaration(keyword, operatorKeyword, operatorToken);
+  }
+  public parsePostfixOperatorDeclaration(keyword: Token): PostfixOperatorDeclaration {
+    this.lexer.whitespace();
+    const operatorKeyword = this.lexer.keyword("operator") || new PlaceholderToken(this.lexer);
+    if (operatorKeyword instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorKeyword.range, ["operator"]));
+    }
+    this.lexer.whitespace();
+    const operatorToken = this.lexer.operator() || new PlaceholderToken(this.lexer);
+    if (operatorToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorToken.range, [TokenTag.operator]));
+    }
+    const lineBreak = this.lexer.lineBreak() || new PlaceholderToken(this.lexer);
+    if (lineBreak instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(lineBreak.range, [TokenTag.lineBreak]));
+    }
+    return new PostfixOperatorDeclaration(keyword, operatorKeyword, operatorToken);
+  }
+  public parseInfixOperatorDeclaration(keyword: Token): InfixOperatorDeclaration {
+    this.lexer.whitespace();
+    const operatorKeyword = this.lexer.keyword("operator") || new PlaceholderToken(this.lexer);
+    if (operatorKeyword instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorKeyword.range, ["operator"]));
+    }
+    this.lexer.whitespace();
+    const operatorToken = this.lexer.operator() || new PlaceholderToken(this.lexer);
+    if (operatorToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(operatorToken.range, [TokenTag.operator]));
+    }
+    this.lexer.whitespace();
+    const precedence = this.lexer.integerLiteral() || new PlaceholderToken(this.lexer);
+    if (precedence instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(precedence.range, [TokenTag.integerLiteral]));
+    }
+    this.lexer.whitespace();
+    const assoc = this.lexer.keyword("left") || this.lexer.keyword("right") || new PlaceholderToken(this.lexer);
+    if (assoc instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(assoc.range, ["left", "right"]));
+    }
+    this.lexer.whitespace();
+    const lineBreak = this.lexer.lineBreak() || new PlaceholderToken(this.lexer);
+    if (lineBreak instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(lineBreak.range, [TokenTag.lineBreak]));
+    }
+    return new InfixOperatorDeclaration(keyword, operatorKeyword, operatorToken, precedence, assoc);
   }
 }
