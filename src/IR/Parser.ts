@@ -5,7 +5,6 @@ export function parse(input: string): ICompilationUnit {
   try {
     return grammar.parse(input) as ICompilationUnit;
   } catch (ex) {
-    console.log(ex.location);
     throw ex as grammar.SyntaxError;
   }
 }
