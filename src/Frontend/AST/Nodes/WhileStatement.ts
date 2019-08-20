@@ -1,6 +1,6 @@
 import { Token } from "../../Lexer/Token";
 import { Block } from "./Block";
-import { ExpressionWrapper } from "./EpxressionWrapper";
+import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class WhileStatement extends Statement {
