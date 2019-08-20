@@ -1,6 +1,6 @@
 import { Token } from "../../Lexer/Token";
 import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
-import { ExpressionWrapper } from "./EpxressionWrapper";
+import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class VariableDeclaration extends Statement {
