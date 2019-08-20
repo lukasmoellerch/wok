@@ -58,11 +58,6 @@ export class BigDecimalInt extends BigDecimalUInt {
     const [high1, low1] = this.splitAt(m2);
     const [high2, low2] = other.splitAt(m2);
 
-    console.log();
-    console.log(this.buffer.array);
-    console.log(m2);
-    console.log(high1.buffer.array, low1.buffer.array);
-
     const z0 = low1.karatsuba(low2);
     const z1 = (low1.addS(high1)).karatsuba((low2.addS(high2)));
     const z2 = high1.karatsuba(high2);
