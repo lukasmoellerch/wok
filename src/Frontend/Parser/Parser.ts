@@ -285,7 +285,7 @@ export class Parser {
     return new WhileStatement(whileKeyword, condition, block);
   }
   public parseForStatement() {
-
+    return;
   }
   public parseConstantDeclaration(constantKeyword: Token): ConstantDeclaration {
     this.lexer.whitespace();
