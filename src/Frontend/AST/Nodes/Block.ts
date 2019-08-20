@@ -4,11 +4,11 @@ import { Statement } from "./Statement";
 export class Block extends ASTNode {
   public startToken: Token;
   public endToken: Token;
-  public statemets: Statement[];
+  public statements: Statement[];
   constructor(startToken: Token, statements: Statement[], endToken: Token) {
     super();
     this.startToken = startToken;
-    this.statemets = statements;
+    this.statements = statements;
     this.endToken = endToken;
     this.children = [startToken, ...statements, endToken];
   }
