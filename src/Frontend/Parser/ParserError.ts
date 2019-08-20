@@ -1,3 +1,6 @@
+import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
+import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
+import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceRange } from "../Lexer/SourceRange";
 import { TokenTag } from "../Lexer/Token";
 
@@ -13,6 +16,30 @@ export class ExpectedExpression extends ParserError {
   }
   public toString(): string {
     return "Expected expression but no matching tokens were found";
+  }
+}
+export class DuplicatePrefixGlobalOperator extends ParserError {
+  constructor(range: SourceRange, public declaration: PrefixOperatorDeclaration) {
+    super(range);
+  }
+  public toString(): string {
+    return `A prefix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
+  }
+}
+export class DuplicateInfixGlobalOperator extends ParserError {
+  constructor(range: SourceRange, public declaration: InfixOperatorDeclaration) {
+    super(range);
+  }
+  public toString(): string {
+    return `An infix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
+  }
+}
+export class DuplicatePostfixGlobalOperator extends ParserError {
+  constructor(range: SourceRange, public declaration: PostfixOperatorDeclaration) {
+    super(range);
+  }
+  public toString(): string {
+    return `A postfix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
   }
 }
 export class WrongTokenError extends ParserError {
