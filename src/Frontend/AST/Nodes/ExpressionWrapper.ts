@@ -10,9 +10,12 @@ export class ExpressionWrapper extends Statement {
 
   public typeScope: TypeScope = new TypeScope();
   public operatorScope: OperatorScope = new OperatorScope();
-  constructor(tokens: Token[]) {
+
+  public allowAssignmentStatement: boolean;
+  constructor(tokens: Token[], allowAssignmentStatement: boolean = false) {
     super();
     this.tokens = tokens;
     this.children = tokens;
+    this.allowAssignmentStatement = allowAssignmentStatement;
   }
 }
