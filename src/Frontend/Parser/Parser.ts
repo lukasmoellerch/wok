@@ -1,7 +1,7 @@
 import { ITopLevelDeclaration } from "../AST/AST";
 import { Block } from "../AST/Nodes/Block";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
-import { ExpressionWrapper } from "../AST/Nodes/EpxressionWrapper";
+import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
