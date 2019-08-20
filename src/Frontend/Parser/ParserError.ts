@@ -57,9 +57,9 @@ export class WrongTokenError extends ParserError {
       case TokenTag.identifier:
         return "Identifier ([_a-zA-Z][_a-zA-Z0-9]*)";
       case TokenTag.integerLiteral:
-        return "Integer Literal (0123456789)";
+        return "Integer Literal";
       case TokenTag.floatingPointLiteral:
-        return "FloatinPointLiteral (0.1234)";
+        return "FloatingPointLiteral (0.1234)";
       case TokenTag.stringLiteral:
         return "StringLiteral (\"Hello World\")";
       case TokenTag.booleanLiteral:
@@ -107,7 +107,7 @@ export class WrongTokenError extends ParserError {
     return this.tokenTagString(e);
   }
   public toString(): string {
-    const firstString = (this.expected.length > 1 ? this.expected.slice(0, this.expected.length - 2).map((e) => this.stringifyError(e)).join(", ") : "");
+    const firstString = (this.expected.length > 1 ? this.expected.slice(0, this.expected.length - 1).map((e) => this.stringifyError(e)).join(", ") : "");
     const lastString = this.stringifyError(this.expected[this.expected.length - 1]);
     const str = firstString === "" ? lastString : `${firstString} or ${lastString}`;
     return `Expected "${str}" but found "${this.range.sourceContent[this.range.start.offset] || "EOF"}"`;
