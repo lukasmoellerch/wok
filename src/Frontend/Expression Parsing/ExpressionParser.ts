@@ -71,10 +71,12 @@ export class ExpressionParser {
   }
   public parseExpressionOrAssignment(lexer: ExpressionLexer, precedence: number = 0): Expression | AssignmentStatement {
     const left = this.parsePrefix(lexer);
+    lexer.whitespace();
     return left;
   }
   public parseExpression(lexer: ExpressionLexer, precedence: number = 0): Expression {
     const left = this.parsePrefix(lexer);
+    lexer.whitespace();
     return left;
   }
   public parsePrefix(lexer: ExpressionLexer): Expression {
