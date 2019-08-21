@@ -287,7 +287,7 @@ export class Lexer {
     const token = new Token(tag, content, range);
     return token;
   }
-  private nextToken(advance: boolean = true): Token | undefined {
+  private nextToken(): Token | undefined {
     for (const entry of this.tokenizationMethods) {
       const token = entry[1].apply(this);
       if (token === undefined) {
