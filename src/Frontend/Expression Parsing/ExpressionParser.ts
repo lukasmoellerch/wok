@@ -11,11 +11,12 @@ import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
+import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/Token";
-import { ParserError, WrongTokenError } from "../Parser/ParserError";
+import { ExpressionParsingTerminatedError, ParserError, WrongTokenError } from "../Parser/ParserError";
 
 class ExpressionLexer extends Lexer {
   constructor(sourcePath: string, sourceString: string) {
@@ -58,12 +59,15 @@ export class ExpressionParser {
   }
   public parseExpressionWrapper(wrapper: ExpressionWrapper) {
     const source = wrapper.raw;
-    console.log(JSON.stringify(source));
     const lexer = new ExpressionLexer(wrapper.tokens[0].range.sourcePath, source);
     lexer.line = wrapper.tokens[0].range.start.line;
     lexer.column = wrapper.tokens[0].range.start.column;
     const expression = this.parseExpressionOrAssignment(lexer);
     wrapper.setExpression(expression);
+    if (!lexer.eof()) {
+      const placeholderToken = new PlaceholderToken(lexer);
+      this.errors.push(new ExpressionParsingTerminatedError(placeholderToken.range));
+    }
   }
   public parseExpressionOrAssignment(lexer: ExpressionLexer, precedence: number = 0): Expression | AssignmentStatement {
     const left = this.parsePrefix(lexer);

@@ -18,6 +18,14 @@ export class ExpectedExpression extends ParserError {
     return "Expected expression but no matching tokens were found";
   }
 }
+export class ExpressionParsingTerminatedError extends ParserError {
+  constructor(range: SourceRange) {
+    super(range);
+  }
+  public toString(): string {
+    return `Infix operator expected but "${this.range.sourceContent[this.range.start.offset]}" was found.`;
+  }
+}
 export class DuplicatePrefixGlobalOperator extends ParserError {
   constructor(range: SourceRange, public declaration: PrefixOperatorDeclaration) {
     super(range);
