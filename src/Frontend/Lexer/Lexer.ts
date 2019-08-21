@@ -107,76 +107,76 @@ export class Lexer {
     this.line = 1;
     this.column = 1;
   }
-  public whitespace(): Token | undefined {
-    return this.regexReturnToken(TokenTag.whitespace, this.whitespaceRegex);
+  public whitespace(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.whitespace, this.whitespaceRegex);
   }
-  public lineBreak(): Token | undefined {
-    return this.regexReturnToken(TokenTag.lineBreak, this.lineBreakRegex);
+  public lineBreak(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.lineBreak, this.lineBreakRegex);
   }
-  public comment(): Token | undefined {
-    return this.regexReturnToken(TokenTag.comment, this.commentRegex);
+  public comment(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.comment, this.commentRegex);
   }
-  public identifier(): Token | undefined {
-    return this.regexReturnToken(TokenTag.identifier, this.identifierRegex);
+  public identifier(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.identifier, this.identifierRegex);
   }
-  public integerLiteral(): Token | undefined {
-    return this.regexReturnToken(TokenTag.integerLiteral, this.integerLiteralRegex);
+  public integerLiteral(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.integerLiteral, this.integerLiteralRegex);
   }
-  public floatingPointLiteral(): Token | undefined {
-    return this.regexReturnToken(TokenTag.floatingPointLiteral, this.floatingPointerLiteralRegex);
+  public floatingPointLiteral(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.floatingPointLiteral, this.floatingPointerLiteralRegex);
   }
-  public stringLiteral(): Token | undefined {
-    return this.regexReturnToken(TokenTag.stringLiteral, this.stringLiteralRegex);
+  public stringLiteral(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.stringLiteral, this.stringLiteralRegex);
   }
-  public booleanLiteral(): Token | undefined {
-    return this.regexReturnToken(TokenTag.booleanLiteral, this.booleanLiteralRegex);
+  public booleanLiteral(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.booleanLiteral, this.booleanLiteralRegex);
   }
-  public nilLiteral(): Token | undefined {
-    return this.regexReturnToken(TokenTag.nilLiteral, this.nilLiteralRegex);
+  public nilLiteral(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.nilLiteral, this.nilLiteralRegex);
   }
-  public operator(): Token | undefined {
-    return this.regexReturnToken(TokenTag.operator, this.operatorRegex);
+  public operator(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.operator, this.operatorRegex);
   }
-  public dotOperator(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.dotOperatorRegex);
+  public dotOperator(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.dotOperatorRegex);
   }
-  public leftParenthesis(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.leftParenthesisRegex);
+  public leftParenthesis(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.leftParenthesisRegex);
   }
-  public rightParenthesis(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.rightParenthesisRegex);
+  public rightParenthesis(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.rightParenthesisRegex);
   }
-  public leftSquareBracket(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.leftSquareBracketRegex);
+  public leftSquareBracket(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.leftSquareBracketRegex);
   }
-  public rightSquareBracket(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.rightSquareBracketRegex);
+  public rightSquareBracket(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.rightSquareBracketRegex);
   }
-  public leftCurlyBracket(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.leftCurlyBracketRegex);
+  public leftCurlyBracket(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.leftCurlyBracketRegex);
   }
-  public rightCurlyBracket(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.rightCurlyBracketRegex);
+  public rightCurlyBracket(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.rightCurlyBracketRegex);
   }
-  public comma(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.commaRegex);
+  public comma(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.commaRegex);
   }
-  public colon(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.colonRegex);
+  public colon(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.colonRegex);
   }
-  public semicolon(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.semicolonRegex);
+  public semicolon(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.semicolonRegex);
   }
-  public assignment(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.assignmentRegex);
+  public assignment(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.assignmentRegex);
   }
-  public at(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.atRegex);
+  public at(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.atRegex);
   }
-  public numberSign(): Token | undefined {
-    return this.regexReturnToken(TokenTag.dotOperator, this.numberSignRegex);
+  public numberSign(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.dotOperator, this.numberSignRegex);
   }
-  public keyword(str: string): Token | undefined {
+  public keyword(str: string, advance: boolean = true): Token | undefined {
     const start = this.getCurrentLocation();
     const result = this.regex(this.identifierRegex);
     if (result === undefined) {
@@ -185,7 +185,9 @@ export class Lexer {
     if (result !== str) {
       return undefined;
     }
-    this.advance(result);
+    if (advance) {
+      this.advance(result);
+    }
     const end = this.getCurrentLocation();
     const range = new SourceRange(start, end);
     const token = new Token(TokenTag.keyword, result, range);
@@ -264,17 +266,19 @@ export class Lexer {
     const str = result[0];
     return str;
   }
-  private regexAndAdvance(regex: RegExp): string | undefined {
+  private regexAndAdvance(advance: boolean, regex: RegExp): string | undefined {
     const result = this.regex(regex);
     if (result === undefined) {
       return undefined;
     }
-    this.advance(result);
+    if (advance) {
+      this.advance(result);
+    }
     return result;
   }
-  private regexReturnToken(tag: TokenTag, regex: RegExp): Token | undefined {
+  private regexReturnToken(advance: boolean, tag: TokenTag, regex: RegExp): Token | undefined {
     const start = this.getCurrentLocation();
-    const content = this.regexAndAdvance(regex);
+    const content = this.regexAndAdvance(advance, regex);
     if (content === undefined) {
       return undefined;
     }
@@ -283,7 +287,7 @@ export class Lexer {
     const token = new Token(tag, content, range);
     return token;
   }
-  private nextToken(): Token | undefined {
+  private nextToken(advance: boolean = true): Token | undefined {
     for (const entry of this.tokenizationMethods) {
       const token = entry[1].apply(this);
       if (token === undefined) {
