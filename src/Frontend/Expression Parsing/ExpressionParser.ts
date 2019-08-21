@@ -102,6 +102,11 @@ export class ExpressionParser {
       const floatingPointLiteralExpression = new FloatingPointLiteralExpression(floatingPointLiteralToken);
       return floatingPointLiteralExpression;
     }
+    const identifierToken = lexer.identifier();
+    if (identifierToken !== undefined) {
+      const variableReferenceExpression = new VariableReferenceExpression(identifierToken);
+      return variableReferenceExpression;
+    }
     const errorPlaceholderToken = new PlaceholderToken(lexer);
     const placeholderExpression = new PlaceholderExpression(errorPlaceholderToken);
     this.errors.push(new WrongTokenError(errorPlaceholderToken.range, [TokenTag.leftParenthesis, TokenTag.integerLiteral, TokenTag.floatingPointLiteral, TokenTag.stringLiteral]));
