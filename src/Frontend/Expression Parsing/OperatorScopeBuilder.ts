@@ -1,14 +1,10 @@
+import { ASTWalker } from "../AST/ASTWalker";
 import { Block } from "../AST/Nodes/Block";
-import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
-import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
-import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
-import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
-import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator, ParserError } from "../Parser/ParserError";
 
 export class PrefixOperatorEntry {
@@ -80,11 +76,12 @@ export class OperatorScope {
     }
   }
 }
-export class OperatorScopeBuilder {
+export class OperatorScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: OperatorScope[] = [];
   public errors: ParserError[] = [];
   constructor(sourceFile: SourceFile, errorBuffer: ParserError[]) {
+    super();
     this.sourceFile = sourceFile;
     this.errors = errorBuffer;
   }
@@ -123,35 +120,17 @@ export class OperatorScopeBuilder {
     }
   }
   public buildScopes() {
-    for (const topLevelDeclaration of this.sourceFile.topLevelDeclarations) {
-      if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
-        this.traverseBlock(topLevelDeclaration.block);
-      }
-    }
+    this.walkSourceFile(this.sourceFile);
   }
-  public traverseBlock(block: Block) {
+  public walkBlock(block: Block) {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
     const scope = new OperatorScope(parent);
     this.scopes.push(scope);
-    for (const statement of block.statements) {
-      if (statement instanceof IfStatement) {
-        this.traverseBlock(statement.block);
-        statement.condition.operatorScope = scope;
-      }
-      if (statement instanceof WhileStatement) {
-        this.traverseBlock(statement.block);
-        statement.condition.operatorScope = scope;
-      }
-      if (statement instanceof ExpressionWrapper) {
-        statement.operatorScope = scope;
-      }
-      if (statement instanceof ConstantDeclaration) {
-        statement.value.operatorScope = scope;
-      }
-      if (statement instanceof VariableDeclaration) {
-        statement.value.operatorScope = scope;
-      }
-    }
+    super.walkBlock(block);
     this.scopes.pop();
+  }
+  protected walkExpressionWrapper(expressionWrapper: ExpressionWrapper) {
+    expressionWrapper.operatorScope = this.scopes[this.scopes.length - 1];
+    super.walkExpressionWrapper(expressionWrapper);
   }
 }
