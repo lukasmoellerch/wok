@@ -4,6 +4,7 @@ import { BinaryOperatorExpression } from "./Nodes/BinaryOperatorExpression";
 import { Block } from "./Nodes/Block";
 import { ConstantDeclaration } from "./Nodes/ConstantDeclaration";
 import { Expression } from "./Nodes/Expression";
+import { ExpressionWrapper } from "./Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "./Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "./Nodes/FunctionArgumentDeclaration";
 import { IfStatement } from "./Nodes/IfStatement";
@@ -64,8 +65,8 @@ export class ASTWalker {
     }
   }
   protected walkStatement(statement: Statement) {
-    if (statement instanceof Expression) {
-      this.walkExpression(statement);
+    if (statement instanceof ExpressionWrapper) {
+      this.walkExpressionWrapper(statement);
     }
     if (statement instanceof IfStatement) {
       this.walkIfStatement(statement);
@@ -81,6 +82,14 @@ export class ASTWalker {
     }
     if (statement instanceof AssignmentStatement) {
       this.walkAssignmentStatement(statement);
+    }
+  }
+  protected walkExpressionWrapper(expressionWrapper: ExpressionWrapper) {
+    if (expressionWrapper.expression instanceof Expression) {
+      this.walkExpression(expressionWrapper.expression);
+    }
+    if (expressionWrapper.expression instanceof AssignmentStatement) {
+      this.walkAssignmentStatement(expressionWrapper.expression);
     }
   }
   protected walkExpression(expression: Expression) {
@@ -104,18 +113,18 @@ export class ASTWalker {
     }
   }
   protected walkIfStatement(ifStatement: IfStatement) {
-    this.walkExpression(ifStatement.condition);
+    this.walkExpressionWrapper(ifStatement.condition);
     this.walkBlock(ifStatement.block);
   }
   protected walkWhileStatement(whileStatement: WhileStatement) {
-    this.walkExpression(whileStatement.condition);
+    this.walkExpressionWrapper(whileStatement.condition);
     this.walkBlock(whileStatement.block);
   }
   protected walkVariableDeclaration(variableDeclaration: VariableDeclaration) {
-    return variableDeclaration;
+    this.walkExpressionWrapper(variableDeclaration.value);
   }
   protected walkConstantDeclaration(constantDeclaration: ConstantDeclaration) {
-    return constantDeclaration;
+    this.walkExpressionWrapper(constantDeclaration.value);
   }
   protected walkAssignmentStatement(assignmentStatement: AssignmentStatement) {
     this.walkLValue(assignmentStatement.target);
