@@ -9,7 +9,7 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator, ParserError } from "../Parser/ParserError";
 
-class PrefixOperatorEntry {
+export class PrefixOperatorEntry {
   public str: string;
   public declaration: PrefixOperatorDeclaration;
   constructor(str: string, declaration: PrefixOperatorDeclaration) {
@@ -17,15 +17,19 @@ class PrefixOperatorEntry {
     this.declaration = declaration;
   }
 }
-class InfixOperatorEntry {
+export class InfixOperatorEntry {
   public str: string;
   public declaration: InfixOperatorDeclaration;
+  public precedence: number;
+  public leftAssociative: boolean;
   constructor(str: string, declaration: InfixOperatorDeclaration) {
     this.str = str;
     this.declaration = declaration;
+    this.precedence = parseInt(declaration.precedenceToken.content, 10);
+    this.leftAssociative = declaration.associativityToken.content === "left";
   }
 }
-class PostfixOperatorEntry {
+export class PostfixOperatorEntry {
   public str: string;
   public declaration: PostfixOperatorDeclaration;
   constructor(str: string, declaration: PostfixOperatorDeclaration) {
