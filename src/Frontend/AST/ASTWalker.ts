@@ -19,6 +19,7 @@ import { SourceFile } from "./Nodes/SourceFile";
 import { Statement } from "./Nodes/Statement";
 import { UnboundFunctionDeclaration } from "./Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "./Nodes/VariableDeclaration";
+import { VariableReferenceExpression } from "./Nodes/VariableReferenceExpression";
 import { WhileStatement } from "./Nodes/WhileStatement";
 
 export class ASTWalker {
@@ -111,6 +112,9 @@ export class ASTWalker {
     if (expression instanceof PrefixUnaryOperatorExpression) {
       this.walkPrefixUnaryOperatorExpression(expression);
     }
+    if (expression instanceof VariableReferenceExpression) {
+      this.walkVariableReferenceExpression(expression);
+    }
   }
   protected walkIfStatement(ifStatement: IfStatement) {
     this.walkExpressionWrapper(ifStatement.condition);
@@ -151,6 +155,9 @@ export class ASTWalker {
   }
   protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression) {
     return prefixUnaryOperatorExpression;
+  }
+  protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression) {
+    return variableReferenceExpression;
   }
 
 }
