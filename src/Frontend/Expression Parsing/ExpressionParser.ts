@@ -3,6 +3,7 @@ import { Block } from "../AST/Nodes/Block";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
+import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
 import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
@@ -15,6 +16,7 @@ import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/Token";
 import { ParserError, WrongTokenError } from "../Parser/ParserError";
+
 class ExpressionLexer extends Lexer {
   constructor(sourcePath: string, sourceString: string) {
     super(sourcePath, sourceString);
@@ -97,7 +99,8 @@ export class ExpressionParser {
     }
     const floatingPointLiteralToken = lexer.floatingPointLiteral();
     if (floatingPointLiteralToken !== undefined) {
-      const floatingPointLiteralExpression = new Flat;
+      const floatingPointLiteralExpression = new FloatingPointLiteralExpression(floatingPointLiteralToken);
+      return floatingPointLiteralExpression;
     }
     const errorPlaceholderToken = new PlaceholderToken(lexer);
     const placeholderExpression = new PlaceholderExpression(errorPlaceholderToken);
