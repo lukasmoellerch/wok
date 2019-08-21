@@ -18,6 +18,22 @@ export class ExpectedExpression extends ParserError {
     return "Expected expression but no matching tokens were found";
   }
 }
+export class LValueRequired extends ParserError {
+  constructor(range: SourceRange) {
+    super(range);
+  }
+  public toString(): string {
+    return "lvalue required as left operand of assignment.";
+  }
+}
+export class UnknownOperatorError extends ParserError {
+  constructor(range: SourceRange, private content: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `the operator ${this.content} could not be resolved`;
+  }
+}
 export class ExpressionParsingTerminatedError extends ParserError {
   constructor(range: SourceRange) {
     super(range);

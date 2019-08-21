@@ -12,5 +12,6 @@ export class AssignmentStatement extends Statement {
     this.target = target;
     this.assignmentOperator = assignmentOperator;
     this.value = value;
+    this.children = [target, assignmentOperator, value];
   }
 }

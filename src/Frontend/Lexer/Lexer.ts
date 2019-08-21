@@ -168,7 +168,18 @@ export class Lexer {
     return this.regexReturnToken(advance, TokenTag.dotOperator, this.semicolonRegex);
   }
   public assignment(advance: boolean = true): Token | undefined {
-    return this.regexReturnToken(advance, TokenTag.dotOperator, this.assignmentRegex);
+    const a = this.operator(false);
+    if (a === undefined) {
+      return undefined;
+    } else {
+      if (a.content !== "=") {
+        return undefined;
+      }
+    }
+    if (!advance) {
+      return a;
+    }
+    return this.operator();
   }
   public at(advance: boolean = true): Token | undefined {
     return this.regexReturnToken(advance, TokenTag.dotOperator, this.atRegex);

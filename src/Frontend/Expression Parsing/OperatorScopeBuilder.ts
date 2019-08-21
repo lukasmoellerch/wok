@@ -1,4 +1,5 @@
 import { Block } from "../AST/Nodes/Block";
+import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
@@ -6,6 +7,7 @@ import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclarat
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
+import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator, ParserError } from "../Parser/ParserError";
 
@@ -134,12 +136,20 @@ export class OperatorScopeBuilder {
     for (const statement of block.statements) {
       if (statement instanceof IfStatement) {
         this.traverseBlock(statement.block);
+        statement.condition.operatorScope = scope;
       }
       if (statement instanceof WhileStatement) {
         this.traverseBlock(statement.block);
+        statement.condition.operatorScope = scope;
       }
       if (statement instanceof ExpressionWrapper) {
         statement.operatorScope = scope;
+      }
+      if (statement instanceof ConstantDeclaration) {
+        statement.value.operatorScope = scope;
+      }
+      if (statement instanceof VariableDeclaration) {
+        statement.value.operatorScope = scope;
       }
     }
     this.scopes.pop();

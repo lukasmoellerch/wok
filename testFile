@@ -1,5 +1,9 @@
+prefix operator -
+infix operator + 3 right
+infix operator - 3 right
+infix operator * 4 right
+infix operator == 2 right
 function a(i: String, b: Int) {
-  a + 34 * 64
-  b - 2
-  a(3 +5, b*2)
+  const a = 2 * 123 + 12 * 3
+  a = 12
 }

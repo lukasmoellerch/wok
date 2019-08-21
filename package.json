@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "compileTs": "tsc",
+    "build": "tsc",
     "compileTsWatch": "tsc --watch"
   },
   "repository": {

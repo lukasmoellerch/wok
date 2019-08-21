@@ -17,7 +17,7 @@ import { BigUInt } from './Support/Math/BigUInt';
 declare const WebAssembly: any;
 export default async function main() {
   const path = process.argv[2];
-  const content = await promisify(readFile)(path);
+  const content = await promisify(readFile)(path || "testFile");
   const lexer = new Lexer(path, content.toString());
   const parser = new Parser(lexer);
   const result = parser.parseSourceFile();
@@ -28,6 +28,7 @@ export default async function main() {
   const operatorScopeBuilder = new OperatorScopeBuilder(result, parser.errors);
   typeScopeBuilder.populateGlobalTypeScope(globalTypeScope);
   operatorScopeBuilder.populateGlobalOperatorScope(globalOperatorScope);
+  operatorScopeBuilder.buildScopes();
   const expressionParser = new ExpressionParser(result, parser.errors);
   expressionParser.parseExpressions();
   console.log(result.toString("", true, true));
