@@ -83,6 +83,9 @@ export class ExpressionParser {
     lexer.whitespace();
     while (precedence < this.getPrecedence(lexer) && !lexer.eof()) {
       left = this.infixParseExpressionOrAssignment(lexer, left);
+      if (left instanceof AssignmentStatement) {
+        break;
+      }
       lexer.whitespace();
     }
     return left;
@@ -100,6 +103,9 @@ export class ExpressionParser {
         return new AssignmentStatement(lvalue, assignmentToken, value);
       }
     }
+    return this.infixParseExpression(lexer, left);
+  }
+  public infixParseExpression(lexer: ExpressionLexer, left: Expression): Expression {
     const leftParenthesis = lexer.leftParenthesis();
     if (leftParenthesis !== undefined) {
       const parsedArguments: Expression[] = [];
@@ -148,7 +154,7 @@ export class ExpressionParser {
     let left = this.parsePrefix(lexer);
     lexer.whitespace();
     while (precedence < this.getPrecedence(lexer) && !lexer.eof()) {
-      left = this.infixParseExpressionOrAssignment(lexer, left);
+      left = this.infixParseExpression(lexer, left);
       lexer.whitespace();
     }
     return left;
