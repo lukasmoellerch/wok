@@ -7,6 +7,7 @@ import { Expression } from "./Nodes/Expression";
 import { ExpressionWrapper } from "./Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "./Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "./Nodes/FunctionArgumentDeclaration";
+import { IdentifierCallExpression } from "./Nodes/IdentifierCallExpression";
 import { IfStatement } from "./Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
 import { IntegerLiteralExpression } from "./Nodes/IntegerLiteralExpression";
@@ -114,6 +115,15 @@ export class ASTWalker {
     }
     if (expression instanceof VariableReferenceExpression) {
       this.walkVariableReferenceExpression(expression);
+    }
+    if (expression instanceof IdentifierCallExpression) {
+      this.walkIdentifierCallExpression(expression);
+    }
+  }
+  protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression) {
+    this.walkVariableReferenceExpression(identifierCallExpression.lhs);
+    for (const arg of identifierCallExpression.args) {
+      this.walkExpression(arg);
     }
   }
   protected walkIfStatement(ifStatement: IfStatement) {
