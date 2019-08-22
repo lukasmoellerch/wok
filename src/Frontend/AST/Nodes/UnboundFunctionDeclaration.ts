@@ -1,4 +1,5 @@
 import { Token } from "../../Lexer/Token";
+import { VariableScopeEntry } from "../../VariableScope/VariableScope";
 import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
 import { Block } from "./Block";
@@ -9,6 +10,7 @@ export class UnboundFunctionDeclaration extends ASTNode implements ITopLevelDecl
   public name: Token;
   public argumentDeclarations: FunctionArgumentDeclaration[];
   public block: Block;
+  public variables: VariableScopeEntry[] = [];
   constructor(functionNameToken: Token, name: Token, argumentDeclarations: FunctionArgumentDeclaration[], block: Block) {
     super();
     this.functionNameToken = functionNameToken;
