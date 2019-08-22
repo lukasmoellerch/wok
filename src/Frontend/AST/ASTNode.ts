@@ -1,7 +1,7 @@
 import * as chalk from "chalk";
 import { TokenContentAttribute } from "./Attributes/TokenContentAttribute";
 import { TypeAttribute } from "./Attributes/TypeAttribute";
-
+import { VariableScopeEntryAttribute } from "./Attributes/VariableScopeEntryAttribute";
 const astNodeNameStyle = chalk.default.red;
 
 export interface IASTNode {
@@ -12,6 +12,7 @@ export interface IASTNode {
 interface IAttributeMap {
   type: TypeAttribute;
   tokenContent: TokenContentAttribute;
+  variableScopeEntry: VariableScopeEntryAttribute;
 }
 export interface IAttribute {
   kind: keyof IAttributeMap;
