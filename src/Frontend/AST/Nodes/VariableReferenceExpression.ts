@@ -1,5 +1,7 @@
 import { Token } from "../../Lexer/Token";
+import { VariableScopeEntry } from "../../VariableScope/VariableScope";
 import { ILValue } from "../AST";
+import { VariableScopeEntryAttribute } from "../Attributes/VariableScopeEntryAttribute";
 import { Expression } from "./Expression";
 
 export class VariableReferenceExpression extends Expression implements ILValue {
@@ -10,5 +12,9 @@ export class VariableReferenceExpression extends Expression implements ILValue {
     super();
     this.variableToken = variableToken;
     this.children = [variableToken];
+  }
+  public resolveToEntry(entry: VariableScopeEntry) {
+    this.entry = entry;
+    this.setAttribute(new VariableScopeEntryAttribute(entry));
   }
 }
