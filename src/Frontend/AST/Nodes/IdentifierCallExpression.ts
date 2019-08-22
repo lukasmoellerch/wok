@@ -8,5 +8,6 @@ export class IdentifierCallExpression extends Expression {
     super();
     this.lhs = lhs;
     this.args = args;
+    this.children = [lhs, ...args];
   }
 }
