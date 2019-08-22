@@ -6,6 +6,7 @@ import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
+import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
 import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
@@ -125,6 +126,10 @@ export class ExpressionParser {
         parsedArguments.push(expression);
 
         rightParenthesis = lexer.rightParenthesis() || new PlaceholderToken(lexer);
+      }
+      if (left instanceof VariableReferenceExpression) {
+        const callExpression = new IdentifierCallExpression(left, parsedArguments);
+        return callExpression;
       }
       const placeholderToken = new PlaceholderToken(lexer);
       return new PlaceholderExpression(placeholderToken);
