@@ -34,6 +34,14 @@ export class UnknownOperatorError extends ParserError {
     return `the operator ${this.content} could not be resolved`;
   }
 }
+export class UndeclaredVariableUsageError extends ParserError {
+  constructor(range: SourceRange, private name: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `Use of undeclared variable "${this.name}"`;
+  }
+}
 export class ExpressionParsingTerminatedError extends ParserError {
   constructor(range: SourceRange) {
     super(range);
