@@ -5,6 +5,7 @@ import { Expression } from "./Expression";
 export class VariableReferenceExpression extends Expression implements ILValue {
   public lvalue: void = undefined;
   public variableToken: Token;
+  public entry: VariableScopeEntry | undefined;
   constructor(variableToken: Token) {
     super();
     this.variableToken = variableToken;
