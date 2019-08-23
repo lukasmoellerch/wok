@@ -13,7 +13,7 @@ export class VariableScopeEntryAttribute implements IAttribute {
     if (type === undefined) {
       return chalk.magenta(this.entry.index + " " + VariableScopeEntryType[this.entry.entryType]);
     } else {
-      return chalk.magenta(this.entry.index + " " + VariableScopeEntryType[this.entry.entryType] + " " + type.stringifyType());
+      return chalk.magenta(this.entry.index + " " + VariableScopeEntryType[this.entry.entryType] + " " + type.name);
     }
   }
 

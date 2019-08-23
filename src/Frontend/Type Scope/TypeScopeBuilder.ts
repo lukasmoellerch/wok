@@ -1,23 +1,22 @@
+import { ASTWalker } from "../AST/ASTWalker";
 import { Block } from "../AST/Nodes/Block";
-import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
-import { IfStatement } from "../AST/Nodes/IfStatement";
 import { SourceFile } from "../AST/Nodes/SourceFile";
-import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
-import { WhileStatement } from "../AST/Nodes/WhileStatement";
+import { IType } from "../Type/Type";
+import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
 
 class TypeArgument {
   public restrictions: void = undefined;
 }
-class TypeScopeEntry {
+export class TypeScopeEntry {
   public name: string;
-  public arguments: TypeArgument[];
   public declaration: undefined;
   public nestedScope: TypeScope;
-  constructor(name: string, args: TypeArgument[], declaration: undefined) {
+  public type: IType;
+  constructor(name: string, type: IType, declaration: undefined) {
     this.name = name;
-    this.arguments = args;
     this.declaration = declaration;
     this.nestedScope = new TypeScope();
+    this.type = type;
   }
 }
 export class TypeScope {
@@ -40,10 +39,11 @@ export class TypeScope {
     return undefined;
   }
 }
-export class TypeScopeBuilder {
+export class TypeScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: TypeScope[] = [];
   constructor(sourceFile: SourceFile) {
+    super();
     this.sourceFile = sourceFile;
   }
   public populateGlobalTypeScope(globalScope: TypeScope) {
@@ -54,27 +54,17 @@ export class TypeScopeBuilder {
     globalScope.resolve("test");
   }
   public buildScopes() {
-    for (const topLevelDeclaration of this.sourceFile.topLevelDeclarations) {
-      if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
-        this.traverseBlock(topLevelDeclaration.block);
-      }
-    }
+    this.walkSourceFile(this.sourceFile);
   }
-  public traverseBlock(block: Block) {
+  public walkBlock(block: Block) {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
     const scope = new TypeScope(parent);
     this.scopes.push(scope);
-    for (const statement of block.statements) {
-      if (statement instanceof IfStatement) {
-        this.traverseBlock(statement.block);
-      }
-      if (statement instanceof WhileStatement) {
-        this.traverseBlock(statement.block);
-      }
-      if (statement instanceof ExpressionWrapper) {
-        statement.typeScope = scope;
-      }
-    }
+    super.walkBlock(block);
     this.scopes.pop();
+  }
+  protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper) {
+    typeExpressionWrapper.typeScope = this.scopes[this.scopes.length - 1];
+    return typeExpressionWrapper;
   }
 }

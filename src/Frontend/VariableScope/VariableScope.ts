@@ -2,7 +2,7 @@ import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
-import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
+import { IType } from "../Type/Type";
 
 export enum VariableScopeEntryType {
   globalUnboundFunction,
@@ -16,9 +16,9 @@ export class VariableScopeEntry {
   public index: number;
   public str: string;
   public entryType: VariableScopeEntryType;
-  public type: TypeExpression | undefined;
+  public type: IType | undefined;
   public declaration: VariableScopeEntryDeclarationType;
-  constructor(str: string, entryType: VariableScopeEntryType, declaration: VariableScopeEntryDeclarationType, type?: TypeExpression | undefined) {
+  constructor(str: string, entryType: VariableScopeEntryType, declaration: VariableScopeEntryDeclarationType, type?: IType | undefined) {
     this.str = str;
     this.entryType = entryType;
     this.type = type;

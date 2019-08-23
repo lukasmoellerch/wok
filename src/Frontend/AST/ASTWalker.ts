@@ -1,3 +1,4 @@
+import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
 import { ILValue, ITopLevelDeclaration } from "./AST";
 import { AssignmentStatement } from "./Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "./Nodes/BinaryOperatorExpression";
@@ -59,7 +60,7 @@ export class ASTWalker {
     this.walkBlock(unboundFunctionDeclaration.block);
   }
   protected walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
-    return argumentDeclaration;
+    this.walkTypeExpressionWrapper(argumentDeclaration.type);
   }
   protected walkBlock(block: Block) {
     for (const statement of block.statements) {
@@ -135,9 +136,15 @@ export class ASTWalker {
     this.walkBlock(whileStatement.block);
   }
   protected walkVariableDeclaration(variableDeclaration: VariableDeclaration) {
+    if (variableDeclaration.typeHint !== undefined) {
+      this.walkTypeExpressionWrapper(variableDeclaration.typeHint);
+    }
     this.walkExpressionWrapper(variableDeclaration.value);
   }
   protected walkConstantDeclaration(constantDeclaration: ConstantDeclaration) {
+    if (constantDeclaration.typeHint !== undefined) {
+      this.walkTypeExpressionWrapper(constantDeclaration.typeHint);
+    }
     this.walkExpressionWrapper(constantDeclaration.value);
   }
   protected walkAssignmentStatement(assignmentStatement: AssignmentStatement) {
@@ -169,5 +176,7 @@ export class ASTWalker {
   protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression) {
     return variableReferenceExpression;
   }
-
+  protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper) {
+    return typeExpressionWrapper;
+  }
 }
