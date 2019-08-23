@@ -1,5 +1,6 @@
 import { Token } from "../../Lexer/Token";
 import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
+import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionWrapper";
 import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
@@ -7,7 +8,7 @@ export class ConstantDeclaration extends Statement {
   public constantKeyword: Token;
   public identifierToken: Token;
   public colonToken: Token | undefined;
-  public typeHint: TypeExpression | undefined;
+  public typeHint: TypeExpressionWrapper | undefined;
   public assignmentOperator: Token;
   public value: ExpressionWrapper;
   constructor(constantKeyword: Token, identifierToken: Token, colonToken: Token | undefined, typeHint: TypeExpression | undefined, assignmentOperator: Token, value: ExpressionWrapper) {
@@ -15,7 +16,9 @@ export class ConstantDeclaration extends Statement {
     this.constantKeyword = constantKeyword;
     this.identifierToken = identifierToken;
     this.colonToken = colonToken;
-    this.typeHint = typeHint;
+    if (typeHint !== undefined) {
+      this.typeHint = new TypeExpressionWrapper(typeHint);
+    }
     this.assignmentOperator = assignmentOperator;
     this.value = value;
     if (colonToken !== undefined && typeHint !== undefined) {
