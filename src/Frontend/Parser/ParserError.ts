@@ -42,6 +42,22 @@ export class UndeclaredVariableUsageError extends ParserError {
     return `Use of undeclared variable "${this.name}"`;
   }
 }
+export class UndeclaredTypeUsageError extends ParserError {
+  constructor(range: SourceRange, private name: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `Use of undeclared type "${this.name}"`;
+  }
+}
+export class TypeHasNoMemberCalledError extends ParserError {
+  constructor(range: SourceRange, private name: string, private member: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `The type named "${this.name}" has no member called "${this.member}"`;
+  }
+}
 export class ExpressionParsingTerminatedError extends ParserError {
   constructor(range: SourceRange) {
     super(range);
