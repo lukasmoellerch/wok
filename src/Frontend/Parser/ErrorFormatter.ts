@@ -5,7 +5,7 @@ export class ErrorFormatter {
   public lines: string[];
   public colorizedLines: string[];
   constructor(public sourceContent: string, public sourcePath: string, public errors: ParserError[]) {
-    this.lines = sourceContent.split(/[\r\n|\r|\n]+/g);
+    this.lines = sourceContent.split(/[\r\n|\r|\n]/g);
     this.colorizedLines = this.lines.map((line) => {
       const lexer = new Lexer(sourcePath, line);
       return lexer.group().map(this.colorizeGroupedString).join("");
@@ -34,9 +34,16 @@ export class ErrorFormatter {
   }
   public toString(): string {
     let result = "";
-    result += chalk.bgWhiteBright.red(this.errors.length + " Errors:\n") + "\"" + this.sourcePath + "\":" + "\n";
+    if (this.errors.length === 0) {
+      result += chalk.bgGreenBright.black("No Errors were found\n") + "in: \"" + this.sourcePath + "\"" + "\n";
+    } else if (this.errors.length === 1) {
+      result += chalk.bgWhiteBright.red(this.errors.length + " Error:\n") + "in: \"" + this.sourcePath + "\"" + "\n";
+    } else {
+      result += chalk.bgWhiteBright.red(this.errors.length + " Errors:\n") + "in: \"" + this.sourcePath + "\"" + "\n";
+    }
+
     const lineNumberingLength = 2;
-    for (const error of this.errors) {
+    for (const error of this.errors.sort((a, b) => a.range.start.line - b.range.start.line)) {
       let index = error.range.start.line - 1;
       while (index <= (error.range.end.line - 1)) {
         const lineNumbering = (index + 1).toString().padEnd(lineNumberingLength, " ") + " | ";
@@ -44,7 +51,7 @@ export class ErrorFormatter {
 
         if (index === error.range.start.line - 1 && index === error.range.end.line - 1) {
           let line = "";
-          for (let i = 1; i < error.range.start.column + lineNumberingLength + 3; i++) {
+          for (let i = 1; i < error.range.start.column + lineNumberingLength + 4; i++) {
             line += " ";
           }
           let errorLength = error.range.end.column - error.range.start.column;
