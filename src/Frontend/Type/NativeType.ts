@@ -1,4 +1,4 @@
-import { TypeScope } from "../Type Scope/TypeScopeBuilder";
+import { TypeScope } from "../Type Scope/TypeScope";
 import { FunctionType } from "./FunctionType";
 import { IType } from "./Type";
 
@@ -21,12 +21,21 @@ export class NativeIntegerType implements IType {
     this.binaryOperatorType = new FunctionType([this], this, this);
     this.unaryOperatorType = new FunctionType([], this, this);
   }
+  public equals(other: IType): boolean {
+    if (other instanceof NativeIntegerType) {
+      if (this.bytes !== other.bytes || this.signed !== other.signed) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
   public typeOfOperator(str: string, arity: number): IType | undefined {
-    if (arity === 1) {
+    if (arity === 0) {
       if (str === "-") {
         return this.unaryOperatorType;
       }
-    } else if (arity === 2) {
+    } else if (arity === 1) {
       if (str === "+") {
         return this.binaryOperatorType;
       }

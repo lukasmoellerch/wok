@@ -9,4 +9,8 @@ export class PrefixUnaryOperatorExpression extends Expression {
     this.operator = operator;
     this.children = [operator, operand];
   }
+  public addImplictConversionsToChildren() {
+    this.operand = this.operand.addImplictConversionIfNeeded();
+    this.children = [this.operator, this.operand];
+  }
 }

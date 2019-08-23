@@ -1,6 +1,7 @@
 import { Lexer } from "./Lexer";
 import { SourceRange } from "./SourceRange";
-import { Token, TokenTag } from "./Token";
+import { Token } from "./Token";
+import { TokenTag } from "./TokenTag";
 export class PlaceholderToken extends Token {
   constructor(lexer: Lexer) {
     const start = lexer.getCurrentLocation();

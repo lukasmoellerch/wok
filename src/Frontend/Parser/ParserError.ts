@@ -2,7 +2,7 @@ import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration"
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceRange } from "../Lexer/SourceRange";
-import { TokenTag } from "../Lexer/Token";
+import { TokenTag } from "../Lexer/TokenTag";
 
 export class CompilerError {
   constructor(public range: SourceRange) { }

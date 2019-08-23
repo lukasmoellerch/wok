@@ -1,6 +1,7 @@
 import { SourceLocation } from "./SourceLocation";
 import { SourceRange } from "./SourceRange";
-import { Token, TokenTag } from "./Token";
+import { Token } from "./Token";
+import { TokenTag } from "./TokenTag";
 
 export enum TokenTagGroup {
   whitespace,

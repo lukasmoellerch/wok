@@ -1,4 +1,4 @@
-import { TypeScope, TypeScopeEntry } from "../Type Scope/TypeScopeBuilder";
+import { TypeScope, TypeScopeEntry } from "../Type Scope/TypeScope";
 import { NativeIntegerType } from "./NativeType";
 
 export function injectNativeTypes(typeScope: TypeScope) {

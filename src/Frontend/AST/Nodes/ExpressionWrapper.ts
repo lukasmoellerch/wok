@@ -1,8 +1,9 @@
 import { OperatorScope } from "../../Expression Parsing/OperatorScope";
 import { Token } from "../../Lexer/Token";
-import { TypeScope } from "../../Type Scope/TypeScopeBuilder";
+import { TypeScope } from "../../Type Scope/TypeScope";
 import { AssignmentStatement } from "./AssignmentStatement";
 import { Expression } from "./Expression";
+import { ImplictConversionExpression } from "./ImplictConversionExpression";
 import { Statement } from "./Statement";
 export class ExpressionWrapper extends Statement {
   public parsed: boolean = false;
@@ -27,5 +28,14 @@ export class ExpressionWrapper extends Statement {
   public setExpression(expression: Expression | AssignmentStatement) {
     this.children = [expression];
     this.expression = expression;
+  }
+  public addImplictConversionsToChildren() {
+    const expression = this.expression;
+    if (expression instanceof Expression) {
+      const implictConversionTargetType = expression.implictConversionTargetType;
+      if (implictConversionTargetType !== undefined) {
+        this.expression = new ImplictConversionExpression(expression.type, implictConversionTargetType, expression);
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { Token } from "../../Lexer/Token";
 import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionWrapper";
+import { VariableScopeEntry } from "../../VariableScope/VariableScope";
 import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
@@ -11,6 +12,7 @@ export class VariableDeclaration extends Statement {
   public typeHint: TypeExpressionWrapper | undefined;
   public assignmentOperator: Token;
   public value: ExpressionWrapper;
+  public entry: VariableScopeEntry | undefined;
   constructor(variableKeyword: Token, identifierToken: Token, colonToken: Token | undefined, typeHint: TypeExpression | undefined, assignmentOperator: Token, value: ExpressionWrapper) {
     super();
     this.variableKeyword = variableKeyword;

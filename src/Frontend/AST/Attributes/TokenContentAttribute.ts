@@ -1,5 +1,6 @@
 import * as chalk from "chalk";
-import { Token, TokenTag } from "../../Lexer/Token";
+import { Token } from "../../Lexer/Token";
+import { TokenTag } from "../../Lexer/TokenTag";
 import { IAttribute } from "../ASTNode";
 export class TokenContentAttribute implements IAttribute {
   public kind: "type" = "type";

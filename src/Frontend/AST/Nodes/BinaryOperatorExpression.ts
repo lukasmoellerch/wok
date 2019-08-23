@@ -11,4 +11,9 @@ export class BinaryOperatorExpression extends Expression {
     this.operator = operator;
     this.children = [lhs, operator, rhs];
   }
+  public addImplictConversionsToChildren() {
+    this.lhs = this.lhs.addImplictConversionIfNeeded();
+    this.rhs = this.rhs.addImplictConversionIfNeeded();
+    this.children = [this.lhs, this.operator, this.rhs];
+  }
 }

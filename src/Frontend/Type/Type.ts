@@ -1,4 +1,4 @@
-import { TypeScope } from "../Type Scope/TypeScopeBuilder";
+import { TypeScope } from "../Type Scope/TypeScope";
 
 export interface IType {
   name: string;
@@ -9,4 +9,5 @@ export interface IType {
   hasMemberCalled(str: string): boolean;
   typeOfOperator(str: string, arity: number): IType | undefined;
   hasOperatorCalled(str: string, arity: number): boolean;
+  equals(other: IType): boolean;
 }

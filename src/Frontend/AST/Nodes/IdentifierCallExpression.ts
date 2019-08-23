@@ -10,4 +10,8 @@ export class IdentifierCallExpression extends Expression {
     this.args = args;
     this.children = [lhs, ...args];
   }
+  public addImplictConversionsToChildren() {
+    this.args = this.args.map((a) => a.addImplictConversionIfNeeded());
+    this.children = [this.lhs, ...this.args];
+  }
 }

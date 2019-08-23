@@ -3,7 +3,8 @@ infix operator + 3 right
 infix operator - 3 right
 infix operator * 4 right
 infix operator == 2 right
-function a(i: String, b: Int) {
+
+function a(i: UInt8, b: UInt8) {
   const a = 2 * 123 + 12 * 3
-  a = 12
+  a = b + 12 + a
 }

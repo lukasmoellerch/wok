@@ -19,7 +19,7 @@ import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpre
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
-import { TokenTag } from "../Lexer/Token";
+import { TokenTag } from "../Lexer/TokenTag";
 import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../Parser/ParserError";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScope";
 
@@ -80,7 +80,7 @@ export class ExpressionParser {
   }
   public parseExpressionOrAssignment(lexer: ExpressionLexer, precedence: number = 0): Expression | AssignmentStatement {
     lexer.whitespace();
-    let left = this.parsePrefix(lexer);
+    let left: Expression | AssignmentStatement = this.parsePrefix(lexer);
     lexer.whitespace();
     while (precedence < this.getPrecedence(lexer) && !lexer.eof()) {
       left = this.infixParseExpressionOrAssignment(lexer, left);

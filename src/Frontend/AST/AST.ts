@@ -1,3 +1,4 @@
+import { IType } from "../Type/Type";
 import { IASTNode } from "./ASTNode";
 
 export interface ITopLevelDeclaration extends IASTNode {
@@ -5,4 +6,5 @@ export interface ITopLevelDeclaration extends IASTNode {
 }
 export interface ILValue extends IASTNode {
   lvalue: void;
+  rhsType: IType;
 }

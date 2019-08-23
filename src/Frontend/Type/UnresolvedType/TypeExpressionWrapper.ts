@@ -1,5 +1,5 @@
 import { ASTNode } from "../../AST/ASTNode";
-import { TypeScope } from "../../Type Scope/TypeScopeBuilder";
+import { TypeScope } from "../../Type Scope/TypeScope";
 import { IType } from "../Type";
 import { VoidType } from "../VoidType";
 import { TypeExpression } from "./TypeExpression";

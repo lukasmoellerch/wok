@@ -6,7 +6,7 @@ import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrap
 import { TypeMemberExpression } from "../Type/UnresolvedType/TypeMemberExpression";
 import { TypeReferenceExpression } from "../Type/UnresolvedType/TypeReferenceExpression";
 import { VoidType } from "../Type/VoidType";
-import { TypeScope } from "./TypeScopeBuilder";
+import { TypeScope } from "./TypeScope";
 
 export class TypeResolver extends ASTWalker {
   public errors: CompilerError[];

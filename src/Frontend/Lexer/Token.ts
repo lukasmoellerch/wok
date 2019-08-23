@@ -1,34 +1,8 @@
 import { ASTNode } from "../AST/ASTNode";
 import { TokenContentAttribute } from "../AST/Attributes/TokenContentAttribute";
 import { SourceRange } from "./SourceRange";
-export enum TokenTag {
-  whitespace,
-  lineBreak,
-  comment,
-  identifier,
-  integerLiteral,
-  floatingPointLiteral,
-  stringLiteral,
-  booleanLiteral,
-  nilLiteral,
-  operator,
-  dotOperator,
-  leftParenthesis,
-  rightParenthesis,
-  leftSquareBracket,
-  rightSquareBracket,
-  leftCurlyBracket,
-  rightCurlyBracket,
-  comma,
-  colon,
-  semicolon,
-  assignment,
-  at,
-  numberSign,
-  keyword,
+import { TokenTag } from "./TokenTag";
 
-  placeholder,
-}
 export class Token extends ASTNode {
   public tag: TokenTag;
   public content: string;

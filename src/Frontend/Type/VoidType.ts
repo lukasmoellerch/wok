@@ -1,10 +1,13 @@
-import { TypeScope } from "../Type Scope/TypeScopeBuilder";
+import { TypeScope } from "../Type Scope/TypeScope";
 import { IType } from "./Type";
 
 export class VoidType implements IType {
   public name: string = "void";
   public scope = new TypeScope();
   public irVariablesNeededForRepresentation: number = 0;
+  public equals(other: IType): boolean {
+    return other instanceof VoidType;
+  }
   public toString(): string {
     throw new Error("Method not implemented.");
   }

@@ -7,8 +7,11 @@ import { Lexer } from "./Frontend/Lexer/Lexer";
 import { ErrorFormatter } from "./Frontend/Parser/ErrorFormatter";
 import { Parser } from "./Frontend/Parser/Parser";
 import { TypeResolver } from "./Frontend/Type Scope/TypeResolver";
-import { TypeScope, TypeScopeBuilder } from "./Frontend/Type Scope/TypeScopeBuilder";
+import { TypeScope } from "./Frontend/Type Scope/TypeScope";
+import { TypeScopeBuilder } from "./Frontend/Type Scope/TypeScopeBuilder";
 import { injectNativeTypes } from "./Frontend/Type/NativeTypeProvider";
+import { ImplictConversionWrapper } from "./Frontend/TypeChecking/ImplictConversionWrapper";
+import { TypeChecker } from "./Frontend/TypeChecking/TypeChecker";
 import { VariableScope } from "./Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Frontend/VariableScope/VariableScopeBuilder";
 
@@ -47,6 +50,11 @@ export default async function main() {
   expressionParser.parseExpressions();
   variableScopeBuilder.buildScopes();
   typeResolver.walkSourceFile(result);
+
+  const typeChecker = new TypeChecker(parser.errors);
+  typeChecker.walkSourceFile(result);
+  const implictConversionWrapper = new ImplictConversionWrapper();
+  implictConversionWrapper.walkSourceFile(result);
 
   console.log(result.toString("", true, true));
   console.log(errorFormatter.toString());

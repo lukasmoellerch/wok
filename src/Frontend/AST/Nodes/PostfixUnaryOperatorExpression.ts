@@ -9,4 +9,8 @@ export class PostfixUnaryOperatorExpression extends Expression {
     this.operator = operator;
     this.children = [operand, operator];
   }
+  public addImplictConversionsToChildren() {
+    this.operand = this.operand.addImplictConversionIfNeeded();
+    this.children = [this.operand, this.operator];
+  }
 }

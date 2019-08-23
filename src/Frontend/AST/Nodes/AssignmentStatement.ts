@@ -1,6 +1,7 @@
 import { Token } from "../../Lexer/Token";
 import { ILValue } from "../AST";
 import { Expression } from "./Expression";
+import { ImplictConversionExpression } from "./ImplictConversionExpression";
 import { Statement } from "./Statement";
 
 export class AssignmentStatement extends Statement {
@@ -13,5 +14,12 @@ export class AssignmentStatement extends Statement {
     this.assignmentOperator = assignmentOperator;
     this.value = value;
     this.children = [target, assignmentOperator, value];
+  }
+  public addImplictConversionsToChildren() {
+    const expression = this.value;
+    const implictConversionTargetType = expression.implictConversionTargetType;
+    if (implictConversionTargetType !== undefined) {
+      this.value = new ImplictConversionExpression(expression.type, implictConversionTargetType, expression);
+    }
   }
 }

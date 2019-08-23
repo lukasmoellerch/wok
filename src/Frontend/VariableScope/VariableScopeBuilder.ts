@@ -7,50 +7,8 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CompilerError, UndeclaredVariableUsageError } from "../Parser/ParserError";
-import { IType } from "../Type/Type";
+import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
 
-export enum VariableScopeEntryType {
-  globalUnboundFunction,
-  variable,
-  constant,
-  argument,
-}
-export type VariableScopeEntryDeclarationType = UnboundFunctionDeclaration | VariableDeclaration | ConstantDeclaration | FunctionArgumentDeclaration;
-let index = 0;
-export class VariableScopeEntry {
-  public index: number;
-  public str: string;
-  public entryType: VariableScopeEntryType;
-  public type: IType | undefined;
-  public declaration: VariableScopeEntryDeclarationType;
-  constructor(str: string, entryType: VariableScopeEntryType, declaration: VariableScopeEntryDeclarationType, type?: IType | undefined) {
-    this.str = str;
-    this.entryType = entryType;
-    this.type = type;
-    this.declaration = declaration;
-    this.index = index++;
-  }
-}
-export class VariableScope {
-  public parent: VariableScope | undefined;
-  public entryMap: Map<string, VariableScopeEntry> = new Map();
-  constructor(parent?: VariableScope | undefined) {
-    this.parent = parent;
-  }
-  public resolve(str: string): VariableScopeEntry | undefined {
-    const entry = this.entryMap.get(str);
-    if (entry !== undefined) {
-      return entry;
-    }
-    if (this.parent !== undefined) {
-      return this.parent.resolve(str);
-    }
-    return undefined;
-  }
-  public register(entry: VariableScopeEntry) {
-    this.entryMap.set(entry.str, entry);
-  }
-}
 export class VariableScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: VariableScope[] = [];
@@ -88,6 +46,7 @@ export class VariableScopeBuilder extends ASTWalker {
     const type = variableDeclaration.typeHint;
     const entry = new VariableScopeEntry(str, entryType, variableDeclaration, type !== undefined ? type.type : undefined);
     this.scopes[this.scopes.length - 1].register(entry);
+    variableDeclaration.entry = entry;
     super.walkVariableDeclaration(variableDeclaration);
   }
   public walkConstantDeclaration(constantDeclaration: ConstantDeclaration) {
@@ -96,6 +55,7 @@ export class VariableScopeBuilder extends ASTWalker {
     const type = constantDeclaration.typeHint;
     const entry = new VariableScopeEntry(str, entryType, constantDeclaration, type !== undefined ? type.type : undefined);
     this.scopes[this.scopes.length - 1].register(entry);
+    constantDeclaration.entry = entry;
     super.walkConstantDeclaration(constantDeclaration);
   }
   public walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
@@ -104,6 +64,7 @@ export class VariableScopeBuilder extends ASTWalker {
     const type = argumentDeclaration.type;
     const entry = new VariableScopeEntry(str, entryType, argumentDeclaration, type.type);
     this.scopes[this.scopes.length - 1].register(entry);
+    argumentDeclaration.entry = entry;
     return super.walkArgumentDeclaration(argumentDeclaration);
   }
   public walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression) {
