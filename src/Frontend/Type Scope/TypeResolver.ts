@@ -1,5 +1,5 @@
 import { ASTWalker } from "../AST/ASTWalker";
-import { ParserError, TypeHasNoMemberCalledError, UndeclaredTypeUsageError } from "../Parser/ParserError";
+import { CompilerError, TypeHasNoMemberCalledError, UndeclaredTypeUsageError } from "../Parser/ParserError";
 import { IType } from "../Type/Type";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
@@ -9,8 +9,8 @@ import { VoidType } from "../Type/VoidType";
 import { TypeScope } from "./TypeScopeBuilder";
 
 export class TypeResolver extends ASTWalker {
-  public errors: ParserError[];
-  constructor(errors: ParserError[]) {
+  public errors: CompilerError[];
+  constructor(errors: CompilerError[]) {
     super();
     this.errors = errors;
   }

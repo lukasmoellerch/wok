@@ -6,7 +6,7 @@ import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
-import { ParserError, UndeclaredVariableUsageError } from "../Parser/ParserError";
+import { CompilerError, UndeclaredVariableUsageError } from "../Parser/ParserError";
 import { IType } from "../Type/Type";
 
 export enum VariableScopeEntryType {
@@ -54,8 +54,8 @@ export class VariableScope {
 export class VariableScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: VariableScope[] = [];
-  public errors: ParserError[];
-  constructor(sourceFile: SourceFile, errorBuffer: ParserError[]) {
+  public errors: CompilerError[];
+  constructor(sourceFile: SourceFile, errorBuffer: CompilerError[]) {
     super();
     this.sourceFile = sourceFile;
     this.errors = errorBuffer;

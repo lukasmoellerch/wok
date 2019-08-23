@@ -17,10 +17,10 @@ import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { Token, TokenTag } from "../Lexer/Token";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeReferenceExpression } from "../Type/UnresolvedType/TypeReferenceExpression";
-import { ExpectedExpression, ParserError, WrongTokenError } from "./ParserError";
+import { CompilerError, ExpectedExpression, WrongTokenError } from "./ParserError";
 export class Parser {
   public lexer: Lexer;
-  public errors: ParserError[] = [];
+  public errors: CompilerError[] = [];
   constructor(lexer: Lexer) {
     this.lexer = lexer;
   }

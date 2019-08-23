@@ -4,13 +4,13 @@ import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaratio
 import { SourceRange } from "../Lexer/SourceRange";
 import { TokenTag } from "../Lexer/Token";
 
-export class ParserError {
+export class CompilerError {
   constructor(public range: SourceRange) { }
   public toString(): string {
     return "unknown error";
   }
 }
-export class ExpectedExpression extends ParserError {
+export class ExpectedExpression extends CompilerError {
   constructor(range: SourceRange) {
     super(range);
   }
@@ -18,7 +18,7 @@ export class ExpectedExpression extends ParserError {
     return "Expected expression but no matching tokens were found";
   }
 }
-export class LValueRequired extends ParserError {
+export class LValueRequired extends CompilerError {
   constructor(range: SourceRange) {
     super(range);
   }
@@ -26,7 +26,7 @@ export class LValueRequired extends ParserError {
     return "lvalue required as left operand of assignment.";
   }
 }
-export class UnknownOperatorError extends ParserError {
+export class UnknownOperatorError extends CompilerError {
   constructor(range: SourceRange, private content: string) {
     super(range);
   }
@@ -34,7 +34,7 @@ export class UnknownOperatorError extends ParserError {
     return `the operator ${this.content} could not be resolved`;
   }
 }
-export class UndeclaredVariableUsageError extends ParserError {
+export class UndeclaredVariableUsageError extends CompilerError {
   constructor(range: SourceRange, private name: string) {
     super(range);
   }
@@ -42,7 +42,7 @@ export class UndeclaredVariableUsageError extends ParserError {
     return `Use of undeclared variable "${this.name}"`;
   }
 }
-export class UndeclaredTypeUsageError extends ParserError {
+export class UndeclaredTypeUsageError extends CompilerError {
   constructor(range: SourceRange, private name: string) {
     super(range);
   }
@@ -50,7 +50,7 @@ export class UndeclaredTypeUsageError extends ParserError {
     return `Use of undeclared type "${this.name}"`;
   }
 }
-export class TypeHasNoMemberCalledError extends ParserError {
+export class TypeHasNoMemberCalledError extends CompilerError {
   constructor(range: SourceRange, private name: string, private member: string) {
     super(range);
   }
@@ -58,7 +58,7 @@ export class TypeHasNoMemberCalledError extends ParserError {
     return `The type named "${this.name}" has no member called "${this.member}"`;
   }
 }
-export class ExpressionParsingTerminatedError extends ParserError {
+export class ExpressionParsingTerminatedError extends CompilerError {
   constructor(range: SourceRange) {
     super(range);
   }
@@ -66,7 +66,7 @@ export class ExpressionParsingTerminatedError extends ParserError {
     return `Infix operator expected but "${this.range.sourceContent[this.range.start.offset]}" was found.`;
   }
 }
-export class DuplicatePrefixGlobalOperator extends ParserError {
+export class DuplicatePrefixGlobalOperator extends CompilerError {
   constructor(range: SourceRange, public declaration: PrefixOperatorDeclaration) {
     super(range);
   }
@@ -74,7 +74,7 @@ export class DuplicatePrefixGlobalOperator extends ParserError {
     return `A prefix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
   }
 }
-export class DuplicateInfixGlobalOperator extends ParserError {
+export class DuplicateInfixGlobalOperator extends CompilerError {
   constructor(range: SourceRange, public declaration: InfixOperatorDeclaration) {
     super(range);
   }
@@ -82,7 +82,7 @@ export class DuplicateInfixGlobalOperator extends ParserError {
     return `An infix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
   }
 }
-export class DuplicatePostfixGlobalOperator extends ParserError {
+export class DuplicatePostfixGlobalOperator extends CompilerError {
   constructor(range: SourceRange, public declaration: PostfixOperatorDeclaration) {
     super(range);
   }
@@ -90,7 +90,7 @@ export class DuplicatePostfixGlobalOperator extends ParserError {
     return `A postfix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
   }
 }
-export class WrongTokenError extends ParserError {
+export class WrongTokenError extends CompilerError {
   constructor(range: SourceRange, public expected: Array<TokenTag | string>) {
     super(range);
   }

@@ -1,10 +1,10 @@
 import chalk from "chalk";
 import { IGroupedString, Lexer, TokenTagGroup } from "../Lexer/Lexer";
-import { ParserError } from "./ParserError";
+import { CompilerError } from "./ParserError";
 export class ErrorFormatter {
   public lines: string[];
   public colorizedLines: string[];
-  constructor(public sourceContent: string, public sourcePath: string, public errors: ParserError[]) {
+  constructor(public sourceContent: string, public sourcePath: string, public errors: CompilerError[]) {
     this.lines = sourceContent.split(/[\r\n|\r|\n]/g);
     this.colorizedLines = this.lines.map((line) => {
       const lexer = new Lexer(sourcePath, line);

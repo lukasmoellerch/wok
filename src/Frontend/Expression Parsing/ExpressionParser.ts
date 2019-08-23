@@ -20,7 +20,7 @@ import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/Token";
-import { ExpressionParsingTerminatedError, LValueRequired, ParserError, UnknownOperatorError, WrongTokenError } from "../Parser/ParserError";
+import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../Parser/ParserError";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScope";
 
 class ExpressionLexer extends Lexer {
@@ -31,9 +31,9 @@ class ExpressionLexer extends Lexer {
 }
 export class ExpressionParser {
   public sourceFile: SourceFile;
-  public errors: ParserError[];
+  public errors: CompilerError[];
   private operatorScope: OperatorScope = new OperatorScope();
-  constructor(sourceFile: SourceFile, errors: ParserError[]) {
+  constructor(sourceFile: SourceFile, errors: CompilerError[]) {
     this.sourceFile = sourceFile;
     this.errors = errors;
   }

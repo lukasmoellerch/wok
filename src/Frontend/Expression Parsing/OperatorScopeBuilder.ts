@@ -5,13 +5,13 @@ import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration"
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
-import { DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator, ParserError } from "../Parser/ParserError";
+import { CompilerError, DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator } from "../Parser/ParserError";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry, PrefixOperatorEntry } from "./OperatorScope";
 export class OperatorScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: OperatorScope[] = [];
-  public errors: ParserError[] = [];
-  constructor(sourceFile: SourceFile, errorBuffer: ParserError[]) {
+  public errors: CompilerError[] = [];
+  constructor(sourceFile: SourceFile, errorBuffer: CompilerError[]) {
     super();
     this.sourceFile = sourceFile;
     this.errors = errorBuffer;
