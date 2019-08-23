@@ -21,7 +21,7 @@ import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/Token";
 import { ExpressionParsingTerminatedError, LValueRequired, ParserError, UnknownOperatorError, WrongTokenError } from "../Parser/ParserError";
-import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScopeBuilder";
+import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScope";
 
 class ExpressionLexer extends Lexer {
   constructor(sourcePath: string, sourceString: string) {
