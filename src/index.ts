@@ -1,11 +1,14 @@
 import { readFile } from "fs";
 import { promisify } from "util";
 import { ExpressionParser } from "./Frontend/Expression Parsing/ExpressionParser";
-import { OperatorScope, OperatorScopeBuilder } from "./Frontend/Expression Parsing/OperatorScopeBuilder";
+import { OperatorScope } from "./Frontend/Expression Parsing/OperatorScope";
+import { OperatorScopeBuilder } from "./Frontend/Expression Parsing/OperatorScopeBuilder";
 import { Lexer } from "./Frontend/Lexer/Lexer";
 import { ErrorFormatter } from "./Frontend/Parser/ErrorFormatter";
 import { Parser } from "./Frontend/Parser/Parser";
+import { TypeResolver } from "./Frontend/Type Scope/TypeResolver";
 import { TypeScope, TypeScopeBuilder } from "./Frontend/Type Scope/TypeScopeBuilder";
+import { injectNativeTypes } from "./Frontend/Type/NativeTypeProvider";
 import { VariableScope } from "./Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Frontend/VariableScope/VariableScopeBuilder";
 
@@ -16,7 +19,6 @@ import { ErrorFormatter } from './Frontend/Parser/ErrorFormatter';
 import { Parser } from "./Frontend/Parser/Parser";
 import { BigUInt } from './Support/Math/BigUInt';
 */
-declare const WebAssembly: any;
 export default async function main() {
   const path = process.argv[2];
   const content = await promisify(readFile)(path || "testFile");
@@ -33,15 +35,18 @@ export default async function main() {
   const operatorScopeBuilder = new OperatorScopeBuilder(result, parser.errors);
   const variableScopeBuilder = new VariableScopeBuilder(result, parser.errors);
   const expressionParser = new ExpressionParser(result, parser.errors);
+  const typeResolver = new TypeResolver(parser.errors);
 
   typeScopeBuilder.populateGlobalTypeScope(globalTypeScope);
   operatorScopeBuilder.populateGlobalOperatorScope(globalOperatorScope);
   variableScopeBuilder.populateGlobalVariableScope(globalVariableScope);
+  injectNativeTypes(globalTypeScope);
 
   typeScopeBuilder.buildScopes();
   operatorScopeBuilder.buildScopes();
   expressionParser.parseExpressions();
   variableScopeBuilder.buildScopes();
+  typeResolver.walkSourceFile(result);
 
   console.log(result.toString("", true, true));
   console.log(errorFormatter.toString());
