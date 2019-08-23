@@ -1,4 +1,4 @@
-import { OperatorScope } from "../../Expression Parsing/OperatorScopeBuilder";
+import { OperatorScope } from "../../Expression Parsing/OperatorScope";
 import { Token } from "../../Lexer/Token";
 import { TypeScope } from "../../Type Scope/TypeScopeBuilder";
 import { AssignmentStatement } from "./AssignmentStatement";
