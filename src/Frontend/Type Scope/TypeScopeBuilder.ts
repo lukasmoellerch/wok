@@ -51,7 +51,6 @@ export class TypeScopeBuilder extends ASTWalker {
     for (const declaration of this.sourceFile.topLevelDeclarations) {
       return;
     }
-    globalScope.resolve("test");
   }
   public buildScopes() {
     this.walkSourceFile(this.sourceFile);
