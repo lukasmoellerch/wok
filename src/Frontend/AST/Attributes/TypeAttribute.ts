@@ -1,14 +1,14 @@
 import chalk from "chalk";
-import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
+import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionWrapper";
 import { IAttribute } from "../ASTNode";
 export class TypeAttribute implements IAttribute {
   public kind: "type" = "type";
-  public unresolvedType: TypeExpression;
-  constructor(unresolvedType: TypeExpression) {
-    this.unresolvedType = unresolvedType;
+  public wrapper: TypeExpressionWrapper;
+  constructor(wrapper: TypeExpressionWrapper) {
+    this.wrapper = wrapper;
   }
   public toString(): string {
-    return chalk.magenta(this.unresolvedType.stringifyType());
+    return chalk.magenta(this.wrapper.type.name);
   }
 
 }
