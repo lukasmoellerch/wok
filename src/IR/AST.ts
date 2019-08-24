@@ -1,5 +1,5 @@
 export interface ICompilationUnit {
-  globalMutableGlobals: IGLobalMutableGlobal[];
+  globalMutableGlobals: IMutableGlobal[];
   externalFunctionDeclarations: IExternalFunctionDeclaration[];
   internalFunctionDeclarations: IInternalFunctionDeclaration[];
   functionCode: IInternalFunctionDefinition[];
