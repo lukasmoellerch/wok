@@ -51,7 +51,7 @@ export class VariableScopeBuilder extends ASTWalker {
   }
   public walkConstantDeclaration(constantDeclaration: ConstantDeclaration) {
     const str = constantDeclaration.identifierToken.content;
-    const entryType = VariableScopeEntryType.variable;
+    const entryType = VariableScopeEntryType.constant;
     const type = constantDeclaration.typeHint;
     const entry = new VariableScopeEntry(str, entryType, constantDeclaration, type !== undefined ? type.type : undefined);
     this.scopes[this.scopes.length - 1].register(entry);
