@@ -152,7 +152,9 @@ export class ASTWalker {
     this.walkExpression(assignmentStatement.value);
   }
   protected walkLValue(lvalue: ILValue) {
-    return lvalue;
+    if (lvalue instanceof VariableReferenceExpression) {
+      this.walkVariableReferenceExpression(lvalue);
+    }
   }
   protected walkBinaryOperatorExpression(binaryOperatorExpression: BinaryOperatorExpression) {
     this.walkExpression(binaryOperatorExpression.lhs);

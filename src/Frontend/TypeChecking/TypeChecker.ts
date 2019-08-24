@@ -83,6 +83,7 @@ export class TypeChecker extends ASTWalker {
       const entry = constantDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
+        console.log("set entry.type to of", entry.str, "to", expression.type.name);
         constantDeclaration.setAttribute(new TypeAttribute(expression.type));
       }
     }
@@ -92,8 +93,17 @@ export class TypeChecker extends ASTWalker {
     const type = assignmentStatement.target.rhsType;
     this.checkExpression(assignmentStatement.value, type);
   }
-  private checkLValue(_lValue: ILValue) {
-    return;
+  private checkLValue(lValue: ILValue) {
+    if (lValue instanceof VariableReferenceExpression) {
+      const entry = lValue.entry;
+      if (entry === undefined) {
+        throw new Error();
+      }
+      const type = entry.type;
+      if (type !== undefined) {
+        lValue.rhsType = type;
+      }
+    }
   }
   private checkExpression(expression: Expression, target?: IType | undefined) {
     if (expression instanceof BinaryOperatorExpression) {
