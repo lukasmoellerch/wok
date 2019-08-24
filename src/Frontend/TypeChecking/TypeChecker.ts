@@ -16,10 +16,11 @@ import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
-import { CompilerError } from "../Parser/ParserError";
+import { CompilerError, WritingToConstantError } from "../Parser/ParserError";
 import { FunctionType } from "../Type/FunctionType";
 import { NativeIntegerType } from "../Type/NativeType";
 import { IType } from "../Type/Type";
+import { VariableScopeEntryType } from "../VariableScope/VariableScope";
 
 export class TypeChecker extends ASTWalker {
   public errors: CompilerError[];
@@ -97,7 +98,10 @@ export class TypeChecker extends ASTWalker {
     if (lValue instanceof VariableReferenceExpression) {
       const entry = lValue.entry;
       if (entry === undefined) {
-        throw new Error();
+        return;
+      }
+      if (entry.entryType === VariableScopeEntryType.constant) {
+        this.errors.push(new WritingToConstantError(lValue.variableToken.range, entry.str));
       }
       const type = entry.type;
       if (type !== undefined) {

@@ -10,12 +10,20 @@ export class CompilerError {
     return "unknown error";
   }
 }
+export class WritingToConstantError extends CompilerError {
+  constructor(range: SourceRange, private name: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `assignment of read-only variable "${this.name}"`;
+  }
+}
 export class ExpectedExpression extends CompilerError {
   constructor(range: SourceRange) {
     super(range);
   }
   public toString(): string {
-    return "Expected expression but no matching tokens were found";
+    return "expected expression but no matching tokens were found";
   }
 }
 export class LValueRequired extends CompilerError {
