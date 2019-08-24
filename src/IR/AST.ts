@@ -14,7 +14,7 @@ export enum Type {
   ptr,
   funcptr,
 }
-export interface IGLobalMutableGlobal {
+export interface IMutableGlobal {
   identifier: GlobalIdentifier;
   type: Type;
 }
