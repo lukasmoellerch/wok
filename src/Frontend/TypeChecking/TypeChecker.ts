@@ -16,28 +16,48 @@ import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
-import { CompilerError, WritingToConstantError } from "../Parser/ParserError";
+import { CompilerError, OperatorNotDefinedForTypeError, WritingToConstantError } from "../Parser/ParserError";
+import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
-import { NativeIntegerType } from "../Type/NativeType";
 import { IType } from "../Type/Type";
 import { VariableScopeEntryType } from "../VariableScope/VariableScope";
 
 export class TypeChecker extends ASTWalker {
   public errors: CompilerError[];
-  public u8 = new NativeIntegerType(false, 1);
-  public u16 = new NativeIntegerType(false, 2);
-  public u32 = new NativeIntegerType(false, 4);
-  public u64 = new NativeIntegerType(false, 8);
-  public i8 = new NativeIntegerType(true, 1);
-  public i16 = new NativeIntegerType(true, 2);
-  public i32 = new NativeIntegerType(true, 4);
-  public i64 = new NativeIntegerType(true, 8);
-  public bool = this.u8;
-  public integer = this.i32;
-  public unsignedInteger = this.u32;
-  constructor(errors: CompilerError[]) {
+  public u8: IType;
+  public u16: IType;
+  public u32: IType;
+  public u64: IType;
+  public i8: IType;
+  public i16: IType;
+  public i32: IType;
+  public i64: IType;
+  public bool: IType;
+  public integer: IType;
+  public unsignedInteger: IType;
+  public string: IType;
+  public rootTypeTreeNode: TypeTreeNode;
+  constructor(rootTypeTreeNode: TypeTreeNode, errors: CompilerError[]) {
     super();
+    this.rootTypeTreeNode = rootTypeTreeNode;
     this.errors = errors;
+
+    this.u8 = this.rootTypeTreeNode.forceResolve("UInt8").forceInstanceType();
+    this.u16 = this.rootTypeTreeNode.forceResolve("UInt16").forceInstanceType();
+    this.u32 = this.rootTypeTreeNode.forceResolve("UInt32").forceInstanceType();
+    this.u64 = this.rootTypeTreeNode.forceResolve("UInt64").forceInstanceType();
+
+    this.i8 = this.rootTypeTreeNode.forceResolve("Int8").forceInstanceType();
+    this.i16 = this.rootTypeTreeNode.forceResolve("Int16").forceInstanceType();
+    this.i32 = this.rootTypeTreeNode.forceResolve("Int32").forceInstanceType();
+    this.i64 = this.rootTypeTreeNode.forceResolve("Int64").forceInstanceType();
+
+    this.bool = this.rootTypeTreeNode.forceResolve("Bool").forceInstanceType();
+
+    this.integer = this.rootTypeTreeNode.forceResolve("Int").forceInstanceType();
+    this.unsignedInteger = this.rootTypeTreeNode.forceResolve("UInt").forceInstanceType();
+
+    this.string = this.rootTypeTreeNode.forceResolve("String").forceInstanceType();
   }
   protected walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
     const entry = argumentDeclaration.entry;
@@ -72,7 +92,7 @@ export class TypeChecker extends ASTWalker {
       const entry = variableDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
-        variableDeclaration.setAttribute(new TypeAttribute(expression.type));
+        variableDeclaration.setAttribute(new TypeAttribute(expression.forceType()));
       }
     }
   }
@@ -84,8 +104,7 @@ export class TypeChecker extends ASTWalker {
       const entry = constantDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
-        console.log("set entry.type to of", entry.str, "to", expression.type.name);
-        constantDeclaration.setAttribute(new TypeAttribute(expression.type));
+        constantDeclaration.setAttribute(new TypeAttribute(expression.forceType()));
       }
     }
   }
@@ -114,12 +133,14 @@ export class TypeChecker extends ASTWalker {
       const lhs = expression.lhs;
       const rhs = expression.rhs;
       this.checkExpression(lhs);
-      const lhsType = lhs.type;
+      const lhsType = lhs.forceType();
       const operator = expression.operator;
       const str = operator.content;
       const operatorType = lhsType.typeOfOperator(str, 1);
       if (operatorType === undefined) {
-        throw new Error();
+        this.errors.push(new OperatorNotDefinedForTypeError(operator.range, lhsType.name, str));
+        this.checkExpression(rhs, undefined);
+        return;
       }
       if (!(operatorType instanceof FunctionType)) {
         throw new Error();
@@ -130,7 +151,23 @@ export class TypeChecker extends ASTWalker {
     } else if (expression instanceof FloatingPointLiteralExpression) {
       throw new Error();
     } else if (expression instanceof IdentifierCallExpression) {
-      throw new Error();
+      const entry = expression.lhs.entry;
+      const argExpressions = expression.args;
+      if (entry === undefined) {
+        throw new Error();
+      }
+      const functionType = entry.type;
+      if (!(functionType instanceof FunctionType)) {
+        throw new Error();
+      }
+      const argTypes = functionType.args;
+      const resultType = functionType.result;
+      let i = 0;
+      while (i < argTypes.length) {
+        this.checkExpression(argExpressions[i], argTypes[i]);
+        i++;
+      }
+      expression.setType(resultType);
     } else if (expression instanceof IntegerLiteralExpression) {
       if (target === undefined) {
         expression.setType(this.integer);
@@ -158,7 +195,7 @@ export class TypeChecker extends ASTWalker {
     } else if (expression instanceof PostfixUnaryOperatorExpression) {
       const operand = expression.operand;
       this.checkExpression(operand);
-      const operandType = operand.type;
+      const operandType = operand.forceType();
       const operator = expression.operator;
       const str = operator.content;
       const operatorType = operandType.typeOfOperator(str, 0);
@@ -172,7 +209,7 @@ export class TypeChecker extends ASTWalker {
     } else if (expression instanceof PrefixUnaryOperatorExpression) {
       const operand = expression.operand;
       this.checkExpression(operand);
-      const operandType = operand.type;
+      const operandType = operand.forceType();
       const operator = expression.operator;
       const str = operator.content;
       const operatorType = operandType.typeOfOperator(str, 0);
@@ -184,7 +221,7 @@ export class TypeChecker extends ASTWalker {
       }
       expression.setType(operatorType.result);
     } else if (expression instanceof StringLiteralExpression) {
-      throw new Error();
+      expression.setType(this.string);
     } else if (expression instanceof VariableReferenceExpression) {
       const entry = expression.entry;
       if (entry === undefined) {
@@ -198,6 +235,9 @@ export class TypeChecker extends ASTWalker {
     }
     if (target !== undefined) {
       const type = expression.type;
+      if (type == undefined) {
+        throw new Error();
+      }
       if (!type.equals(target)) {
         expression.implictConversionTargetType = target;
       }

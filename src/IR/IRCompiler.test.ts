@@ -5,7 +5,8 @@ import { compileIR } from "./IRCompiler";
 declare const WebAssembly: any;
 test("Can compile a basic function that lists even integers up to the parameter", () => {
   const ir: ICompilationUnit = {
-    globalMutableGlobals: [],
+    mutableGlobals: [],
+    dataSegments: [],
     externalFunctionDeclarations: [
       {
         identifier: "printInteger",
@@ -28,7 +29,7 @@ test("Can compile a basic function that lists even integers up to the parameter"
         variableTypes: [/* arg, */Type.si32, Type.ui32, Type.si32, Type.si32, Type.si32, Type.ui32],
         code: [
           {
-            type: BlockType.breakble,
+            type: BlockType.breakable,
             blocks: [
               {
                 type: BlockType.basic,

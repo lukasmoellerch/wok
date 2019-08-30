@@ -10,6 +10,14 @@ export class CompilerError {
     return "unknown error";
   }
 }
+export class OperatorNotDefinedForTypeError extends CompilerError {
+  constructor(range: SourceRange, private type: string, private operator: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `operator "${this.operator}" is not defined for type "${this.type}"`;
+  }
+}
 export class WritingToConstantError extends CompilerError {
   constructor(range: SourceRange, private name: string) {
     super(range);
@@ -31,7 +39,7 @@ export class LValueRequired extends CompilerError {
     super(range);
   }
   public toString(): string {
-    return "lvalue required as left operand of assignment.";
+    return "lvalue required as left operand of assignment";
   }
 }
 export class UnknownOperatorError extends CompilerError {

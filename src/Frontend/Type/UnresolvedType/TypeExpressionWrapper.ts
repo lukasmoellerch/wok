@@ -1,17 +1,15 @@
 import { ASTNode } from "../../AST/ASTNode";
-import { TypeScope } from "../../Type Scope/TypeScope";
+import { TypeTreeNode } from "../../Type Scope/TypeScope";
 import { IType } from "../Type";
-import { VoidType } from "../VoidType";
 import { TypeExpression } from "./TypeExpression";
 
 export class TypeExpressionWrapper extends ASTNode {
   public expression: TypeExpression;
-  public typeScope: TypeScope = new TypeScope();
-  public type: IType;
+  public wrappingTypeTreeNode: TypeTreeNode | undefined;
+  public type: IType | undefined;
   constructor(expression: TypeExpression) {
     super();
     this.expression = expression;
     this.children = [expression];
-    this.type = new VoidType();
   }
 }

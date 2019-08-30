@@ -4,6 +4,7 @@ import { AssignmentStatement } from "./Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "./Nodes/BinaryOperatorExpression";
 import { Block } from "./Nodes/Block";
 import { ConstantDeclaration } from "./Nodes/ConstantDeclaration";
+import { Decorator } from "./Nodes/Decorator";
 import { Expression } from "./Nodes/Expression";
 import { ExpressionWrapper } from "./Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "./Nodes/FloatingPointLiteralExpression";
@@ -44,20 +45,26 @@ export class ASTWalker {
       this.walkUnboundFunctionDeclaration(topLevelDeclaration);
     }
   }
-  protected walkPrefixOperatorDeclaration(prefixOperatorDeclaration: PrefixOperatorDeclaration) {
-    return prefixOperatorDeclaration;
+  protected walkPrefixOperatorDeclaration(_prefixOperatorDeclaration: PrefixOperatorDeclaration) {
+    return;
   }
-  protected walkInfixOperatorDeclaration(infixOperatorDeclaration: InfixOperatorDeclaration) {
-    return infixOperatorDeclaration;
+  protected walkInfixOperatorDeclaration(_infixOperatorDeclaration: InfixOperatorDeclaration) {
+    return;
   }
-  protected walkPostfixOperatorDeclaration(postfixOperatorDeclaration: PostfixOperatorDeclaration) {
-    return postfixOperatorDeclaration;
+  protected walkPostfixOperatorDeclaration(_postfixOperatorDeclaration: PostfixOperatorDeclaration) {
+    return;
   }
   protected walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
+    for (const decorator of unboundFunctionDeclaration.decorators) {
+      this.walkDecorator(decorator);
+    }
     for (const argumentDeclaration of unboundFunctionDeclaration.argumentDeclarations) {
       this.walkArgumentDeclaration(argumentDeclaration);
     }
-    this.walkBlock(unboundFunctionDeclaration.block);
+    const block = unboundFunctionDeclaration.block;
+    if (block !== undefined) {
+      this.walkBlock(block);
+    }
   }
   protected walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
     this.walkTypeExpressionWrapper(argumentDeclaration.type);
@@ -160,25 +167,30 @@ export class ASTWalker {
     this.walkExpression(binaryOperatorExpression.lhs);
     this.walkExpression(binaryOperatorExpression.rhs);
   }
-  protected walkFloatingPointLiteralExpression(floatingPointLiteralExpression: FloatingPointLiteralExpression) {
-    return floatingPointLiteralExpression;
+  protected walkFloatingPointLiteralExpression(_floatingPointLiteralExpression: FloatingPointLiteralExpression) {
+    return;
   }
-  protected walkIntegerLiteralExpression(integerLiteralExpression: IntegerLiteralExpression) {
-    return integerLiteralExpression;
+  protected walkIntegerLiteralExpression(_integerLiteralExpression: IntegerLiteralExpression) {
+    return;
   }
-  protected walkPlaceholderExpression(placeholderExpression: PlaceholderExpression) {
-    return placeholderExpression;
+  protected walkPlaceholderExpression(_placeholderExpression: PlaceholderExpression) {
+    return;
   }
-  protected walkPostfixUnaryOperatorExpression(postfixUnaryOperatorExpression: PostfixUnaryOperatorExpression) {
-    return postfixUnaryOperatorExpression;
+  protected walkPostfixUnaryOperatorExpression(_postfixUnaryOperatorExpression: PostfixUnaryOperatorExpression) {
+    return;
   }
-  protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression) {
-    return prefixUnaryOperatorExpression;
+  protected walkPrefixUnaryOperatorExpression(_prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression) {
+    return;
   }
-  protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression) {
-    return variableReferenceExpression;
+  protected walkVariableReferenceExpression(_variableReferenceExpression: VariableReferenceExpression) {
+    return;
   }
-  protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper) {
-    return typeExpressionWrapper;
+  protected walkTypeExpressionWrapper(_typeExpressionWrapper: TypeExpressionWrapper) {
+    return;
+  }
+  protected walkDecorator(decorator: Decorator) {
+    for (const parameter of decorator.parameters) {
+      this.walkExpressionWrapper(parameter);
+    }
   }
 }

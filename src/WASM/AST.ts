@@ -3,7 +3,9 @@ import { Limit as LimitType, TableType } from "./Encoding/Constants";
 export interface IModule {
   sections: Section[];
 }
-export interface IGenericSection { }
+export interface IGenericSection {
+  sectionId: Constants.Section;
+}
 export type Section =
   | ICustomSection
   | IFunctionSection

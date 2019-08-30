@@ -6,7 +6,6 @@ export class ImplictConversionExpression extends Expression {
   public to: IType;
   public value: Expression;
   constructor(from: IType, to: IType, value: Expression) {
-    console.log(from.name, to.name);
     super();
     this.from = from;
     this.to = to;

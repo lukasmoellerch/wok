@@ -1,22 +1,17 @@
 import { ILValue } from "../AST/AST";
+import { ASTWalker } from "../AST/ASTWalker";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
-import { Block } from "../AST/Nodes/Block";
-import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
-import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
 import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
-import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
-import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
-import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/TokenTag";
@@ -29,41 +24,17 @@ class ExpressionLexer extends Lexer {
     this.whitespaceRegex = /([ \t]+|(\r\n|\r|\n)+)+/g;
   }
 }
-export class ExpressionParser {
+export class ExpressionParser extends ASTWalker {
   public sourceFile: SourceFile;
   public errors: CompilerError[];
   private operatorScope: OperatorScope = new OperatorScope();
   constructor(sourceFile: SourceFile, errors: CompilerError[]) {
+    super();
     this.sourceFile = sourceFile;
     this.errors = errors;
   }
   public parseExpressions() {
-    for (const topLevelDeclaration of this.sourceFile.topLevelDeclarations) {
-      if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
-        this.traverseBlock(topLevelDeclaration.block);
-      }
-    }
-  }
-  public traverseBlock(block: Block) {
-    for (const statement of block.statements) {
-      if (statement instanceof IfStatement) {
-        this.parseExpressionWrapper(statement.condition);
-        this.traverseBlock(statement.block);
-      }
-      if (statement instanceof WhileStatement) {
-        this.parseExpressionWrapper(statement.condition);
-        this.traverseBlock(statement.block);
-      }
-      if (statement instanceof VariableDeclaration) {
-        this.parseExpressionWrapper(statement.value);
-      }
-      if (statement instanceof ConstantDeclaration) {
-        this.parseExpressionWrapper(statement.value);
-      }
-      if (statement instanceof ExpressionWrapper) {
-        this.parseExpressionWrapper(statement);
-      }
-    }
+    this.walkSourceFile(this.sourceFile);
   }
   public parseExpressionWrapper(wrapper: ExpressionWrapper) {
     this.operatorScope = wrapper.operatorScope;
@@ -178,7 +149,6 @@ export class ExpressionParser {
       const str = operatorToken.content;
       const operator = this.operatorScope.resolvePostfix(str);
       if (operator !== undefined) {
-        const declaration = operator.declaration;
         if (operator instanceof PostfixOperatorEntry) {
           return 7;
         }
@@ -186,7 +156,7 @@ export class ExpressionParser {
           return operator.precedence;
         }
       } else {
-        debugger;
+        throw new Error();
       }
     }
     return 0;
@@ -229,5 +199,8 @@ export class ExpressionParser {
     const placeholderExpression = new PlaceholderExpression(errorPlaceholderToken);
     this.errors.push(new WrongTokenError(errorPlaceholderToken.range, [TokenTag.leftParenthesis, TokenTag.integerLiteral, TokenTag.floatingPointLiteral, TokenTag.stringLiteral]));
     return placeholderExpression;
+  }
+  protected walkExpressionWrapper(wrapper: ExpressionWrapper) {
+    this.parseExpressionWrapper(wrapper);
   }
 }

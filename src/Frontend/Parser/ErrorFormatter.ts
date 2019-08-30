@@ -55,15 +55,15 @@ export class ErrorFormatter {
             line += " ";
           }
           let errorLength = error.range.end.column - error.range.start.column;
-          errorLength = Math.max(3, errorLength);
+          errorLength = Math.max(1, errorLength);
           for (let i = 0; i < errorLength; i++) {
-            line += "^";
+            line += "↑";
           }
           result += chalk.red(line) + "\n";
         }
         index++;
       }
-      result += error.toString() + "\n";
+      result += "🛑 " + error.toString() + "\n";
     }
     return result;
   }

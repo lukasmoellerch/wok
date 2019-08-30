@@ -19,7 +19,7 @@ export class AssignmentStatement extends Statement {
     const expression = this.value;
     const implictConversionTargetType = expression.implictConversionTargetType;
     if (implictConversionTargetType !== undefined) {
-      this.value = new ImplictConversionExpression(expression.type, implictConversionTargetType, expression);
+      this.value = new ImplictConversionExpression(expression.forceType(), implictConversionTargetType, expression);
     }
   }
 }

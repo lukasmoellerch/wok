@@ -11,7 +11,12 @@ export class TypeAttribute implements IAttribute {
   public toString(): string {
     const wrapper = this.wrapper;
     if (wrapper instanceof TypeExpressionWrapper) {
-      return chalk.magenta(wrapper.type.name);
+      const type = wrapper.type;
+      if (type !== undefined) {
+        return chalk.magenta(type.name);
+      } else {
+        return chalk.magenta("<unresolved type>");
+      }
     } else {
       return chalk.magentaBright(wrapper.name);
     }

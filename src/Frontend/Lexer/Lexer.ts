@@ -100,7 +100,7 @@ export class Lexer {
     [TokenTag.keyword, TokenTagGroup.keyword],
   ];
   private tokenTagGroupsMap: Map<TokenTag, TokenTagGroup> = new Map(this.tokenTagGroups);
-  private keywords = ["function", "String", "Int"];
+  private keywords = ["func", "operator", "prefix", "infix", "postfix", "var", "const", "while", "if"];
   constructor(sourcePath: string, sourceString: string) {
     this.sourcePath = sourcePath;
     this.sourceString = sourceString;
@@ -255,6 +255,21 @@ export class Lexer {
   public group(): IGroupedString[] {
     return this.tokenize().map((a) => this.groupToken(a));
   }
+  public nextToken(): Token | undefined {
+    for (const entry of this.tokenizationMethods) {
+      const token = entry[1].apply(this);
+      if (token === undefined) {
+        continue;
+      }
+      if (entry[0] === TokenTag.identifier) {
+        if (this.keywords.indexOf(token.content) !== -1) {
+          return new Token(TokenTag.keyword, token.content, token.range);
+        }
+      }
+      return token;
+    }
+    return undefined;
+  }
   private groupToken(token: Token): IGroupedString {
     const group = this.tokenTagGroupsMap.get(token.tag);
     if (group === undefined) {
@@ -298,21 +313,6 @@ export class Lexer {
     const range = new SourceRange(start, end);
     const token = new Token(tag, content, range);
     return token;
-  }
-  private nextToken(): Token | undefined {
-    for (const entry of this.tokenizationMethods) {
-      const token = entry[1].apply(this);
-      if (token === undefined) {
-        continue;
-      }
-      if (entry[0] === TokenTag.identifier) {
-        if (this.keywords.indexOf(token.content) !== -1) {
-          return new Token(TokenTag.keyword, token.content, token.range);
-        }
-      }
-      return token;
-    }
-    return undefined;
   }
 
 }

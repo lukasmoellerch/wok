@@ -1,9 +1,11 @@
-import { TypeScope } from "../Type Scope/TypeScope";
+import { Type } from "../../IR/AST";
+import { TypeTreeNode } from "../Type Scope/TypeScope";
 
 export interface IType {
   name: string;
-  scope: TypeScope;
-  irVariablesNeededForRepresentation: number;
+  node: TypeTreeNode;
+  irVariablesNeededForRepresentation(): number;
+  irVariableTypes(): Type[];
   toString(): string;
   typeOfMember(str: string): IType | undefined;
   hasMemberCalled(str: string): boolean;

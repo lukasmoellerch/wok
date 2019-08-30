@@ -1,8 +1,12 @@
 export interface ICompilationUnit {
-  globalMutableGlobals: IMutableGlobal[];
+  mutableGlobals: IMutableGlobal[];
+  dataSegments: IDataSegment[];
   externalFunctionDeclarations: IExternalFunctionDeclaration[];
   internalFunctionDeclarations: IInternalFunctionDeclaration[];
   functionCode: IInternalFunctionDefinition[];
+}
+export interface IDataSegment {
+  content: Uint8Array;
 }
 export enum Type {
   ui32,
@@ -46,6 +50,7 @@ export enum InstructionType {
   setToConstant,
   setToFunction,
   setToGlobal,
+  setToDataSegment,
   copy,
   load,
   store,
@@ -86,6 +91,7 @@ export type Variable = number;
 export type FunctionIdentifier = string;
 export type GlobalIdentifier = string;
 export type NumericConstant = number;
+export type DataSegmentIdentifier = number;
 export type SSAStatement =
   [InstructionType.phi, Variable, Variable[]]
   | [InstructionType.break]
@@ -96,6 +102,7 @@ export type SSAStatement =
   | [InstructionType.setToConstant, Variable, NumericConstant]
   | [InstructionType.setToFunction, Variable, FunctionIdentifier]
   | [InstructionType.setToGlobal, Variable, GlobalIdentifier]
+  | [InstructionType.setToDataSegment, Variable, DataSegmentIdentifier]
   | [InstructionType.copy, Variable, Variable]
   | [InstructionType.load, Variable, Variable, Type]
   | [InstructionType.store, Variable, Variable, Type]
@@ -129,11 +136,11 @@ export type SSAStatement =
   | [InstructionType.sqrt, Variable, Variable]
   | [InstructionType.minimum, Variable, Variable, Variable]
   | [InstructionType.maximum, Variable, Variable, Variable]
-  | [InstructionType.return, Variable];
+  | [InstructionType.return, Variable[]];
 export enum BlockType {
   basic,
   loop,
-  breakble,
+  breakable,
   if,
   ifelse,
 }
@@ -147,7 +154,7 @@ export interface ILoopBlock {
   blocks: Block[];
 }
 export interface IBreakableBlock {
-  type: BlockType.breakble;
+  type: BlockType.breakable;
   blocks: Block[];
 }
 export interface IIfBlock {

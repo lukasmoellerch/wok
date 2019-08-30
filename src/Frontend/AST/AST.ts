@@ -6,5 +6,5 @@ export interface ITopLevelDeclaration extends IASTNode {
 }
 export interface ILValue extends IASTNode {
   lvalue: void;
-  rhsType: IType;
+  rhsType: IType | undefined;
 }

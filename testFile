@@ -3,8 +3,32 @@ infix operator + 3 right
 infix operator - 3 right
 infix operator * 4 right
 infix operator == 2 right
+infix operator > 2 right
+infix operator < 2 right
+infix operator >= 2 right
+infix operator <= 2 right
 
-function a(i: UInt8, b: UInt8) {
-  const a = 2 * 123 + 12 * 3
-  a = b + 12 + a
+@foreign("printInt") func printInt(str: UInt32)
+@foreign("print") func print(str: String)
+func main(max: UInt32) {
+  var a: UInt32 = 0
+  var b: UInt32 = 0
+  var c: UInt32 = 1
+  var i: UInt32 = 0
+  while i < max {
+    printInt(a)
+    a = b
+    b = c
+    c = b + a
+    i = i + 1
+  }
+  const str = "This is a simple string"
+  print(str)
+  print("More strings....")
+}
+func other() {
+  const a = 3
+}
+extension Int {
+
 }

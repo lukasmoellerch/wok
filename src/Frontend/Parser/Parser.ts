@@ -1,8 +1,10 @@
 import { ITopLevelDeclaration } from "../AST/AST";
 import { Block } from "../AST/Nodes/Block";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
+import { Decorator } from "../AST/Nodes/Decorator";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
+import { FunctionResultDeclaration } from "../AST/Nodes/FunctionResultDeclaration";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
@@ -28,45 +30,80 @@ export class Parser {
   public parseSourceFile(): SourceFile {
     const topLevelDeclarations: ITopLevelDeclaration[] = [];
     while (!this.lexer.eof()) {
-      this.lexer.whitespace();
-      const functionToken = this.lexer.keyword("function");
-      if (functionToken !== undefined) {
-        const functionDeclaration = this.parseFunction(functionToken);
-        topLevelDeclarations.push(functionDeclaration);
-        continue;
+      const declaration = this.parseDecoratedTopLevelDeclaration();
+      if (declaration === undefined) {
+        this.lexer.advance(" ");
+      } else {
+        topLevelDeclarations.push(declaration);
       }
-      const prefixToken = this.lexer.keyword("prefix");
-      if (prefixToken !== undefined) {
-        const prefixOperatorDeclaration = this.parsePrefixOperatorDeclaration(prefixToken);
-        topLevelDeclarations.push(prefixOperatorDeclaration);
-        continue;
-      }
-      const infixToken = this.lexer.keyword("infix");
-      if (infixToken !== undefined) {
-        const infixOperatorDeclaration = this.parseInfixOperatorDeclaration(infixToken);
-        topLevelDeclarations.push(infixOperatorDeclaration);
-        continue;
-      }
-      const postfixToken = this.lexer.keyword("postfix");
-      if (postfixToken !== undefined) {
-        const postfixOperatorDeclaration = this.parsePostfixOperatorDeclaration(postfixToken);
-        topLevelDeclarations.push(postfixOperatorDeclaration);
-        continue;
-      }
-
     }
     const sourceFile = new SourceFile(topLevelDeclarations);
     return sourceFile;
   }
-  public parseFunction(functionKeywordToken: Token): UnboundFunctionDeclaration {
+  public parseDecoratedTopLevelDeclaration(): ITopLevelDeclaration | undefined {
+    const at = this.lexer.at(false);
+    if (at === undefined) {
+      return this.parseUndecoratedTopLevelDeclaration([]);
+    } else {
+      const decorators = this.parseDecoratorList();
+      this.lexer.whitespace();
+      return this.parseUndecoratedTopLevelDeclaration(decorators);
+    }
+    return undefined;
+  }
+  public parseUndecoratedTopLevelDeclaration(decorators: Decorator[]): ITopLevelDeclaration | undefined {
+    this.lexer.whitespace();
+    const functionToken = this.lexer.keyword("func");
+    if (functionToken !== undefined) {
+      const functionDeclaration = this.parseFunction(decorators, functionToken);
+      return functionDeclaration;
+    }
+    const prefixToken = this.lexer.keyword("prefix");
+    if (prefixToken !== undefined) {
+      const prefixOperatorDeclaration = this.parsePrefixOperatorDeclaration(prefixToken);
+      return prefixOperatorDeclaration;
+    }
+    const infixToken = this.lexer.keyword("infix");
+    if (infixToken !== undefined) {
+      const infixOperatorDeclaration = this.parseInfixOperatorDeclaration(infixToken);
+      return infixOperatorDeclaration;
+    }
+    const postfixToken = this.lexer.keyword("postfix");
+    if (postfixToken !== undefined) {
+      const postfixOperatorDeclaration = this.parsePostfixOperatorDeclaration(postfixToken);
+      return postfixOperatorDeclaration;
+    }
+    return undefined;
+  }
+  public parseFunction(decorators: Decorator[], functionKeywordToken: Token): UnboundFunctionDeclaration {
     const ws = this.lexer.whitespace();
     const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
     if (nameToken instanceof PlaceholderToken) {
       this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
     }
     const argumentDeclarations = this.parseFunctionArgumentDeclarationList();
-    const block = this.parseBlock();
-    return new UnboundFunctionDeclaration(functionKeywordToken, nameToken, argumentDeclarations, block);
+    this.lexer.whitespace();
+    const colon = this.lexer.colon();
+    this.lexer.whitespace();
+    if (colon !== undefined) {
+      const type = this.parseType();
+      let block: Block | undefined;
+      this.lexer.whitespace();
+      const leftCurly = this.lexer.leftCurlyBracket(false);
+      if (leftCurly) {
+        block = this.parseBlock();
+      }
+      const resultDeclaration = new FunctionResultDeclaration(type);
+      return new UnboundFunctionDeclaration(decorators, functionKeywordToken, nameToken, argumentDeclarations, block, resultDeclaration);
+    } else {
+      let block: Block | undefined;
+      this.lexer.whitespace();
+      const leftCurly = this.lexer.leftCurlyBracket(false);
+      if (leftCurly) {
+        block = this.parseBlock();
+      }
+      return new UnboundFunctionDeclaration(decorators, functionKeywordToken, nameToken, argumentDeclarations, block);
+    }
   }
   public parseFunctionArgumentDeclarationList(): FunctionArgumentDeclaration[] {
     const declarations: FunctionArgumentDeclaration[] = [];
@@ -177,6 +214,31 @@ export class Parser {
       return undefined;
     }
     return new ExpressionWrapper(tokens);
+  }
+  public parseExpressionTokensUntilCommaOrRightParenthesis(): { tokens: Token[], closingToken: Token } {
+    let tokens: Token[] = [];
+    let closingToken = this.lexer.rightParenthesis() || this.lexer.comma() || new PlaceholderToken(this.lexer);
+    this.lexer.whitespace();
+    while (closingToken instanceof PlaceholderToken && !this.lexer.eof()) {
+      const leftParenthesisToken = this.lexer.leftParenthesis();
+      if (leftParenthesisToken !== undefined) {
+        const t = this.parseExpressionTokensUntilClosed(leftParenthesisToken);
+        tokens = tokens.concat(t);
+        continue;
+      }
+      const nextExpressionToken = this.parseNextExpressionToken();
+      this.lexer.whitespace();
+      if (nextExpressionToken === undefined) {
+        closingToken = this.lexer.rightParenthesis() || this.lexer.comma() || new PlaceholderToken(this.lexer);
+        break;
+      }
+      tokens.push(nextExpressionToken);
+      closingToken = this.lexer.rightParenthesis() || this.lexer.comma() || new PlaceholderToken(this.lexer);
+    }
+    if (closingToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(closingToken.range, [TokenTag.rightParenthesis, TokenTag.comma]));
+    }
+    return { tokens, closingToken };
   }
   public parseExpressionTokensUntilBlock(): { tokens: Token[], leftCurlyBracket: Token } {
     let tokens: Token[] = [];
@@ -440,5 +502,55 @@ export class Parser {
       this.errors.push(new WrongTokenError(lineBreak.range, [TokenTag.lineBreak]));
     }
     return new InfixOperatorDeclaration(keyword, operatorKeyword, operatorToken, precedence, assoc);
+  }
+  public parseDecoratorList(): Decorator[] {
+    this.lexer.whitespace();
+    const decorators: Decorator[] = [];
+    let atToken = this.lexer.at() || new PlaceholderToken(this.lexer);
+    while (!(atToken instanceof PlaceholderToken)) {
+      const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
+      if (nameToken instanceof PlaceholderToken) {
+        this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
+      }
+      const leftParenthesis = this.lexer.leftParenthesis() || new PlaceholderToken(this.lexer);
+      if (leftParenthesis instanceof PlaceholderToken) {
+        const decorator = new Decorator(nameToken, []);
+        decorators.push(decorator);
+        this.lexer.whitespace();
+        atToken = this.lexer.at() || new PlaceholderToken(this.lexer);
+        continue;
+      } else {
+        const parameterList: ExpressionWrapper[] = [];
+        let forceNextParameter = false;
+        while (true) {
+          this.lexer.whitespace();
+          if (!forceNextParameter) {
+            const rightParenthesis = this.lexer.rightParenthesis();
+            if (rightParenthesis !== undefined) {
+              this.lexer.whitespace();
+              break;
+            }
+          }
+          const { tokens, closingToken } = this.parseExpressionTokensUntilCommaOrRightParenthesis();
+          const wrapper = new ExpressionWrapper(tokens, false);
+          parameterList.push(wrapper);
+          if (closingToken.tag === TokenTag.comma) {
+            forceNextParameter = true;
+            this.lexer.whitespace();
+            atToken = this.lexer.at() || new PlaceholderToken(this.lexer);
+            continue;
+          } else {
+            this.lexer.whitespace();
+            break;
+          }
+        }
+        const decorator = new Decorator(nameToken, parameterList);
+        decorators.push(decorator);
+        this.lexer.whitespace();
+        atToken = this.lexer.at() || new PlaceholderToken(this.lexer);
+        continue;
+      }
+    }
+    return decorators;
   }
 }

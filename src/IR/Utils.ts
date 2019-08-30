@@ -8,7 +8,7 @@ export function getStatementsInLinearOrder(blocks: Block[]): SSAStatement[] {
   for (const block of blocks) {
     if (block.type === BlockType.basic) {
       statements = statements.concat(block.statements);
-    } else if (block.type === BlockType.breakble) {
+    } else if (block.type === BlockType.breakable) {
       statements = statements.concat(getStatementsInLinearOrder(block.blocks));
     } else if (block.type === BlockType.loop) {
       statements = statements.concat(getStatementsInLinearOrder(block.blocks));
@@ -141,6 +141,9 @@ export function getWrittenVariables(statement: SSAStatement): Variable[] {
   if (statement[0] === InstructionType.setToGlobal) {
     return [statement[1]];
   }
+  if (statement[0] === InstructionType.setToDataSegment) {
+    return [statement[1]];
+  }
   if (statement[0] === InstructionType.copy) {
     return [statement[1]];
   }
@@ -245,6 +248,18 @@ export function getWrittenVariables(statement: SSAStatement): Variable[] {
   }
   return [];
 }
+export function isBreakStatement(statement: SSAStatement): boolean {
+  if (statement[0] === InstructionType.break) {
+    return true;
+  }
+  if (statement[0] === InstructionType.breakIf) {
+    return true;
+  }
+  if (statement[0] === InstructionType.breakIfFalse) {
+    return true;
+  }
+  return false;
+}
 export function getReadVariables(statement: SSAStatement): Variable[] {
   if (statement[0] === InstructionType.phi) {
     return statement[2];
@@ -271,6 +286,9 @@ export function getReadVariables(statement: SSAStatement): Variable[] {
     return [];
   }
   if (statement[0] === InstructionType.setToGlobal) {
+    return [];
+  }
+  if (statement[0] === InstructionType.setToDataSegment) {
     return [];
   }
   if (statement[0] === InstructionType.copy) {
@@ -373,7 +391,7 @@ export function getReadVariables(statement: SSAStatement): Variable[] {
     return [statement[2], statement[3]];
   }
   if (statement[0] === InstructionType.return) {
-    return [statement[1]];
+    return statement[1];
   }
   return [];
 }

@@ -1,14 +1,21 @@
-import { TypeScope, TypeScopeEntry } from "../Type Scope/TypeScope";
-import { NativeIntegerType } from "./NativeType";
 
-export function injectNativeTypes(typeScope: TypeScope) {
-  typeScope.addEntry(new TypeScopeEntry("UInt8", new NativeIntegerType(false, 1), undefined));
-  typeScope.addEntry(new TypeScopeEntry("UInt16", new NativeIntegerType(false, 2), undefined));
-  typeScope.addEntry(new TypeScopeEntry("UInt32", new NativeIntegerType(false, 4), undefined));
-  typeScope.addEntry(new TypeScopeEntry("UInt64", new NativeIntegerType(false, 8), undefined));
+import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode } from "../Type Scope/TypeScope";
+import { NativeIntegerType, StringType } from "./NativeType";
 
-  typeScope.addEntry(new TypeScopeEntry("Int8", new NativeIntegerType(true, 1), undefined));
-  typeScope.addEntry(new TypeScopeEntry("Int16", new NativeIntegerType(true, 2), undefined));
-  typeScope.addEntry(new TypeScopeEntry("Int32", new NativeIntegerType(true, 4), undefined));
-  typeScope.addEntry(new TypeScopeEntry("Int64", new NativeIntegerType(true, 8), undefined));
+export function injectNativeTypes(rootNode: TypeTreeNode) {
+  rootNode.registerNewNamedTemplate("UInt8", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt8", "native", new NativeIntegerType(rootNode, false, 1))));
+  rootNode.registerNewNamedTemplate("UInt16", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt16", "native", new NativeIntegerType(rootNode, false, 2))));
+  rootNode.registerNewNamedTemplate("UInt32", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt32", "native", new NativeIntegerType(rootNode, false, 4))));
+  rootNode.registerNewNamedTemplate("UInt64", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt64", "native", new NativeIntegerType(rootNode, false, 8))));
+
+  rootNode.registerNewNamedTemplate("Int8", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int8", "native", new NativeIntegerType(rootNode, true, 1))));
+  rootNode.registerNewNamedTemplate("Int16", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int16", "native", new NativeIntegerType(rootNode, true, 2))));
+  rootNode.registerNewNamedTemplate("Int32", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int32", "native", new NativeIntegerType(rootNode, true, 4))));
+  rootNode.registerNewNamedTemplate("Int64", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int64", "native", new NativeIntegerType(rootNode, true, 8))));
+
+  rootNode.registerNewNamedTemplate("Bool", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt8")));
+  rootNode.registerNewNamedTemplate("Int", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("Int32")));
+  rootNode.registerNewNamedTemplate("UInt", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt32")));
+
+  rootNode.registerNewNamedTemplate("String", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "String", "native", new StringType(rootNode))));
 }

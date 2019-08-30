@@ -7,16 +7,16 @@ import { TypedArrayBytestreamConsumer } from "./Encoding/TypedArrayBytestreamCon
 
 export class ASTBuilder {
   public sections: Section[] = [];
-  private defaultTypeSection: ITypeSection | null = null;
-  private defaultFunctionSection: IFunctionSection | null = null;
-  private defaultCodeSection: ICodeSection | null = null;
-  private defaultExportSection: IExportSection | null = null;
-  private defaultImportSection: IImportSection | null = null;
-  private defaultTableSection: ITableSection | null = null;
-  private defaultGlobalSection: IGlobalSection | null = null;
-  private defaultStartSection: IStartSection | null = null;
-  private defaultElementSection: IElementSection | null = null;
-  private defaultDataSection: IDataSection | null = null;
+  public defaultTypeSection: ITypeSection | null = null;
+  public defaultFunctionSection: IFunctionSection | null = null;
+  public defaultCodeSection: ICodeSection | null = null;
+  public defaultExportSection: IExportSection | null = null;
+  public defaultImportSection: IImportSection | null = null;
+  public defaultTableSection: ITableSection | null = null;
+  public defaultGlobalSection: IGlobalSection | null = null;
+  public defaultStartSection: IStartSection | null = null;
+  public defaultElementSection: IElementSection | null = null;
+  public defaultDataSection: IDataSection | null = null;
   public get module(): IModule {
     return {
       sections: this.sections,
@@ -78,7 +78,7 @@ export class ASTBuilder {
       sectionId: SectionId.code,
       codeEntries,
     };
-    if (this.defaultTypeSection === null) {
+    if (this.defaultCodeSection === null) {
       this.defaultCodeSection = section;
     }
     this.sections.push(section);
@@ -89,7 +89,7 @@ export class ASTBuilder {
       sectionId: SectionId.export,
       exports: e,
     };
-    if (this.defaultTypeSection === null) {
+    if (this.defaultExportSection === null) {
       this.defaultExportSection = section;
     }
     this.sections.push(section);

@@ -1,9 +1,7 @@
-import { ILimit, ILocal, IModule } from "../WASM/AST";
+import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
-import { Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
+import { ExportDescription, Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
-import { TypedArrayBytestreamConsumer } from "../WASM/Encoding/TypedArrayBytestreamConsumer";
-import { encodeUTF8String } from '../WASM/Encoding/Utils';
 import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Type, Variable } from "./AST";
 import { getWrittenVariables, irFunctionTypesAreEqual, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
 import { allocateVirtualRegistersToVariables, IBucket } from "./VirtualRegisterAllocator";
@@ -30,7 +28,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
 
   const wasmFunctionTypes: Array<[FunctionType, number]> = [];
   const wasmBuilder = new ASTBuilder();
-
+  wasmBuilder.addTypeSection();
   for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
     const type = externalFunctionDeclaration.type;
     let index = -1;
@@ -62,10 +60,19 @@ export function compileIR(ir: ICompilationUnit): IModule {
     max: 1,
   };
   wasmBuilder.addMemorySection([memory]);
-  const memoryIndex = 0;
 
-  const constantMemoryOffset = 0;
-  const dataSegments = new TypedArrayBytestreamConsumer();
+  const dataSegmentOffsetArray: number[] = [];
+
+  let currentOffset = 0;
+  const alignment = 16;
+
+  for (const segmentData of ir.dataSegments) {
+    dataSegmentOffsetArray.push(currentOffset);
+    const content = segmentData.content;
+    const length = content.length;
+    const alignedNewOffset = (Math.ceil((currentOffset + length) / alignment)) * alignment;
+    currentOffset = alignedNewOffset;
+  }
 
   for (const fn of ir.functionCode) {
     const functionType = functionIdentifierTypeMapping.get(fn.identifier);
@@ -108,6 +115,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
     }
 
     const variableTypeArray = functionType[0].concat(localTypes);
+
     const env: ICompilationEnvironment = {
       compilationUnit: ir,
       sequenceBuilderStack: [],
@@ -121,6 +129,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
       bucketIndexArray,
       buckets: bucketArray,
       bucketsWrittenToInCurrentBasicBlock: new Set(),
+      dataSegmentOffsetArray,
     };
     env.sequenceBuilderStack.push(new InstructionSequenceBuilder());
     env.stack.push([]);
@@ -139,6 +148,10 @@ export function compileIR(ir: ICompilationUnit): IModule {
         });
       }
     }
+    const stack = env.stack[env.stack.length - 1];
+    for (let j = stack.length - 1; j >= 0; j--) {
+      sequenceBuilder.drop();
+    }
     sequenceBuilder.end();
     const wasmFunctionIndex = functionIdentifierIndexMapping.get(fn.identifier);
     if (wasmFunctionIndex === undefined) {
@@ -146,18 +159,35 @@ export function compileIR(ir: ICompilationUnit): IModule {
     }
     wasmBuilder.addFunction(wasmFunctionIndex, fn.identifier, index, locals, sequenceBuilder.instructions);
   }
+  const memoryExportDescription: IMemoryExport = {
+    type: ExportDescription.memory,
+    index: 0,
+  };
+  const memoryExport: IExport = {
+    name: "memory",
+    description: memoryExportDescription,
+  };
 
-  encodeUTF8String("Hello World", dataSegments);
+  const exportSection = wasmBuilder.defaultExportSection || wasmBuilder.addExportSection();
+  exportSection.exports.push(memoryExport);
 
+  let k = 0;
   const dataSection = wasmBuilder.addDataSection();
-  const constantOffsetInstructionBuilder = new InstructionSequenceBuilder();
-  constantOffsetInstructionBuilder.i32Const(0);
-  constantOffsetInstructionBuilder.end();
-  dataSection.segments.push({
-    memIndex: 0,
-    offset: constantOffsetInstructionBuilder.instructions,
-    data: dataSegments.cleanArray,
-  });
+  for (const segmentData of ir.dataSegments) {
+    const offset = dataSegmentOffsetArray[k];
+    const content = segmentData.content;
+
+    const constantOffsetInstructionBuilder = new InstructionSequenceBuilder();
+    constantOffsetInstructionBuilder.i32Const(offset);
+    constantOffsetInstructionBuilder.end();
+    dataSection.segments.push({
+      memIndex: 0,
+      offset: constantOffsetInstructionBuilder.instructions,
+      data: content,
+    });
+    k++;
+  }
+
   return wasmBuilder.module;
 }
 export interface ICompilationEnvironment {
@@ -173,6 +203,7 @@ export interface ICompilationEnvironment {
   bucketIndexArray: number[];
   buckets: IBucket[];
   bucketsWrittenToInCurrentBasicBlock: Set<number>;
+  dataSegmentOffsetArray: number[];
 }
 export function compileBlock(environment: ICompilationEnvironment, block: Block): void {
   function getSequenceBuilder(): InstructionSequenceBuilder {
@@ -467,6 +498,24 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const [, target, functionidentifier] = statement;
       } else if (statement[0] === InstructionType.setToGlobal) {
         const [, target, globalIdentifier] = statement;
+      } else if (statement[0] === InstructionType.setToDataSegment) {
+        const [, target, dataSegmentIndex] = statement;
+        const type = environment.variableTypeArray[target];
+        const offset = environment.dataSegmentOffsetArray[dataSegmentIndex];
+        const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+        if (wasmType === ValueType.i32) {
+          builder.i32Const(offset);
+        }
+        if (wasmType === ValueType.i64) {
+          builder.i64Const(offset);
+        }
+        if (wasmType === ValueType.f32) {
+          builder.f32Const(offset);
+        }
+        if (wasmType === ValueType.i64) {
+          builder.f64Const(offset);
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.copy) {
         const [, target, arg] = statement;
         prepareStack([arg]);
@@ -744,7 +793,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Remainder operations is not defined for floating pointer operands");
+          throw new Error("Remainder operation is not defined for floating point operands");
         } else {
           const s = isSigned(environment.compilationUnit, type);
           if (s) {
@@ -774,7 +823,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("And operation is not defined for floating pointer operands");
+          throw new Error("And operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32And);
@@ -795,7 +844,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("And operation is not defined for floating pointer operands");
+          throw new Error("And operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32Or);
@@ -816,7 +865,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Xor operation is not defined for floating pointer operands");
+          throw new Error("Xor operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32Xor);
@@ -837,7 +886,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Shift operations operation is not defined for floating pointer operands");
+          throw new Error("Shift operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32ShiftLeft);
@@ -858,7 +907,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Shift operations operation is not defined for floating pointer operands");
+          throw new Error("Shift operation is not defined for floating point operands");
         } else {
           const s = isSigned(environment.compilationUnit, type);
           if (s) {
@@ -888,7 +937,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Shift operations operation is not defined for floating pointer operands");
+          throw new Error("Rotation operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32RotateLeft);
@@ -909,7 +958,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("Shift operations operation is not defined for floating pointer operands");
+          throw new Error("Rotation operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32RotateRight);
@@ -1030,7 +1079,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       }
       environment.statementIndex++;
     }
-  } else if (block.type === BlockType.breakble) {
+  } else if (block.type === BlockType.breakable) {
     clearStack(environment.statementIndex);
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
     environment.stack.push([]);

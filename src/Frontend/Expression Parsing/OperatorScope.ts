@@ -2,8 +2,6 @@ import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration"
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 
-
-
 export class PrefixOperatorEntry {
   public str: string;
   public declaration: PrefixOperatorDeclaration;

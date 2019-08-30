@@ -1,37 +1,83 @@
 import { IType } from "../Type/Type";
 
-class TypeArgument {
-  public restrictions: void = undefined;
-}
-export class TypeScopeEntry {
-  public name: string;
-  public declaration: undefined;
-  public nestedScope: TypeScope;
-  public type: IType;
-  constructor(name: string, type: IType, declaration: undefined) {
-    this.name = name;
-    this.declaration = declaration;
-    this.nestedScope = new TypeScope();
-    this.type = type;
+export type TypeTreeNodeKind = "struct" | "protocol" | "class" | "component" | "native" | "global" | "block" | "function";
+export class TypeTreeNodeTemplate {
+  public requiredArgs: number = 0;
+  public create(_args: TypeTreeNode[]): TypeTreeNode {
+    throw new Error();
   }
 }
-export class TypeScope {
-  public entries: Map<string, TypeScopeEntry> = new Map();
-  public parent: TypeScope | undefined;
-  constructor(parent?: TypeScope | undefined) {
-    this.parent = parent;
+export class ArgumentlessTypeTreeNodeTemplate extends TypeTreeNodeTemplate {
+  public requiredArgs: number = 0;
+  public typeTreeNode: TypeTreeNode;
+  constructor(typeTreeNode: TypeTreeNode) {
+    super();
+    this.typeTreeNode = typeTreeNode;
   }
-  public addEntry(entry: TypeScopeEntry) {
-    this.entries.set(entry.name, entry);
+  public create(_args: TypeTreeNode[]): TypeTreeNode {
+    return this.typeTreeNode;
   }
-  public resolve(name: string): TypeScopeEntry | undefined {
-    const entry = this.entries.get(name);
-    if (entry !== undefined) {
-      return entry;
+}
+export class TypeTreeNode {
+  public rootTypeTreeNode: TypeTreeNode;
+  public args: TypeTreeNode[];
+  public treeNodeName: string;
+  public kind: TypeTreeNodeKind;
+  public namedTemplates: Map<string, TypeTreeNodeTemplate>;
+  public parent: TypeTreeNode | undefined;
+  public instanceType: IType | undefined;
+  constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, instanceType?: IType | undefined) {
+    if (parent !== undefined) {
+      this.rootTypeTreeNode = parent.rootTypeTreeNode;
+    } else {
+      this.rootTypeTreeNode = this;
     }
-    if (this.parent !== undefined) {
-      return this.parent.resolve(name);
+    this.parent = parent;
+    this.args = args;
+    this.treeNodeName = treeNodeName;
+    this.kind = kind;
+    this.namedTemplates = new Map();
+    this.instanceType = instanceType;
+  }
+  public registerNewNamedTemplate(name: string, template: TypeTreeNodeTemplate) {
+    this.namedTemplates.set(name, template);
+  }
+  public getChildTreeNode(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
+    const template = this.namedTemplates.get(name);
+    if (template === undefined) {
+      return undefined;
+    }
+    return template.create(args);
+  }
+  public resolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
+    const node = this.getChildTreeNode(name, args);
+    if (node !== undefined) {
+      return node;
+    }
+    const parent = this.parent;
+    if (parent !== undefined) {
+      return parent.resolve(name, args);
     }
     return undefined;
   }
+  public forceResolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode {
+    const result = this.resolve(name, args);
+    if (result === undefined) {
+      throw new Error();
+    }
+    return result;
+  }
+  public forceInstanceType(): IType {
+    const result = this.instanceType;
+    if (result === undefined) {
+      throw new Error();
+    }
+    return result;
+  }
+}
+export class GlobalTypeTreeNode extends TypeTreeNode {
+  constructor() {
+    super(undefined, [], "global", "global");
+  }
+
 }

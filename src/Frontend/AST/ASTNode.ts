@@ -34,7 +34,7 @@ export class ASTNode implements IASTNode {
   public deleteAttribute<T extends keyof IAttributeMap>(kind: T) {
     this.attributes.delete(kind);
   }
-  public toString(prefix: string, first: boolean, last: boolean): string {
+  public toString(prefix: string = "", first: boolean = true, last: boolean = true): string {
     let str = "";
     str += prefix;
 

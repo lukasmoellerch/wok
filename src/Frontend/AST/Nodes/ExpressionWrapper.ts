@@ -1,6 +1,6 @@
 import { OperatorScope } from "../../Expression Parsing/OperatorScope";
 import { Token } from "../../Lexer/Token";
-import { TypeScope } from "../../Type Scope/TypeScope";
+import { TypeTreeNode } from "../../Type Scope/TypeScope";
 import { AssignmentStatement } from "./AssignmentStatement";
 import { Expression } from "./Expression";
 import { ImplictConversionExpression } from "./ImplictConversionExpression";
@@ -10,7 +10,7 @@ export class ExpressionWrapper extends Statement {
   public tokens: Token[];
   public expression: Expression | AssignmentStatement | undefined = undefined;
 
-  public typeScope: TypeScope = new TypeScope();
+  public wrappingTypeTreeNode: TypeTreeNode | undefined;
   public operatorScope: OperatorScope = new OperatorScope();
   public raw: string;
 
@@ -34,7 +34,7 @@ export class ExpressionWrapper extends Statement {
     if (expression instanceof Expression) {
       const implictConversionTargetType = expression.implictConversionTargetType;
       if (implictConversionTargetType !== undefined) {
-        this.expression = new ImplictConversionExpression(expression.type, implictConversionTargetType, expression);
+        this.expression = new ImplictConversionExpression(expression.forceType(), implictConversionTargetType, expression);
       }
     }
   }
