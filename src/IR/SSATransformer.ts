@@ -167,7 +167,11 @@ export class SSATransformer {
 
     if (block.type === BlockType.basic) {
       for (const statement of block.statements) {
-        phiStatements.push(this.traverseStatementRead(env, statement));
+        const newStatement = this.traverseStatementRead(env, statement);
+        if (newStatement === undefined) {
+          continue;
+        }
+        phiStatements.push(newStatement);
       }
       block.statements = phiStatements;
       return [block];
@@ -195,6 +199,9 @@ export class SSATransformer {
       const statements: SSAStatement[] = [];
       for (const statement of block.statements) {
         const newStatement = this.traverseStatementWrite(env, statement);
+        if (newStatement === undefined) {
+          continue;
+        }
         statements.push(newStatement);
       }
       block.statements = statements;
@@ -252,7 +259,7 @@ export class SSATransformer {
     env.blockStack.pop();
     throw new Error("Invalid block");
   }
-  public traverseStatementRead(env: TransformationEnvironment, statement: SSAStatement): SSAStatement {
+  public traverseStatementRead(env: TransformationEnvironment, statement: SSAStatement): SSAStatement | undefined {
     let newStatement: SSAStatement | undefined;
     if (statement[0] === InstructionType.phi) {
       newStatement = [statement[0], statement[1], statement[2].map((a) => env.ssaOf(a))];
@@ -394,12 +401,9 @@ export class SSATransformer {
       }
       env.currentAssignment.set(variable, write);
     }
-    if (newStatement === undefined) {
-      throw new Error();
-    }
     return newStatement;
   }
-  public traverseStatementWrite(env: TransformationEnvironment, statement: SSAStatement): SSAStatement {
+  public traverseStatementWrite(env: TransformationEnvironment, statement: SSAStatement): SSAStatement | undefined {
     if (statement[0] === InstructionType.phi) {
       return [statement[0], env.ssa(statement[1]), statement[2]];
     }

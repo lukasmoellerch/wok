@@ -201,6 +201,8 @@ export class ExpressionParser extends ASTWalker {
     return placeholderExpression;
   }
   protected walkExpressionWrapper(wrapper: ExpressionWrapper) {
+    console.log(wrapper.raw);
     this.parseExpressionWrapper(wrapper);
+    wrapper.parsed = true;
   }
 }

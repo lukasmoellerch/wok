@@ -8,7 +8,8 @@
     "object-literal-sort-keys": false,
     "no-bitwise": false,
     "max-classes-per-file": false,
-    "variable-name": false
+    "variable-name": false,
+    "prefer-for-of": false
   },
   "rulesDirectory": []
 }

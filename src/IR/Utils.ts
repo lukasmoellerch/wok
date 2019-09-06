@@ -3,6 +3,14 @@ import { Block, BlockType, FunctionType, ICompilationUnit, InstructionType, SSAS
 export function isPhiNode(statement: SSAStatement): boolean {
   return statement[0] === InstructionType.phi;
 }
+export function getAllPhiNodes(out: Array<[Variable, Variable[]]>, blocks: Block[]) {
+  for (const statement of getStatementsInLinearOrder(blocks)) {
+    if (statement[0] === InstructionType.phi) {
+      const [write, read] = [statement[1], statement[2]];
+      out.push([write, read]);
+    }
+  }
+}
 export function getStatementsInLinearOrder(blocks: Block[]): SSAStatement[] {
   let statements: SSAStatement[] = [];
   for (const block of blocks) {
@@ -411,4 +419,275 @@ export function numberArrayContentsAreEqual(a: number[], b: number[]): boolean {
 export function irFunctionTypesAreEqual(a: FunctionType, b: FunctionType): boolean {
   return numberArrayContentsAreEqual(a[0], b[0]) &&
     numberArrayContentsAreEqual(a[1], b[1]);
+}
+
+export function mapWrittenVariables(statement: SSAStatement, fn: ((arg0: number) => number)): SSAStatement {
+  if (statement[0] === InstructionType.phi) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.break) {
+    return [statement[0]];
+  }
+  if (statement[0] === InstructionType.breakIf) {
+    return [statement[0], statement[1]];
+  }
+  if (statement[0] === InstructionType.breakIfFalse) {
+    return [statement[0], statement[1]];
+  }
+  if (statement[0] === InstructionType.call) {
+    return [statement[0], statement[1], statement[2].map((a) => fn(a)), statement[3]];
+  }
+  if (statement[0] === InstructionType.callFunctionPointer) {
+    return [statement[0], statement[1], statement[2], statement[3].map((a) => fn(a)), statement[4]];
+  }
+  if (statement[0] === InstructionType.setToConstant) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.setToFunction) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.setToGlobal) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.setToDataSegment) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.copy) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.load) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.store) {
+    return [statement[0], statement[1], statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.convert) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.equalToZero) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.equal) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.notEqual) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.less) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.greater) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.lessEqual) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.greaterEqual) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.countLeadingZeroes) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.countTrailingZeroes) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.add) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.subtract) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.multiply) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.divide) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.remainder) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.and) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.or) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.xor) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.shiftLeft) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.shiftRight) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.rotateleft) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.rotateRight) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.absolute) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.negate) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.floor) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.truncate) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.nearest) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.sqrt) {
+    return [statement[0], fn(statement[1]), statement[2]];
+  }
+  if (statement[0] === InstructionType.minimum) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.maximum) {
+    return [statement[0], fn(statement[1]), statement[2], statement[3]];
+  }
+  if (statement[0] === InstructionType.return) {
+    return [statement[0], statement[1]];
+  }
+  throw new Error();
+}
+export function mapReadVariables(statement: SSAStatement, map: ((arg: number) => number)): SSAStatement {
+  if (statement[0] === InstructionType.phi) {
+    return [statement[0], statement[1], statement[2].map((a) => map(a))];
+  }
+  if (statement[0] === InstructionType.break) {
+    return [statement[0]];
+  }
+  if (statement[0] === InstructionType.breakIf) {
+    return [statement[0], map(statement[1])];
+  }
+  if (statement[0] === InstructionType.breakIfFalse) {
+    return [statement[0], map(statement[1])];
+  }
+  if (statement[0] === InstructionType.call) {
+    return [statement[0], statement[1], statement[2], statement[3].map((a) => map(a))];
+  }
+  if (statement[0] === InstructionType.callFunctionPointer) {
+    return [statement[0], statement[1], map(statement[2]), statement[3], statement[4].map((a) => map(a))];
+  }
+  if (statement[0] === InstructionType.setToConstant) {
+    return [statement[0], statement[1], statement[2]];
+  }
+  if (statement[0] === InstructionType.setToFunction) {
+    return [statement[0], statement[1], statement[2]];
+  }
+  if (statement[0] === InstructionType.setToGlobal) {
+    return [statement[0], statement[1], statement[2]];
+  }
+  if (statement[0] === InstructionType.setToDataSegment) {
+    return [statement[0], statement[1], statement[2]];
+  }
+  if (statement[0] === InstructionType.copy) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.load) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.store) {
+    return [statement[0], map(statement[1]), map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.convert) {
+    return [statement[0], statement[1], map(statement[2]), statement[3]];
+  }
+  if (statement[0] === InstructionType.equalToZero) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.equal) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.notEqual) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.less) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.greater) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.lessEqual) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.greaterEqual) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.countLeadingZeroes) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.countTrailingZeroes) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.add) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.subtract) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.multiply) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.divide) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.remainder) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.and) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.or) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.xor) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.shiftLeft) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.shiftRight) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.rotateleft) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.rotateRight) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.absolute) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.negate) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.floor) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.truncate) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.nearest) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.sqrt) {
+    return [statement[0], statement[1], map(statement[2])];
+  }
+  if (statement[0] === InstructionType.minimum) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.maximum) {
+    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+  }
+  if (statement[0] === InstructionType.return) {
+    return [statement[0], statement[1].map((a) => map(a))];
+  }
+  throw new Error();
 }

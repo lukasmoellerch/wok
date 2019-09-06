@@ -39,6 +39,14 @@ export class TypeTreeNode {
     this.namedTemplates = new Map();
     this.instanceType = instanceType;
   }
+  public toString(): string {
+    const parent = this.parent;
+    if (parent === undefined) {
+      return this.treeNodeName;
+    } else {
+      return parent.toString() + "." + this.treeNodeName;
+    }
+  }
   public registerNewNamedTemplate(name: string, template: TypeTreeNodeTemplate) {
     this.namedTemplates.set(name, template);
   }

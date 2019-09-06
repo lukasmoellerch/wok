@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "fs";
 import { promisify } from "util";
+import { DependencyAnalyzer } from "./Frontend/DependencyAnalysis/DependencyAnalyzer";
 import { ExpressionParser } from "./Frontend/Expression Parsing/ExpressionParser";
 import { OperatorScope } from "./Frontend/Expression Parsing/OperatorScope";
 import { OperatorScopeBuilder } from "./Frontend/Expression Parsing/OperatorScopeBuilder";
@@ -16,7 +17,7 @@ import { TypeChecker } from "./Frontend/TypeChecking/TypeChecker";
 import { VariableScope } from "./Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Frontend/VariableScope/VariableScopeBuilder";
 import { compileIR } from "./IR/IRCompiler";
-import { IRPrinter } from "./IR/IRPrinter";
+import { removeCopyStatements } from "./IR/Optimization/CopyRemove";
 import { SSATransformer } from "./IR/SSATransformer";
 import { encodeModule } from "./WASM/Encoding/Encoder";
 import { TypedArrayBytestreamConsumer } from "./WASM/Encoding/TypedArrayBytestreamConsumer";
@@ -61,17 +62,21 @@ export default async function main() {
   typeChecker.walkSourceFile(result);
   const implictConversionWrapper = new ImplictConversionWrapper();
   implictConversionWrapper.walkSourceFile(result);
+  const dependencyAnalyzer = new DependencyAnalyzer();
+  dependencyAnalyzer.walkSourceFile(result);
   if (parser.errors.length > 0) {
     process.stdout.write(errorFormatter.toString());
     return;
   }
+  console.log(result.toString());
   const irCompiler = new IRCompiler(globalTypeScope);
   irCompiler.compileSourceFile(result);
   const compilationUnit = irCompiler.compilationUnit;
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
-  const irPrinter = new IRPrinter();
-  // const irString = irPrinter.stringifyCompilationUnit(ssa);
+  removeCopyStatements(ssa);
+  /*const irPrinter = new IRPrinter();
+  const irString = irPrinter.stringifyCompilationUnit(ssa);*/
   const wasmModule = compileIR(ssa);
   const consumer = new TypedArrayBytestreamConsumer();
   encodeModule(wasmModule, consumer);
@@ -92,7 +97,6 @@ export default async function main() {
       },
     },
   });
-  console.log(instance.exports.memory);
   const memory = instance.exports.memory.buffer as ArrayBuffer;
   instance.exports.main(50);
 }

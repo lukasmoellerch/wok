@@ -10,24 +10,21 @@ infix operator <= 2 right
 
 @foreign("printInt") func printInt(str: UInt32)
 @foreign("print") func print(str: String)
-func main(max: UInt32) {
-  var a: UInt32 = 0
-  var b: UInt32 = 0
-  var c: UInt32 = 1
-  var i: UInt32 = 0
-  while i < max {
-    printInt(a)
-    a = b
-    b = c
-    c = b + a
-    i = i + 1
-  }
-  const str = "This is a simple string"
-  print(str)
-  print("More strings....")
+@export("main") func main(max: UInt32) {
+  fib(max)
 }
-func other() {
-  const a = 3
+func fib(n: UInt32) {
+  var f1: UInt32 = 0
+  var f2: UInt32 = 1
+  var fi: UInt32 = 0
+  var i: UInt32 = 0
+  while i < n {
+    fi = f1 + f2
+    f1 = f2
+    f2 = fi
+    i = i + 1
+    printInt(fi)
+  }
 }
 extension Int {
 

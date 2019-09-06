@@ -1,9 +1,9 @@
 import { Token } from "../../Lexer/Token";
 import { ASTNode } from "../ASTNode";
-import { ConstantDeclaration } from "./ConstantDeclaration";
-import { VariableDeclaration } from "./VariableDeclaration";
+import { ConstantFieldDeclaration } from "./ConstantFieldDeclaration";
+import { VariableFieldDeclaration } from "./VariableFieldDeclaration";
 
-type Declaration = ConstantDeclaration | VariableDeclaration;
+export type Declaration = ConstantFieldDeclaration | VariableFieldDeclaration;
 export class DeclarationBlock extends ASTNode {
   public startToken: Token;
   public endToken: Token;

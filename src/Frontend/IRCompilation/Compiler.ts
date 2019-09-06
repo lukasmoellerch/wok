@@ -435,6 +435,7 @@ export class IRCompiler {
       const valueIrVariables = irValue.irVariables;
       while (i < targetIrVariables.length) {
         env.writeStatement([IR.InstructionType.copy, targetIrVariables[i], valueIrVariables[i]]);
+        // env.writeStatement([IR.InstructionType.phi, targetIrVariables[i], [valueIrVariables[i]]]);
         i++;
       }
     } else if (expression instanceof ImplictConversionExpression) {
@@ -509,6 +510,7 @@ export class IRCompiler {
       const [toIRType] = toType.irVariableTypes();
       if (fromIRType === toIRType) {
         env.writeStatement([IR.InstructionType.copy, targetIRVariable, valueIRVariable]);
+        // env.writeStatement([IR.InstructionType.phi, targetIRVariable, [valueIRVariable]]);
       } else {
         env.writeStatement([IR.InstructionType.convert, targetIRVariable, valueIRVariable, toType.irVariableTypes()[0]]);
       }

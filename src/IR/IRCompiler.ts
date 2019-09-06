@@ -1,10 +1,10 @@
-import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
+import { IExport, ILimit, ILocal, IMemoryExport, IModule, InstructionSequence } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
 import { ExportDescription, Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
 import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Type, Variable } from "./AST";
-import { getWrittenVariables, irFunctionTypesAreEqual, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
-import { allocateVirtualRegistersToVariables, IBucket } from "./VirtualRegisterAllocator";
+import { IRPrinter } from "./IRPrinter";
+import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, irFunctionTypesAreEqual, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
 export function compileIR(ir: ICompilationUnit): IModule {
   const functionIdentifierIndexMapping: Map<FunctionIdentifier, number> = new Map();
   let i = 0;
@@ -16,8 +16,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
     functionIdentifierIndexMapping.set(internalFunctionDeclaration.identifier, i);
     i++;
   }
-  const allocation = allocateVirtualRegistersToVariables(ir);
-  const usageSpanMappings = allocation.usageSpanMappings;
+
   const functionIdentifierTypeMapping: Map<FunctionIdentifier, FunctionType> = new Map();
   for (const internalFunctionDeclaration of ir.internalFunctionDeclarations) {
     functionIdentifierTypeMapping.set(internalFunctionDeclaration.identifier, internalFunctionDeclaration.type);
@@ -80,10 +79,6 @@ export function compileIR(ir: ICompilationUnit): IModule {
     if (functionType === undefined) {
       throw new Error();
     }
-    const mapping = usageSpanMappings.get(fn.identifier);
-    if (mapping === undefined) {
-      continue;
-    }
 
     let index = -1;
     const searchResult = wasmFunctionTypes.find((a) => {
@@ -103,36 +98,76 @@ export function compileIR(ir: ICompilationUnit): IModule {
         functionType, index,
       ]);
     }
-    const bucketArray: IBucket[] = [];
-    const bucketIndexArray: number[] = [];
-    for (const buckets of mapping.values()) {
-      for (const bucket of buckets) {
-        bucketArray[bucket.index] = bucket;
-        for (const value of bucket.variables) {
-          bucketIndexArray[value] = bucket.index;
+    const irTypes = functionType[0].concat(localTypes);
+
+    const variableTypeArray = functionType[0].map((type) => mapIRTypeToWasm(ir, type));
+    const variablePhiNodeLocalMapping: Map<number, number[]> = new Map();
+    const phiNodeResultLocalMapping: Map<number, number> = new Map();
+    const phiNodes: Array<[Variable, Variable[]]> = [];
+    getAllPhiNodes(phiNodes, fn.code);
+    for (const node of phiNodes) {
+      const newIndex = variableTypeArray.length;
+      const [written, read] = node;
+      const writtenIRType = irTypes[written];
+      const writtenType = mapIRTypeToWasm(ir, writtenIRType);
+      variableTypeArray.push(writtenType);
+      phiNodeResultLocalMapping.set(written, newIndex);
+      for (const readVariable of read) {
+        const mapping = variablePhiNodeLocalMapping.get(readVariable);
+        if (mapping === undefined) {
+          variablePhiNodeLocalMapping.set(readVariable, [newIndex]);
+        } else {
+          mapping.push(newIndex);
         }
       }
     }
 
-    const variableTypeArray = functionType[0].concat(localTypes);
+    const variableLastUsageStatementIndex: Map<number, number> = new Map();
+    let w = 0;
+    for (const statement of getStatementsInLinearOrder(fn.code)) {
+      if (!isPhiNode(statement)) {
+        const read = getReadVariables(statement);
+        for (const variable of read) {
+          variableLastUsageStatementIndex.set(variable, w);
+        }
+      }
+      w++;
+    }
+
+    const localSavedVariableMap = new Map();
+    const variableSavedInLocalMap = new Map();
+    let argId = 0;
+    while (argId < variableTypeArray.length) {
+      localSavedVariableMap.set(argId, argId);
+      variableSavedInLocalMap.set(argId, argId);
+      argId++;
+    }
 
     const env: ICompilationEnvironment = {
       compilationUnit: ir,
-      sequenceBuilderStack: [],
-      stack: [],
       functionType,
       functionIdentifierTypeMapping,
-      variableTypeArray,
-      mapping,
-      statementIndex: 0,
       functionIdentifierIndexMapping,
-      bucketIndexArray,
-      buckets: bucketArray,
-      bucketsWrittenToInCurrentBasicBlock: new Set(),
+      irVariableTypeArray: irTypes,
+      wasmVariableTypeArray: variableTypeArray,
       dataSegmentOffsetArray,
+
+      variableLastUsageStatementIndex,
+
+      sequenceBuilderStack: [],
+      statementIndex: 0,
+
+      stackArray: [],
+      reproducibleVariableMapping: new Map(),
+      localSavedVariableMap,
+      variableSavedInLocalMap,
+      variablePhiNodeLocalMapping,
+      phiNodeResultLocalMapping,
+
+      variablesWrittenToInCurrentBlock: new Set(),
     };
     env.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    env.stack.push([]);
+    env.stackArray.push([]);
 
     for (const block of fn.code) {
       compileBlock(env, block);
@@ -140,15 +175,13 @@ export function compileIR(ir: ICompilationUnit): IModule {
 
     const sequenceBuilder = env.sequenceBuilderStack[env.sequenceBuilderStack.length - 1];
     const locals: ILocal[] = [];
-    for (const [type, buckets] of mapping.entries()) {
-      for (const bucket of buckets) {
-        locals.push({
-          n: 1,
-          type,
-        });
-      }
+    for (const type of variableTypeArray) {
+      locals.push({
+        n: 1,
+        type,
+      });
     }
-    const stack = env.stack[env.stack.length - 1];
+    const stack = env.stackArray[env.stackArray.length - 1];
     for (let j = stack.length - 1; j >= 0; j--) {
       sequenceBuilder.drop();
     }
@@ -190,245 +223,306 @@ export function compileIR(ir: ICompilationUnit): IModule {
 
   return wasmBuilder.module;
 }
+export class ReproducibleVariable {
+  public index: number;
+  public sequence: InstructionSequence;
+  constructor(index: number, sequence: InstructionSequence) {
+    this.index = index;
+    this.sequence = sequence;
+  }
+}
 export interface ICompilationEnvironment {
   compilationUnit: ICompilationUnit;
-  sequenceBuilderStack: InstructionSequenceBuilder[];
-  stack: Variable[][];
   functionType: FunctionType;
   functionIdentifierTypeMapping: Map<FunctionIdentifier, FunctionType>;
-  variableTypeArray: Type[];
-  mapping: Map<ValueType, IBucket[]>;
-  statementIndex: number;
   functionIdentifierIndexMapping: Map<FunctionIdentifier, number>;
-  bucketIndexArray: number[];
-  buckets: IBucket[];
-  bucketsWrittenToInCurrentBasicBlock: Set<number>;
+  irVariableTypeArray: Type[];
+  wasmVariableTypeArray: ValueType[];
   dataSegmentOffsetArray: number[];
+  variableLastUsageStatementIndex: Map<number, number>;
+
+  sequenceBuilderStack: InstructionSequenceBuilder[];
+  statementIndex: number;
+
+  stackArray: Variable[][];
+  reproducibleVariableMapping: Map<number, ReproducibleVariable>;
+  localSavedVariableMap: Map<number, number>;
+  variableSavedInLocalMap: Map<number, number>;
+  variablePhiNodeLocalMapping: Map<number, number[]>;
+  phiNodeResultLocalMapping: Map<number, number>;
+
+  variablesWrittenToInCurrentBlock: Set<number>;
+
 }
 export function compileBlock(environment: ICompilationEnvironment, block: Block): void {
   function getSequenceBuilder(): InstructionSequenceBuilder {
     return environment.sequenceBuilderStack[environment.sequenceBuilderStack.length - 1];
   }
   function getStack(): Variable[] {
-    return environment.stack[environment.stack.length - 1];
+    return environment.stackArray[environment.stackArray.length - 1];
   }
-  function clearStack(instructionIndex: number) {
+  function clearStack() {
     const stack = getStack();
     for (let i = stack.length - 1; i >= 0; i--) {
-      clearTos(instructionIndex);
+      clearTos();
     }
   }
-  function bucketOf(variable: Variable): number {
-    return environment.bucketIndexArray[variable];
-  }
-  function clearTos(instructionIndex: number) {
-    const usageSpanMapping = environment.mapping;
+  function clearTos() {
+    const stack = getStack();
+    const tosVariable = stack[stack.length - 1];
     const sequenceBuilder = getSequenceBuilder();
-    const stack = getStack();
-    const variable = stack.pop();
-    if (variable === undefined) {
-      return;
-    }
-    const type = environment.variableTypeArray[variable];
-    const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
-    const typeMapping = environment.mapping.get(wasmType);
-    if (typeMapping === undefined) {
-      return;
-    }
-    const bucketInformation = typeMapping.find((a) => {
-      return a.variables.indexOf(variable) !== -1;
-    });
-    if (bucketInformation === undefined) {
-      return;
-    }
-    if (bucketInformation.total[1] > instructionIndex - 1) {
-      sequenceBuilder.localSet(bucketInformation.index);
-      environment.bucketsWrittenToInCurrentBasicBlock.delete(bucketInformation.index);
-    } else {
-      sequenceBuilder.drop();
-    }
-  }
-  function prepareVariableUsage(amount: number) {
-    const stack = getStack();
-    const builder = getSequenceBuilder();
-    const statementIndex = environment.statementIndex;
-    let stackVariablesToBeSaved = 0;
-    if (stack.length < amount) {
-      throw new Error();
-    }
-    let j = 0;
-    while (j < amount) {
-      const variable = stack[stack.length - j - 1];
-      const bucketIndex = bucketOf(variable);
-      if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex)) {
-        stackVariablesToBeSaved = j + 1;
+
+    const usage = environment.variableLastUsageStatementIndex.get(tosVariable);
+    if (usage !== undefined) {
+      if (usage < environment.statementIndex) {
+        const variablePhiNodeLocalMapping = environment.variablePhiNodeLocalMapping.get(tosVariable);
+        if (variablePhiNodeLocalMapping !== undefined && variablePhiNodeLocalMapping.length > 0) {
+          for (let i = 0; i < variablePhiNodeLocalMapping.length; i++) {
+            sequenceBuilder.localSet(variablePhiNodeLocalMapping[i]);
+          }
+          environment.variablesWrittenToInCurrentBlock.delete(tosVariable);
+          stack.pop();
+          return;
+        }
       }
-      j++;
     }
-    for (let i = stack.length - 1; i > stack.length - stackVariablesToBeSaved; i--) {
-      const variable = stack[i];
-      const bucket = bucketOf(variable);
-      builder.localSet(bucket);
-      environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+
+    const index = environment.wasmVariableTypeArray.length;
+    const type = environment.irVariableTypeArray[tosVariable];
+    const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+    environment.wasmVariableTypeArray.push(wasmType);
+    sequenceBuilder.localSet(index);
+
+    environment.variableSavedInLocalMap.set(tosVariable, index);
+    environment.localSavedVariableMap.set(index, tosVariable);
+
+    stack.pop();
+  }
+  function teeTos() {
+    const stack = getStack();
+    const tosVariable = stack[stack.length - 1];
+    const sequenceBuilder = getSequenceBuilder();
+
+    const usage = environment.variableLastUsageStatementIndex.get(tosVariable);
+    if (usage !== undefined) {
+      if (usage < environment.statementIndex) {
+        const variablePhiNodeLocalMapping = environment.variablePhiNodeLocalMapping.get(tosVariable);
+        if (variablePhiNodeLocalMapping !== undefined && variablePhiNodeLocalMapping.length > 0) {
+          for (let i = 0; i < variablePhiNodeLocalMapping.length; i++) {
+            sequenceBuilder.localSet(variablePhiNodeLocalMapping[i]);
+          }
+          environment.variablesWrittenToInCurrentBlock.delete(tosVariable);
+          stack.pop();
+          return;
+        }
+      }
     }
-    if (stackVariablesToBeSaved > 0) {
-      const variable = stack[stack.length - stackVariablesToBeSaved];
-      const bucket = bucketOf(variable);
-      builder.localTee(bucket);
-      environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
+
+    const index = environment.wasmVariableTypeArray.length;
+    const type = environment.irVariableTypeArray[tosVariable];
+    const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+    environment.wasmVariableTypeArray.push(wasmType);
+    sequenceBuilder.localTee(index);
+
+    environment.variableSavedInLocalMap.set(tosVariable, index);
+    environment.localSavedVariableMap.set(index, tosVariable);
+  }
+  function load(variable: number) {
+    const sequenceBuilder = getSequenceBuilder();
+    const reproducible = environment.reproducibleVariableMapping.get(variable);
+    if (reproducible !== undefined) {
+      sequenceBuilder.write(reproducible.sequence);
+      return;
     }
-    for (let i = stack.length - stackVariablesToBeSaved + 1; i < stack.length; i++) {
-      const variable = stack[i];
-      const bucket = bucketOf(variable);
-      builder.localGet(bucket);
+    const local = environment.variableSavedInLocalMap.get(variable);
+    if (local !== undefined) {
+      sequenceBuilder.localGet(local);
+      return;
     }
-    while (j--) {
-      stack.pop();
-    }
+    throw new Error();
   }
   function prepareStack(top: number[], exact: boolean = false) {
     const stack = getStack();
-    const builder = getSequenceBuilder();
+    let stackIndexOfLowestNonReproducibleVariableOfTop = Infinity;
+    let tosIndexOfLowestNonReproducibleVariableOfTop = Infinity;
+    for (let i = 0; i < top.length; i++) {
+      const variable = top[i];
+      const indexOnStack = stack.indexOf(variable);
+      if (indexOnStack === -1) {
+        continue;
+      }
+      const isReproducible = environment.reproducibleVariableMapping.has(variable);
+      if (isReproducible) {
+        continue;
+      }
+      const isLocalSaved = environment.variableSavedInLocalMap.has(variable);
+      if (isLocalSaved) {
+        continue;
+      }
+      if (indexOnStack < stackIndexOfLowestNonReproducibleVariableOfTop) {
+        stackIndexOfLowestNonReproducibleVariableOfTop = indexOnStack;
+        tosIndexOfLowestNonReproducibleVariableOfTop = i;
+      }
+    }
     if (exact) {
-      let loadingStart = 0;
-      while (bucketOf(stack[loadingStart]) === bucketOf(top[loadingStart]) && loadingStart < stack.length) {
-        loadingStart++;
-      }
-      while (stack.length > loadingStart) {
-        clearTos(environment.statementIndex);
-      }
-      // START | NOT FINISHED
-      let j = 0;
-      let stackVariablesToBeSaved = 0;
-      while (j < top.length) {
-        const variable = stack[stack.length - j - 1];
-        const bucketIndex = bucketOf(variable);
-        const bucket = environment.buckets[bucketIndex];
-        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex) && (bucket.variables.length > 1 || bucket.total[1] > environment.statementIndex + 1)) {
-          stackVariablesToBeSaved = j + 1;
+      if (tosIndexOfLowestNonReproducibleVariableOfTop === 0 && stackIndexOfLowestNonReproducibleVariableOfTop === 0) {
+        let loadedTopVariables: number = 0;
+        for (loadedTopVariables = 0; loadedTopVariables < top.length && loadedTopVariables < stack.length; loadedTopVariables++) {
+          if (stack[loadedTopVariables] !== top[loadedTopVariables]) {
+            break;
+          }
         }
-        j++;
-      }
-      for (let i = stack.length - 1; i > stack.length - stackVariablesToBeSaved; i--) {
-        const variable = stack[i];
-        const bucket = bucketOf(variable);
-        builder.localSet(bucket);
-        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
-      }
-      if (stackVariablesToBeSaved > 0) {
-        const variable = stack[stack.length - stackVariablesToBeSaved];
-        const bucket = bucketOf(variable);
-        builder.localTee(bucket);
-        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
-      }
-      for (let i = stack.length - stackVariablesToBeSaved + 1; i < stack.length; i++) {
-        const variable = stack[i];
-        const bucket = bucketOf(variable);
-        builder.localGet(bucket);
-      }
-      // END
-
-      for (let i = loadingStart; i < top.length; i++) {
-        const variable = top[i];
-        const bucketIndex = bucketOf(variable);
-        builder.localGet(bucketIndex);
-
-        stack.push(variable);
+        const stackVariablesToBeDeleted = Math.max(0, stack.length - loadedTopVariables);
+        const topVariablesToBeLoaded = Math.max(0, top.length - loadedTopVariables);
+        for (let i = 0; i < stackVariablesToBeDeleted; i++) {
+          clearTos();
+        }
+        for (let i = 0; i < topVariablesToBeLoaded; i++) {
+          const variable = top[loadedTopVariables + i];
+          load(variable);
+        }
+        while (stack.length > 0) {
+          stack.pop();
+        }
+      } else {
+        clearStack();
+        for (let i = 0; i < top.length; i++) {
+          const variable = top[i];
+          load(variable);
+        }
       }
     } else {
-      const firstVariableIndex = stack.map((q) => bucketOf(q)).indexOf(bucketOf(top[0]));
-      let loadingStart = -1;
-      if (firstVariableIndex === -1) {
-        loadingStart = 0;
-        for (const v of top) {
-          while (stack.map((q) => bucketOf(q)).indexOf(bucketOf(v)) !== -1) {
-            clearTos(environment.statementIndex);
+      if (stackIndexOfLowestNonReproducibleVariableOfTop === Infinity) {
+        let perfect = true;
+        const firstStackIndex = stack.indexOf(top[0]);
+        if (firstStackIndex !== stack.length - top.length) {
+          perfect = false;
+        }
+        if (perfect) {
+          for (let i = 0; i < top.length; i++) {
+            if (stack[firstStackIndex + i] !== top[i]) {
+              perfect = false;
+              break;
+            }
+          }
+        }
+        if (perfect) {
+          // are all reproducible - we can destroy them without saving them
+          for (let i = 0; i < stack.length; i++) {
+            stack.pop();
+          }
+        } else {
+          for (const variable of top) {
+            load(variable);
           }
         }
       } else {
-        let i = 0;
-        while ((i + firstVariableIndex) < stack.length && bucketOf(stack[firstVariableIndex + i]) === bucketOf(top[i])) {
-          i++;
-        }
-        loadingStart = i;
-        if (i !== stack.length - 1) {
-          while (bucketOf(stack[stack.length - 1]) !== bucketOf(top[i - 1])) {
-            clearTos(environment.statementIndex);
+        if (tosIndexOfLowestNonReproducibleVariableOfTop === 0) {
+          const stackStartIndex = stackIndexOfLowestNonReproducibleVariableOfTop;
+          for (let i = stack.length - 1; i > stackStartIndex + 1; i--) {
+            clearTos();
+          }
+          teeTos();
+          stack.pop();
+          for (let i = 1; i < top.length; i++) {
+            const variable = top[i];
+            load(variable);
+          }
+        } else {
+          const stackStartIndex = stackIndexOfLowestNonReproducibleVariableOfTop;
+          for (let i = stack.length - 1; i >= stackStartIndex; i--) {
+            clearTos();
+          }
+          for (let i = 0; i < top.length; i++) {
+            const variable = top[i];
+            load(variable);
           }
         }
       }
-      // START
-      let j = 0;
-      let stackVariablesToBeSaved = 0;
-      while (j < (top.length - loadingStart) && j < stack.length) {
-        const variable = stack[stack.length - j - 1];
-        const bucketIndex = bucketOf(variable);
-        const bucket = environment.buckets[bucketIndex];
-        if (environment.bucketsWrittenToInCurrentBasicBlock.has(bucketIndex) && (bucket.variables.length > 1 || bucket.total[1] > environment.statementIndex + 1)) {
-          stackVariablesToBeSaved = j + 1;
-        }
-        j++;
-      }
-      for (let i = stack.length - 1; i > stack.length - stackVariablesToBeSaved; i--) {
-        const variable = stack[i];
-        const bucket = bucketOf(variable);
-        builder.localSet(bucket);
-        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
-      }
-      if (stackVariablesToBeSaved > 0) {
-        const variable = stack[stack.length - stackVariablesToBeSaved];
-        const bucket = bucketOf(variable);
-        builder.localTee(bucket);
-        environment.bucketsWrittenToInCurrentBasicBlock.delete(bucket);
-      }
-      for (let i = stack.length - stackVariablesToBeSaved + 1; i < stack.length; i++) {
-        const variable = stack[i];
-        const bucket = bucketOf(variable);
-        builder.localGet(bucket);
-      }
-
-      // END
-
-      for (let i = loadingStart; i < top.length; i++) {
-        const variable = top[i];
-        const type = environment.variableTypeArray[variable];
-        const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
-        const typeMapping = environment.mapping.get(wasmType);
-        if (typeMapping === undefined) {
-          throw new Error();
-        }
-        const bucketInformation = typeMapping.find((q) => {
-          return q.variables.indexOf(variable) !== -1;
-        });
-        if (bucketInformation === undefined) {
-          throw new Error();
-        }
-        builder.localGet(bucketInformation.index);
-
-        stack.push(variable);
-      }
-    }
-    let a = 0;
-    while (a < top.length) {
-      stack.pop();
-      a++;
     }
   }
   if (block.type === BlockType.basic) {
     const builder = getSequenceBuilder();
     const stack = getStack();
-    const localTypeMapping = environment.variableTypeArray;
+    const localTypeMapping = environment.irVariableTypeArray;
     const typeOf = (variable: number): Type => {
       return localTypeMapping[variable];
     };
     const convertToWasmType = (type: Type): ValueType => {
       return mapIRTypeToWasm(environment.compilationUnit, type);
     };
-    environment.bucketsWrittenToInCurrentBasicBlock = new Set();
+    environment.variablesWrittenToInCurrentBlock = new Set();
+
+    function savePhiNodeReadVariables() {
+      const handledWrittenVariables: Set<number> = new Set();
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const variable = stack[i];
+        if (!environment.variablesWrittenToInCurrentBlock.has(variable)) {
+          clearTos();
+          continue;
+        }
+        const arrayOfLocals = environment.variablePhiNodeLocalMapping.get(variable);
+        if (arrayOfLocals === undefined) {
+          clearTos();
+          continue;
+        }
+        const savingTo = arrayOfLocals.slice();
+        const reproducible = environment.reproducibleVariableMapping.has(variable);
+        if (!reproducible) {
+          const index = environment.wasmVariableTypeArray.length;
+          const type = environment.irVariableTypeArray[variable];
+          const wasmType = convertToWasmType(type);
+          environment.wasmVariableTypeArray.push(wasmType);
+          environment.localSavedVariableMap.set(index, variable);
+          environment.variableSavedInLocalMap.set(variable, index);
+          savingTo.push(index);
+        }
+        if (savingTo.length === 0) {
+          continue;
+        }
+        for (let i = 0; i < savingTo.length - 1; i++) {
+          builder.localTee(savingTo[i]);
+        }
+        builder.localSet(savingTo[savingTo.length - 1]);
+        stack.pop();
+        handledWrittenVariables.add(variable);
+      }
+      const writtenVariables = environment.variablesWrittenToInCurrentBlock.values();
+      for (const variable of writtenVariables) {
+        if (handledWrittenVariables.has(variable)) {
+          continue;
+        }
+        const arrayOfLocals = environment.variablePhiNodeLocalMapping.get(variable);
+        if (arrayOfLocals === undefined) {
+          continue;
+        }
+        if (arrayOfLocals.length === 0) {
+          continue;
+        }
+        load(variable);
+        for (let i = 0; i < arrayOfLocals.length - 1; i++) {
+          builder.localTee(arrayOfLocals[i]);
+        }
+        builder.localSet(arrayOfLocals[arrayOfLocals.length - 1]);
+      }
+      environment.variablesWrittenToInCurrentBlock = new Set();
+    }
+
     for (const statement of block.statements) {
+      const irPrinter = new IRPrinter();
+      const str = irPrinter.stringifyStatement(statement);
+      if (isBreakStatement(statement)) {
+        savePhiNodeReadVariables();
+      }
+
       if (statement[0] === InstructionType.phi) {
-        const [, target, args] = statement;
-        // No actual compiled code generates from this.
+        const [, target] = statement;
+        const localIndex = environment.phiNodeResultLocalMapping.get(target);
+        if (localIndex === undefined) {
+          throw new Error();
+        }
+        environment.localSavedVariableMap.set(localIndex, target);
+        environment.variableSavedInLocalMap.set(target, localIndex);
       } else if (statement[0] === InstructionType.break) {
         builder.br(1);
       } else if (statement[0] === InstructionType.breakIf) {
@@ -479,43 +573,47 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const [, functionType, functionPointer, targets, args] = statement;
       } else if (statement[0] === InstructionType.setToConstant) {
         const [, target, constant] = statement;
-        const type = environment.variableTypeArray[target];
+        const type = environment.irVariableTypeArray[target];
         const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+        const instructionSequenceBuilder = new InstructionSequenceBuilder();
         if (wasmType === ValueType.i32) {
-          builder.i32Const(constant);
+          instructionSequenceBuilder.i32Const(constant);
         }
         if (wasmType === ValueType.i64) {
-          builder.i64Const(constant);
+          instructionSequenceBuilder.i64Const(constant);
         }
         if (wasmType === ValueType.f32) {
-          builder.f32Const(constant);
+          instructionSequenceBuilder.f32Const(constant);
         }
         if (wasmType === ValueType.i64) {
-          builder.f64Const(constant);
+          instructionSequenceBuilder.f64Const(constant);
         }
-        stack.push(target);
+        const v = new ReproducibleVariable(target, instructionSequenceBuilder.instructions);
+        environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.setToFunction) {
         const [, target, functionidentifier] = statement;
       } else if (statement[0] === InstructionType.setToGlobal) {
         const [, target, globalIdentifier] = statement;
       } else if (statement[0] === InstructionType.setToDataSegment) {
         const [, target, dataSegmentIndex] = statement;
-        const type = environment.variableTypeArray[target];
+        const type = environment.irVariableTypeArray[target];
         const offset = environment.dataSegmentOffsetArray[dataSegmentIndex];
         const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+        const instructionSequenceBuilder = new InstructionSequenceBuilder();
         if (wasmType === ValueType.i32) {
-          builder.i32Const(offset);
+          instructionSequenceBuilder.i32Const(offset);
         }
         if (wasmType === ValueType.i64) {
-          builder.i64Const(offset);
+          instructionSequenceBuilder.i64Const(offset);
         }
         if (wasmType === ValueType.f32) {
-          builder.f32Const(offset);
+          instructionSequenceBuilder.f32Const(offset);
         }
         if (wasmType === ValueType.i64) {
-          builder.f64Const(offset);
+          instructionSequenceBuilder.f64Const(offset);
         }
-        stack.push(target);
+        const v = new ReproducibleVariable(target, instructionSequenceBuilder.instructions);
+        environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.copy) {
         const [, target, arg] = statement;
         prepareStack([arg]);
@@ -1070,25 +1168,25 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       } else if (statement[0] === InstructionType.return) {
         const [, returnValue] = statement;
       }
-      if (!isPhiNode(statement)) {
-        const writtenVars = getWrittenVariables(statement);
-        for (const v of writtenVars) {
-          const bucket = bucketOf(v);
-          environment.bucketsWrittenToInCurrentBasicBlock.add(bucket);
-        }
+      const writtenVars = getWrittenVariables(statement);
+      for (const v of writtenVars) {
+        environment.variablesWrittenToInCurrentBlock.add(v);
       }
+      savePhiNodeReadVariables();
+      environment.variablesWrittenToInCurrentBlock = new Set();
       environment.statementIndex++;
     }
+    savePhiNodeReadVariables();
   } else if (block.type === BlockType.breakable) {
-    clearStack(environment.statementIndex);
+    clearStack();
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    environment.stack.push([]);
+    environment.stackArray.push([]);
     for (const b of block.blocks) {
       compileBlock(environment, b);
     }
-    clearStack(environment.statementIndex);
+    clearStack();
     const builder = environment.sequenceBuilderStack.pop();
-    const stack = environment.stack.pop();
+    const stack = environment.stackArray.pop();
     if (builder === undefined) {
       throw new Error();
     }
@@ -1098,15 +1196,15 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
     const parentBuilder = getSequenceBuilder();
     parentBuilder.block(NonValueResultType.empty, builder);
   } else if (block.type === BlockType.loop) {
-    clearStack(environment.statementIndex);
+    clearStack();
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    environment.stack.push([]);
+    environment.stackArray.push([]);
     for (const b of block.blocks) {
       compileBlock(environment, b);
     }
-    clearStack(environment.statementIndex);
+    clearStack();
     const builder = environment.sequenceBuilderStack.pop();
-    const stack = environment.stack.pop();
+    const stack = environment.stackArray.pop();
     if (builder === undefined) {
       throw new Error();
     }
@@ -1118,13 +1216,13 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
   } else if (block.type === BlockType.if) {
     prepareStack([block.condition]);
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    environment.stack.push([]);
+    environment.stackArray.push([]);
     for (const b of block.blocks) {
       compileBlock(environment, b);
     }
-    clearStack(environment.statementIndex);
+    clearStack();
     const builder = environment.sequenceBuilderStack.pop();
-    const stack = environment.stack.pop();
+    const stack = environment.stackArray.pop();
     if (builder === undefined) {
       throw new Error();
     }
@@ -1137,25 +1235,25 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
     prepareStack([block.condition]);
 
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    environment.stack.push([]);
+    environment.stackArray.push([]);
     for (const b of block.true) {
       compileBlock(environment, b);
     }
-    clearStack(environment.statementIndex);
+    clearStack();
     const trueBuilder = environment.sequenceBuilderStack.pop();
-    environment.stack.pop();
+    environment.stackArray.pop();
     if (trueBuilder === undefined) {
       throw new Error();
     }
 
     environment.sequenceBuilderStack.push(new InstructionSequenceBuilder());
-    environment.stack.push([]);
+    environment.stackArray.push([]);
     for (const b of block.false) {
       compileBlock(environment, b);
     }
-    clearStack(environment.statementIndex);
+    clearStack();
     const falseBuilder = environment.sequenceBuilderStack.pop();
-    environment.stack.pop();
+    environment.stackArray.pop();
     if (falseBuilder === undefined) {
       throw new Error();
     }

@@ -14,8 +14,8 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     this.index = 0;
   }
   public write(data: number): void;
-  public write(data: number[], size?: number): void;
-  public write(data: number | number[], size?: number) {
+  public write(data: number[] | Uint8Array, size?: number): void;
+  public write(data: number | number[] | Uint8Array, size?: number) {
     if (typeof data === "number") {
       // Writes only the smallest byte to the buffer
       this.setIndexValueAndAdvance(data);
@@ -36,8 +36,8 @@ export class TypedArrayBytestreamConsumer implements IBytestreamConsumer {
     return position;
   }
   public writeAt(position: number, data: number): void;
-  public writeAt(position: number, data: number[], size?: number): void;
-  public writeAt(position: number, data: number | number[], size?: number) {
+  public writeAt(position: number, data: number[] | Uint8Array, size?: number): void;
+  public writeAt(position: number, data: number | number[] | Uint8Array, size?: number) {
     if (typeof data === "number") {
       // Writes only the smallest byte to the buffer
       this.set(position, data);
