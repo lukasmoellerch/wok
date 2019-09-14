@@ -5,7 +5,7 @@ import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration"
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
-import { CompilerError, DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator } from "../Parser/ParserError";
+import { CompilerError, DuplicateInfixGlobalOperator, DuplicatePostfixGlobalOperator, DuplicatePrefixGlobalOperator } from "../ErrorHandling/CompilerError";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry, PrefixOperatorEntry } from "./OperatorScope";
 export class OperatorScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;

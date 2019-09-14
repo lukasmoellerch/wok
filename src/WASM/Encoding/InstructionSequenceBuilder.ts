@@ -172,7 +172,8 @@ export class InstructionSequenceBuilder {
     this.consumer.write(Instruction.blockend);
     this.debugInstructions.push("end");
   }
-  public write(other: InstructionSequence) {
-    this.consumer.write(other);
+  public write(other: InstructionSequenceBuilder) {
+    this.consumer.write(other.instructions);
+    this.debugInstructions.push(...other.debugInstructions);
   }
 }

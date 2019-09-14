@@ -17,6 +17,8 @@ export class VariableScopeEntry {
   public str: string;
   public entryType: VariableScopeEntryType;
   public type: IType | undefined;
+  // Add this for generic types - reevaluate expression during compilation step
+  // public typeExpressionWrapper: TypeExpressionWrapper
   public declaration: VariableScopeEntryDeclarationType;
   constructor(str: string, entryType: VariableScopeEntryType, declaration: VariableScopeEntryDeclarationType, type?: IType | undefined) {
     this.str = str;

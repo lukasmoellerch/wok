@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { IGroupedString, Lexer, TokenTagGroup } from "../Lexer/Lexer";
-import { CompilerError } from "./ParserError";
+import { CompilerError } from "./CompilerError";
 export class ErrorFormatter {
   public lines: string[];
   public colorizedLines: string[];
@@ -35,7 +35,7 @@ export class ErrorFormatter {
   public toString(): string {
     let result = "";
     if (this.errors.length === 0) {
-      result += chalk.bgGreenBright.black("No Errors were found\n") + "in: \"" + this.sourcePath + "\"" + "\n";
+      result += chalk.bgGreenBright.green("No Errors were found\n") + "in: \"" + this.sourcePath + "\"" + "\n";
     } else if (this.errors.length === 1) {
       result += chalk.bgWhiteBright.red(this.errors.length + " Error:\n") + "in: \"" + this.sourcePath + "\"" + "\n";
     } else {
@@ -63,7 +63,7 @@ export class ErrorFormatter {
         }
         index++;
       }
-      result += "🛑 " + error.toString() + "\n";
+      result += "🛑  " + error.toString() + "\n\n\n";
     }
     return result;
   }

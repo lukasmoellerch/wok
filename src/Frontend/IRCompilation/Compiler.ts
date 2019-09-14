@@ -6,6 +6,7 @@ import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { Block } from "../AST/Nodes/Block";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
+import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
@@ -13,8 +14,10 @@ import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression"
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { ImplictConversionExpression } from "../AST/Nodes/ImplictConversionExpression";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
+import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
+import { ReturnStatement } from "../AST/Nodes/ReturnStatement";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { Statement } from "../AST/Nodes/Statement";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
@@ -25,6 +28,7 @@ import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
 import { NativeIntegerType } from "../Type/NativeType";
+import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { VariableScopeEntry, VariableScopeEntryType } from "../VariableScope/VariableScope";
 export class IRValue {
@@ -42,7 +46,6 @@ export class IRValue {
 export class IRFunctionCompilationEnvironment {
   public localTypes: IR.Type[];
   public values: IRValue[] = [];
-  public irVariableIndex: number = 0;
   public entryIndexValueIndexMapping: Map<number, number> = new Map();
   public declaration: IR.IInternalFunctionDeclaration;
   public irFunction: IR.IInternalFunctionDefinition;
@@ -302,17 +305,27 @@ export class IRCompiler {
   public compileStatement(env: IRFunctionCompilationEnvironment, statement: Statement) {
     if (statement instanceof ExpressionWrapper) {
       this.compileExpressionWrapper(env, statement);
+      return;
     } else if (statement instanceof IfStatement) {
       this.compileIfStatement(env, statement);
+      return;
     } else if (statement instanceof WhileStatement) {
       this.compileWhileStatement(env, statement);
+      return;
     } else if (statement instanceof VariableDeclaration) {
       this.compileVariableDeclaration(env, statement);
+      return;
     } else if (statement instanceof ConstantDeclaration) {
       this.compileConstantDeclaration(env, statement);
+      return;
     } else if (statement instanceof AssignmentStatement) {
       this.compileAssignmentStatement(env, statement);
+      return;
+    } else if (statement instanceof ReturnStatement) {
+      this.compileReturnStatement(env, statement);
+      return;
     }
+    throw new Error();
   }
   public compileExpressionWrapper(env: IRFunctionCompilationEnvironment, expressionWrapper: ExpressionWrapper) {
     const expression = expressionWrapper.expression;
@@ -389,9 +402,33 @@ export class IRCompiler {
     const expression = assignmentStatement.value;
     this.compileExpression(env, expression, value);
   }
+  public compileReturnStatement(env: IRFunctionCompilationEnvironment, returnStatement: ReturnStatement) {
+    const returnValue = returnStatement.value;
+    if (returnValue !== undefined) {
+      const expression = returnValue.expression;
+      if (expression === undefined) {
+        throw new Error();
+      }
+      if (!(expression instanceof Expression)) {
+        throw new Error();
+      }
+      const value = this.getExpressionAsValue(env, expression);
+      env.writeStatement([IR.InstructionType.return, value.irVariables]);
+    } else {
+      env.writeStatement([IR.InstructionType.return, []]);
+    }
+  }
   public getIRValueOfLValue(env: IRFunctionCompilationEnvironment, lValue: ILValue): IRValue {
     if (lValue instanceof VariableReferenceExpression) {
       return this.getIRValueOfVariableReferenceExpression(env, lValue);
+    } else if (lValue instanceof MemberReferenceExpression) {
+      const lhsType = lValue.lhs.forceType();
+      if (lhsType instanceof StructType) {
+        const lhs = this.getExpressionAsValue(env, lValue.lhs);
+        return this.getStructMemberAsValue(env, lhs, lValue.memberToken.content);
+      } else {
+        throw new Error();
+      }
     }
     throw new Error("Not implemented");
   }
@@ -406,25 +443,31 @@ export class IRCompiler {
   public compileExpression(env: IRFunctionCompilationEnvironment, expression: Expression, target?: IRValue) {
     if (expression instanceof BinaryOperatorExpression) {
       this.compileBinaryOperatorExpression(env, expression, target);
+      return;
     } else if (expression instanceof PostfixUnaryOperatorExpression) {
       this.compilePostfixUnaryOperatorExpression(env, expression, target);
+      return;
     } else if (expression instanceof PrefixUnaryOperatorExpression) {
       this.compilePrefixUnaryOperatorExpression(env, expression, target);
+      return;
     } else if (expression instanceof IntegerLiteralExpression) {
       if (target === undefined) {
         return;
       }
       this.compileIntegerLiteralExpression(env, expression, target);
+      return;
     } else if (expression instanceof FloatingPointLiteralExpression) {
       if (target === undefined) {
         return;
       }
       this.compileFloatingPointLiteralExpression(env, expression, target);
+      return;
     } else if (expression instanceof StringLiteralExpression) {
       if (target === undefined) {
         return;
       }
       this.compileStringLiteralExpression(env, expression, target);
+      return;
     } else if (expression instanceof VariableReferenceExpression) {
       if (target === undefined) {
         return;
@@ -438,15 +481,71 @@ export class IRCompiler {
         // env.writeStatement([IR.InstructionType.phi, targetIrVariables[i], [valueIrVariables[i]]]);
         i++;
       }
+      return;
     } else if (expression instanceof ImplictConversionExpression) {
       if (target === undefined) {
         this.compileExpression(env, expression.value);
         return;
       }
       this.compileImplictConversionExpression(env, expression, target);
+      return;
     } else if (expression instanceof IdentifierCallExpression) {
       this.compileIdentifierCallExpression(env, expression, target);
+      return;
+    } else if (expression instanceof ConstructorCallExpression) {
+      const constructedType = expression.type;
+      if (constructedType instanceof StructType) {
+        if (target === undefined && constructedType.constructorDeclaration === undefined) {
+          return;
+        }
+      }
+      this.compileConstructorCallExpression(env, expression, target);
+      return;
+    } else if (expression instanceof ConstructorCallExpression) {
+      this.compileConstructorCallExpression(env, expression, target);
+      return;
+    } else if (expression instanceof MemberReferenceExpression) {
+      // TODO: Use getStructMemberAsValue
+      const type = expression.lhs.forceType();
+      if (type instanceof StructType) {
+        const lhs = this.getExpressionAsValue(env, expression.lhs);
+        if (target === undefined) {
+          return;
+        }
+        const lhsIRVariables = target.irVariables;
+        const rhsIRVariables = lhs.irVariables;
+        let index = 0;
+        for (const lhsIRVariable of lhsIRVariables) {
+          const rhsIRVariable = rhsIRVariables[index];
+          env.writeStatement([IR.InstructionType.copy, lhsIRVariable, rhsIRVariable]);
+          index++;
+        }
+        return;
+      } else {
+        throw new Error();
+      }
     }
+    throw new Error();
+  }
+  public compileConstructorCallExpression(env: IRFunctionCompilationEnvironment, expression: ConstructorCallExpression, target: IRValue | undefined) {
+    const constructedType = expression.type;
+    if (constructedType instanceof StructType) {
+      if (constructedType.constructorDeclaration === undefined) {
+        if (target === undefined) {
+          return;
+        }
+        let propertyIndex = 0;
+        for (const arg of expression.args) {
+          const propertyName = constructedType.properties[propertyIndex];
+          const value = this.getStructMemberAsValue(env, target, propertyName);
+          this.compileExpression(env, arg, value);
+          propertyIndex++;
+        }
+
+      }
+      // TODO: Handle custom constructor
+    }
+    // TODO: Handle other constructable types
   }
   public getExpressionAsValue(env: IRFunctionCompilationEnvironment, expression: Expression): IRValue {
     if (expression instanceof BinaryOperatorExpression) {
@@ -483,6 +582,18 @@ export class IRCompiler {
       const temporary = env.generateValueOfType(expression.forceType());
       this.compileIdentifierCallExpression(env, expression, temporary);
       return temporary;
+    } else if (expression instanceof ConstructorCallExpression) {
+      const temporary = env.generateValueOfType(expression.forceType());
+      this.compileConstructorCallExpression(env, expression, temporary);
+      return temporary;
+    } else if (expression instanceof MemberReferenceExpression) {
+      const type = expression.lhs.forceType();
+      if (type instanceof StructType) {
+        const lhs = this.getExpressionAsValue(env, expression.lhs);
+        return this.getStructMemberAsValue(env, lhs, expression.memberToken.content);
+      } else {
+        throw new Error();
+      }
     }
     throw new Error();
   }
@@ -674,5 +785,20 @@ export class IRCompiler {
     const [ptrVariable, lengthVariable] = target.irVariables;
     env.writeStatement([IR.InstructionType.setToDataSegment, ptrVariable, dataSegment]);
     env.writeStatement([IR.InstructionType.setToConstant, lengthVariable, length]);
+  }
+  public getStructMemberAsValue(env: IRFunctionCompilationEnvironment, struct: IRValue, propertyName: string): IRValue {
+    const structType = struct.type as StructType;
+    const propertyIndices = structType.propertyIrVariableIndexMapping.get(propertyName);
+    const propertyType = structType.propertyTypeMap.get(propertyName);
+    if (propertyType === undefined) {
+      throw new Error();
+    }
+    if (propertyIndices === undefined) {
+      throw new Error();
+    }
+    const valueIndex = env.values.length;
+    const indicies = propertyIndices.map((index) => struct.irVariables[index]);
+    const propertyValue = new IRValue(valueIndex, indicies, propertyType);
+    return propertyValue;
   }
 }

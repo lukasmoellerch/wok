@@ -11,6 +11,7 @@ import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
+import { ReturnStatement } from "../AST/Nodes/ReturnStatement";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { Statement } from "../AST/Nodes/Statement";
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
@@ -18,14 +19,14 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableFieldDeclaration } from "../AST/Nodes/VariableFieldDeclaration";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
+import { CompilerError, ExpectedExpression, WrongTokenError } from "../ErrorHandling/CompilerError";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { Token } from "../Lexer/Token";
 import { TokenTag } from "../Lexer/TokenTag";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
-import { TypeReferenceExpression } from "../Type/UnresolvedType/TypeReferenceExpression";
-import { CompilerError, ExpectedExpression, WrongTokenError } from "./ParserError";
+import { TypeParser } from "./TypeParser";
 export class Parser {
   public lexer: Lexer;
   public errors: CompilerError[] = [];
@@ -54,7 +55,6 @@ export class Parser {
       this.lexer.whitespace();
       return this.parseUndecoratedTopLevelDeclaration(decorators);
     }
-    return undefined;
   }
   public parseUndecoratedTopLevelDeclaration(decorators: Decorator[]): ITopLevelDeclaration | undefined {
     this.lexer.whitespace();
@@ -158,15 +158,8 @@ export class Parser {
     return new FunctionArgumentDeclaration(argumentNameToken, type);
   }
   public parseType(): TypeExpression {
-    const lhs: TypeExpression = this.parseTypeReferenceExpression();
-    return lhs;
-  }
-  public parseTypeReferenceExpression(): TypeReferenceExpression {
-    const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
-    if (nameToken instanceof PlaceholderToken) {
-      this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
-    }
-    return new TypeReferenceExpression(nameToken, []);
+    const parser = new TypeParser(this.lexer, this.errors);
+    return parser.parseType();
   }
   public parseBlock(leftCurlyBracket?: Token): Block {
     this.lexer.whitespace();
@@ -215,6 +208,10 @@ export class Parser {
     const variableKeyword = this.lexer.keyword("var");
     if (variableKeyword !== undefined) {
       return this.parseVariableDeclaration(variableKeyword);
+    }
+    const returnKeyword = this.lexer.keyword("return");
+    if (returnKeyword !== undefined) {
+      return this.parseReturnStatement(returnKeyword);
     }
     return this.parseExpressionWrapper();
   }
@@ -306,6 +303,11 @@ export class Parser {
       if (leftParenthesisToken !== undefined) {
         const t = this.parseExpressionTokensUntilClosed(leftParenthesisToken);
         tokens = tokens.concat(t);
+
+        rightParenthesisToken = this.lexer.rightParenthesis();
+        if (rightParenthesisToken !== undefined) {
+          tokens.push(rightParenthesisToken);
+        }
         continue;
       }
       const nextExpressionToken = this.parseNextExpressionToken();
@@ -450,6 +452,12 @@ export class Parser {
       }
       return new VariableDeclaration(variableKeyword, identifier, undefined, undefined, assignmentOperator, value);
     }
+  }
+  public parseReturnStatement(keyword: Token): ReturnStatement {
+    this.lexer.whitespace();
+    const value = this.parseExpressionWrapper();
+    this.lexer.lineBreak();
+    return new ReturnStatement(keyword, value);
   }
   public parsePrefixOperatorDeclaration(keyword: Token): PrefixOperatorDeclaration {
     this.lexer.whitespace();

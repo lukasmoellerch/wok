@@ -5,7 +5,7 @@ import { Expression } from "./Expression";
 
 export class PlaceholderExpression extends Expression implements ILValue {
   public rhsType: IType | undefined;
-  public lvalue: void;
+  public lvalue: undefined = undefined;
   public token: Token;
   constructor(token: Token) {
     super();

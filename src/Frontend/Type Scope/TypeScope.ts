@@ -68,6 +68,16 @@ export class TypeTreeNode {
     }
     return undefined;
   }
+  public hsaNamedTemplate(name: string): boolean {
+    if (this.namedTemplates.has(name)) {
+      return true;
+    }
+    const parent = this.parent;
+    if (parent === undefined) {
+      return false;
+    }
+    return parent.hsaNamedTemplate(name);
+  }
   public forceResolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode {
     const result = this.resolve(name, args);
     if (result === undefined) {

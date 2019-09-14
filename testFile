@@ -8,10 +8,41 @@ infix operator < 2 right
 infix operator >= 2 right
 infix operator <= 2 right
 
+struct Player {
+  const name: String
+  const position: Vec2
+}
+struct Vec2 {
+  const x: UInt32
+  const y: UInt32
+}
+
 @foreign("printInt") func printInt(str: UInt32)
 @foreign("print") func print(str: String)
 @export("main") func main(max: UInt32) {
-  fib(max)
+  printVec2(getVector())
+  var player = Player("Lukas", Vec2(11, 32))
+  player.position = Vec2(13, 15)
+  printVec2(player.position)
+  if isGreaterThanTen(Player("Lukas", Vec2(11, 32)).position.x) {
+    print("Greater")
+  }
+}
+func getZero(): UInt32 {
+  return 0
+}
+func isGreaterThanTen(x: UInt32): UInt32 {
+  if x > 10 {
+    return 1
+  }
+  return 0
+}
+func getVector(): Vec2 {
+  return Vec2(12, 45)
+}
+func printVec2(vec: Vec2) {
+  printInt(vec.x)
+  printInt(vec.y)
 }
 func fib(n: UInt32) {
   var f1: UInt32 = 0

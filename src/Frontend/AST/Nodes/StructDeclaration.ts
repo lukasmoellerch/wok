@@ -1,4 +1,5 @@
 import { Token } from "../../Lexer/Token";
+import { TypeTreeNodeTemplate } from "../../Type Scope/TypeScope";
 import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
 import { DeclarationBlock } from "./DeclarationBlock";
@@ -8,6 +9,7 @@ export class StructDeclaration extends ASTNode implements ITopLevelDeclaration {
   public structKeyword: Token;
   public nameToken: Token;
   public declarationBlock: DeclarationBlock;
+  public template: TypeTreeNodeTemplate | undefined;
   constructor(structKeyword: Token, nameToken: Token, declarationBlock: DeclarationBlock) {
     super();
     this.structKeyword = structKeyword;

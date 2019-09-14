@@ -1,14 +1,15 @@
-import { Token } from "../../Lexer/Token";
 import { TypeTreeNode } from "../../Type Scope/TypeScope";
+import { IType } from "../../Type/Type";
 import { Expression } from "./Expression";
 
 export class TypeReferenceExpression extends Expression {
-  public nameToken: Token;
-  public node: TypeTreeNode | undefined;
-  constructor(nameToken: Token) {
+  public type: IType | undefined;
+  public node: TypeTreeNode;
+  constructor(node: TypeTreeNode) {
     super();
-    this.nameToken = nameToken;
-    this.children = [nameToken];
+    this.node = node;
+    this.type = node.instanceType;
+    this.children = [];
   }
 
 }

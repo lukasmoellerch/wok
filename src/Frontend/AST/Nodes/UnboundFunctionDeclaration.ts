@@ -50,7 +50,8 @@ export class UnboundFunctionDeclaration extends ASTNode implements ITopLevelDecl
   }
   public getFunctionType(rootTypeTreeNode: TypeTreeNode): FunctionType {
     const argTypes = this.argumentDeclarations.map((a) => a.type.type as IType);
-    const resultType = new VoidType(rootTypeTreeNode);
+    const resultDeclaration = this.resultDeclaration;
+    const resultType = resultDeclaration !== undefined ? (resultDeclaration.type.type || new VoidType(rootTypeTreeNode)) : new VoidType(rootTypeTreeNode);
     return new FunctionType(rootTypeTreeNode, argTypes, resultType, undefined);
   }
 }

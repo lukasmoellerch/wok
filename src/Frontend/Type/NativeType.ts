@@ -2,6 +2,51 @@ import { Type } from "../../IR/AST";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "./FunctionType";
 import { IType } from "./Type";
+export class PointerType implements IType {
+  public stored: IType;
+  public name: string = "Pointer";
+  public node: TypeTreeNode;
+  constructor(node: TypeTreeNode) {
+    const stored = node.resolve("Stored");
+    if (stored === undefined) {
+      throw new Error();
+    }
+    const instanceType = stored.instanceType;
+    if (instanceType === undefined) {
+      throw new Error();
+    }
+    this.stored = instanceType;
+    this.node = node;
+  }
+  public irVariablesNeededForRepresentation(): number {
+    return 1;
+  }
+  public irVariableTypes(): Type[] {
+    return [Type.ptr];
+  }
+  public toString(): string {
+    return `Pointer<${this.stored.toString()}>`;
+  }
+  public typeOfMember(_str: string): IType | undefined {
+    return undefined;
+  }
+  public hasMemberCalled(_str: string): boolean {
+    return false;
+  }
+  public typeOfOperator(_str: string, _arity: number): IType | undefined {
+    return undefined;
+  }
+  public hasOperatorCalled(_str: string, _arity: number): boolean {
+    return false;
+  }
+  public equals(other: IType): boolean {
+    if (!(other instanceof PointerType)) {
+      return false;
+    }
+    return other.stored.equals(this.stored);
+  }
+
+}
 export class StringType implements IType {
   public name: string = "String";
   public node: TypeTreeNode;

@@ -6,7 +6,7 @@ import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
-import { CompilerError, UndeclaredVariableUsageError } from "../Parser/ParserError";
+import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
 

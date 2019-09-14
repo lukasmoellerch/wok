@@ -1,6 +1,6 @@
 import { ASTWalker } from "../AST/ASTWalker";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
-import { CompilerError, TypeHasNoMemberCalledError, UndeclaredTypeUsageError } from "../Parser/ParserError";
+import { CompilerError, TypeHasNoMemberCalledError, UndeclaredTypeUsageError } from "../ErrorHandling/CompilerError";
 import { IType } from "../Type/Type";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";

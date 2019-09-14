@@ -1,12 +1,12 @@
 import { readFile, writeFile } from "fs";
 import { promisify } from "util";
 import { DependencyAnalyzer } from "./Frontend/DependencyAnalysis/DependencyAnalyzer";
+import { ErrorFormatter } from "./Frontend/ErrorHandling/ErrorFormatter";
 import { ExpressionParser } from "./Frontend/Expression Parsing/ExpressionParser";
 import { OperatorScope } from "./Frontend/Expression Parsing/OperatorScope";
 import { OperatorScopeBuilder } from "./Frontend/Expression Parsing/OperatorScopeBuilder";
 import { IRCompiler } from "./Frontend/IRCompilation/Compiler";
 import { Lexer } from "./Frontend/Lexer/Lexer";
-import { ErrorFormatter } from "./Frontend/Parser/ErrorFormatter";
 import { Parser } from "./Frontend/Parser/Parser";
 import { TypeResolver } from "./Frontend/Type Scope/TypeResolver";
 import { GlobalTypeTreeNode } from "./Frontend/Type Scope/TypeScope";
@@ -54,29 +54,35 @@ export default async function main() {
 
   typeScopeBuilder.buildScopes();
   operatorScopeBuilder.buildScopes();
+  typeResolver.walkSourceFile(result);
   expressionParser.parseExpressions();
   variableScopeBuilder.buildScopes();
-  typeResolver.walkSourceFile(result);
 
   const typeChecker = new TypeChecker(globalTypeScope, parser.errors);
   typeChecker.walkSourceFile(result);
   const implictConversionWrapper = new ImplictConversionWrapper();
   implictConversionWrapper.walkSourceFile(result);
-  const dependencyAnalyzer = new DependencyAnalyzer();
+  const dependencyAnalyzer = new DependencyAnalyzer(parser.errors);
   dependencyAnalyzer.walkSourceFile(result);
   if (parser.errors.length > 0) {
     process.stdout.write(errorFormatter.toString());
     return;
   }
-  console.log(result.toString());
+  for (const task of dependencyAnalyzer.compilerTasks) {
+    console.log(task.toString());
+  }
   const irCompiler = new IRCompiler(globalTypeScope);
   irCompiler.compileSourceFile(result);
   const compilationUnit = irCompiler.compilationUnit;
+
+  /*const irPrinter = new IRPrinter();
+  const irString = irPrinter.stringifyCompilationUnit(compilationUnit);
+  console.log(irString);*/
+
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
   removeCopyStatements(ssa);
-  /*const irPrinter = new IRPrinter();
-  const irString = irPrinter.stringifyCompilationUnit(ssa);*/
+
   const wasmModule = compileIR(ssa);
   const consumer = new TypedArrayBytestreamConsumer();
   encodeModule(wasmModule, consumer);

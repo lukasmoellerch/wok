@@ -106,6 +106,14 @@ export class DuplicatePostfixGlobalOperator extends CompilerError {
     return `A postfix operator called ${this.declaration.operatorToken.content} already exists and cannot be added again.`;
   }
 }
+export class CircularTypeError extends CompilerError {
+  constructor(range: SourceRange, private typeName: string, private dependencies: string[]) {
+    super(range);
+  }
+  public toString(): string {
+    return `The definition of the type ${this.typeName} results in a circular memory dependency as it contains the following types: ${this.dependencies.map((a) => `"${a}"`).join(", ")}.`;
+  }
+}
 export class WrongTokenError extends CompilerError {
   constructor(range: SourceRange, public expected: Array<TokenTag | string>) {
     super(range);

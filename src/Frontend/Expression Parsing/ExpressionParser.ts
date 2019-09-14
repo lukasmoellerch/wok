@@ -2,20 +2,24 @@ import { ILValue } from "../AST/AST";
 import { ASTWalker } from "../AST/ASTWalker";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
+import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
+import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
 import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
+import { TypeReferenceExpression } from "../AST/Nodes/TypeReferenceExpression";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
+import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../ErrorHandling/CompilerError";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/TokenTag";
-import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../Parser/ParserError";
+import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScope";
 
 class ExpressionLexer extends Lexer {
@@ -28,6 +32,7 @@ export class ExpressionParser extends ASTWalker {
   public sourceFile: SourceFile;
   public errors: CompilerError[];
   private operatorScope: OperatorScope = new OperatorScope();
+  private wrappingTypeTreeNode: TypeTreeNode | undefined;
   constructor(sourceFile: SourceFile, errors: CompilerError[]) {
     super();
     this.sourceFile = sourceFile;
@@ -38,9 +43,11 @@ export class ExpressionParser extends ASTWalker {
   }
   public parseExpressionWrapper(wrapper: ExpressionWrapper) {
     this.operatorScope = wrapper.operatorScope;
+    this.wrappingTypeTreeNode = wrapper.wrappingTypeTreeNode;
     const source = wrapper.raw;
     const lexer = new ExpressionLexer(wrapper.tokens[0].range.sourcePath, source);
-    lexer.line = wrapper.tokens[0].range.start.line;
+    // TODO: Why + 2???
+    lexer.line = wrapper.tokens[0].range.start.line + 2;
     lexer.column = wrapper.tokens[0].range.start.column;
     const expression = this.parseExpressionOrAssignment(lexer);
     wrapper.setExpression(expression);
@@ -78,12 +85,20 @@ export class ExpressionParser extends ASTWalker {
     return this.infixParseExpression(lexer, left);
   }
   public infixParseExpression(lexer: ExpressionLexer, left: Expression): Expression {
+    const dotOperator = lexer.dotOperator();
+    if (dotOperator !== undefined) {
+      const memberToken = lexer.identifier() || new PlaceholderToken(lexer);
+      if (memberToken instanceof PlaceholderToken) {
+        this.errors.push(new WrongTokenError(memberToken.range, [TokenTag.identifier]));
+      }
+      return new MemberReferenceExpression(left, memberToken);
+    }
     const leftParenthesis = lexer.leftParenthesis();
     if (leftParenthesis !== undefined) {
       const parsedArguments: Expression[] = [];
       let first = true;
       let rightParenthesis = lexer.rightParenthesis() || new PlaceholderToken(lexer);
-      while (rightParenthesis instanceof PlaceholderToken) {
+      while (rightParenthesis instanceof PlaceholderToken && !lexer.eof()) {
         lexer.whitespace();
         if (!first) {
           const comma = lexer.comma() || new PlaceholderToken(lexer);
@@ -101,6 +116,14 @@ export class ExpressionParser extends ASTWalker {
       if (left instanceof VariableReferenceExpression) {
         const callExpression = new IdentifierCallExpression(left, parsedArguments);
         return callExpression;
+      } else if (left instanceof TypeReferenceExpression) {
+        const type = left.type;
+        if (type === undefined) {
+          // TODO: Handle error
+          throw new Error();
+        }
+        const constructorCallExpression = new ConstructorCallExpression(type, parsedArguments);
+        return constructorCallExpression;
       }
       const placeholderToken = new PlaceholderToken(lexer);
       return new PlaceholderExpression(placeholderToken);
@@ -159,6 +182,10 @@ export class ExpressionParser extends ASTWalker {
         throw new Error();
       }
     }
+    const dotOperatorToken = lexer.dotOperator(false);
+    if (dotOperatorToken !== undefined) {
+      return 100;
+    }
     return 0;
   }
   public parsePrefix(lexer: ExpressionLexer): Expression {
@@ -192,6 +219,17 @@ export class ExpressionParser extends ASTWalker {
     }
     const identifierToken = lexer.identifier();
     if (identifierToken !== undefined) {
+      const node = this.wrappingTypeTreeNode;
+      if (node !== undefined) {
+        if (node.hsaNamedTemplate(identifierToken.content)) {
+          const resolved = node.resolve(identifierToken.content);
+          if (resolved === undefined) {
+            throw new Error();
+          }
+          const typeReferenceExpression = new TypeReferenceExpression(resolved);
+          return typeReferenceExpression;
+        }
+      }
       const variableReferenceExpression = new VariableReferenceExpression(identifierToken);
       return variableReferenceExpression;
     }
@@ -201,7 +239,6 @@ export class ExpressionParser extends ASTWalker {
     return placeholderExpression;
   }
   protected walkExpressionWrapper(wrapper: ExpressionWrapper) {
-    console.log(wrapper.raw);
     this.parseExpressionWrapper(wrapper);
     wrapper.parsed = true;
   }

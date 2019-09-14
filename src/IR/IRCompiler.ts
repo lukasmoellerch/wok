@@ -1,10 +1,10 @@
-import { IExport, ILimit, ILocal, IMemoryExport, IModule, InstructionSequence } from "../WASM/AST";
+import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
 import { ExportDescription, Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
 import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Type, Variable } from "./AST";
 import { IRPrinter } from "./IRPrinter";
-import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, irFunctionTypesAreEqual, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
+import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
 export function compileIR(ir: ICompilationUnit): IModule {
   const functionIdentifierIndexMapping: Map<FunctionIdentifier, number> = new Map();
   let i = 0;
@@ -25,29 +25,16 @@ export function compileIR(ir: ICompilationUnit): IModule {
     functionIdentifierTypeMapping.set(externalFunctionDeclaration.identifier, externalFunctionDeclaration.type);
   }
 
-  const wasmFunctionTypes: Array<[FunctionType, number]> = [];
   const wasmBuilder = new ASTBuilder();
   wasmBuilder.addTypeSection();
   for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
     const type = externalFunctionDeclaration.type;
-    let index = -1;
-    const searchResult = wasmFunctionTypes.find((a) => {
-      return irFunctionTypesAreEqual(a[0], type);
-    });
-    if (searchResult !== undefined) {
-      index = searchResult[1];
+    const argTypeBuffer: ValueType[] = [];
+    for (const argType of type[0]) {
+      argTypeBuffer.push(mapIRTypeToWasm(ir, argType));
     }
-    if (index === -1) {
-      const argTypeBuffer: ValueType[] = [];
-      for (const argType of type[0]) {
-        argTypeBuffer.push(mapIRTypeToWasm(ir, argType));
-      }
-      const resultType = type[1].length === 1 ? mapIRTypeToWasm(ir, type[1][0]) : undefined;
-      index = wasmBuilder.functionTypeIndex(argTypeBuffer, resultType);
-      wasmFunctionTypes.push([
-        type, index,
-      ]);
-    }
+    const resultType = type[1].length >= 1 ? mapIRTypeToWasm(ir, type[1][0]) : undefined;
+    const index = wasmBuilder.functionTypeIndex(argTypeBuffer, resultType);
     wasmBuilder.addFunctionImport("env", externalFunctionDeclaration.externalName, index);
   }
 
@@ -73,6 +60,11 @@ export function compileIR(ir: ICompilationUnit): IModule {
     currentOffset = alignedNewOffset;
   }
 
+  const i32ReturnOffset: number[] = [];
+  const i64ReturnOffset: number[] = [];
+  const f32ReturnOffset: number[] = [];
+  const f64ReturnOffset: number[] = [];
+
   for (const fn of ir.functionCode) {
     const functionType = functionIdentifierTypeMapping.get(fn.identifier);
     const localTypes = fn.variableTypes;
@@ -80,24 +72,13 @@ export function compileIR(ir: ICompilationUnit): IModule {
       throw new Error();
     }
 
-    let index = -1;
-    const searchResult = wasmFunctionTypes.find((a) => {
-      return irFunctionTypesAreEqual(a[0], functionType);
-    });
-    if (searchResult !== undefined) {
-      index = searchResult[1];
+    const argTypeBuffer: ValueType[] = [];
+    for (const argType of functionType[0]) {
+      argTypeBuffer.push(mapIRTypeToWasm(ir, argType));
     }
-    if (index === -1) {
-      const argTypeBuffer: ValueType[] = [];
-      for (const argType of functionType[0]) {
-        argTypeBuffer.push(mapIRTypeToWasm(ir, argType));
-      }
-      const resultType = functionType[1].length === 1 ? mapIRTypeToWasm(ir, functionType[1][0]) : undefined;
-      index = wasmBuilder.functionTypeIndex(argTypeBuffer, resultType);
-      wasmFunctionTypes.push([
-        functionType, index,
-      ]);
-    }
+    const resultType = functionType[1].length >= 1 ? mapIRTypeToWasm(ir, functionType[1][0]) : undefined;
+    const index = wasmBuilder.functionTypeIndex(argTypeBuffer, resultType);
+
     const irTypes = functionType[0].concat(localTypes);
 
     const variableTypeArray = functionType[0].map((type) => mapIRTypeToWasm(ir, type));
@@ -165,13 +146,32 @@ export function compileIR(ir: ICompilationUnit): IModule {
       phiNodeResultLocalMapping,
 
       variablesWrittenToInCurrentBlock: new Set(),
+
+      i32ReturnOffset,
+      i64ReturnOffset,
+      f32ReturnOffset,
+      f64ReturnOffset,
+
+      currentOffset,
     };
-    env.sequenceBuilderStack.push(new InstructionSequenceBuilder());
+    const instructionBuilder = new InstructionSequenceBuilder();
+    env.sequenceBuilderStack.push(instructionBuilder);
     env.stackArray.push([]);
 
     for (const block of fn.code) {
       compileBlock(env, block);
     }
+    currentOffset = env.currentOffset;
+    /*
+        console.log("<", fn.identifier, ">");
+        console.log("#", functionIdentifierIndexMapping.get(fn.identifier));
+        const defaultTypeSection = wasmBuilder.defaultTypeSection;
+        if (defaultTypeSection) {
+          console.log(defaultTypeSection.types[index]);
+        }
+        console.log(instructionBuilder.debugInstructions.join("\n"));
+        console.log();
+        */
 
     const sequenceBuilder = env.sequenceBuilderStack[env.sequenceBuilderStack.length - 1];
     const locals: ILocal[] = [];
@@ -225,10 +225,10 @@ export function compileIR(ir: ICompilationUnit): IModule {
 }
 export class ReproducibleVariable {
   public index: number;
-  public sequence: InstructionSequence;
-  constructor(index: number, sequence: InstructionSequence) {
+  public sequenceBuilder: InstructionSequenceBuilder;
+  constructor(index: number, sequenceBuilder: InstructionSequenceBuilder) {
     this.index = index;
-    this.sequence = sequence;
+    this.sequenceBuilder = sequenceBuilder;
   }
 }
 export interface ICompilationEnvironment {
@@ -253,8 +253,43 @@ export interface ICompilationEnvironment {
 
   variablesWrittenToInCurrentBlock: Set<number>;
 
+  i32ReturnOffset: number[];
+  i64ReturnOffset: number[];
+  f32ReturnOffset: number[];
+  f64ReturnOffset: number[];
+
+  currentOffset: number;
+
 }
 export function compileBlock(environment: ICompilationEnvironment, block: Block): void {
+  function geti32ReturnOffset(index: number): number {
+    while (environment.i32ReturnOffset.length <= index) {
+      environment.i32ReturnOffset.push(environment.currentOffset);
+      environment.currentOffset += 8;
+    }
+    return environment.i32ReturnOffset[index];
+  }
+  function geti64ReturnOffset(index: number): number {
+    while (environment.i64ReturnOffset.length <= index) {
+      environment.i64ReturnOffset.push(environment.currentOffset);
+      environment.currentOffset += 8;
+    }
+    return environment.i64ReturnOffset[index];
+  }
+  function getf32ReturnOffset(index: number): number {
+    while (environment.f32ReturnOffset.length <= index) {
+      environment.f32ReturnOffset.push(environment.currentOffset);
+      environment.currentOffset += 8;
+    }
+    return environment.f32ReturnOffset[index];
+  }
+  function getf64ReturnOffset(index: number): number {
+    while (environment.f64ReturnOffset.length <= index) {
+      environment.f64ReturnOffset.push(environment.currentOffset);
+      environment.currentOffset += 8;
+    }
+    return environment.f64ReturnOffset[index];
+  }
   function getSequenceBuilder(): InstructionSequenceBuilder {
     return environment.sequenceBuilderStack[environment.sequenceBuilderStack.length - 1];
   }
@@ -331,7 +366,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
     const sequenceBuilder = getSequenceBuilder();
     const reproducible = environment.reproducibleVariableMapping.get(variable);
     if (reproducible !== undefined) {
-      sequenceBuilder.write(reproducible.sequence);
+      sequenceBuilder.write(reproducible.sequenceBuilder);
       return;
     }
     const local = environment.variableSavedInLocalMap.get(variable);
@@ -340,6 +375,36 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
       return;
     }
     throw new Error();
+  }
+  function loadReturnValueOnStack(functionResultTypes: Type[]) {
+    const sequenceBuilder = getSequenceBuilder();
+    const resultVariablesThatHaveToBeLoaded = functionResultTypes.slice(1);
+    let i32Index = 0;
+    let i64Index = 0;
+    let f32Index = 0;
+    let f64Index = 0;
+    for (const type of resultVariablesThatHaveToBeLoaded) {
+      const valueType = mapIRTypeToWasm(environment.compilationUnit, type);
+      let offset = -1;
+      sequenceBuilder.i32Const(0);
+      if (valueType === ValueType.i32) {
+        offset = geti32ReturnOffset(i32Index);
+        i32Index++;
+        sequenceBuilder.load(Instruction.i32Load, { align: 0, offset });
+      } else if (valueType === ValueType.i64) {
+        offset = geti64ReturnOffset(i64Index);
+        i64Index++;
+        sequenceBuilder.load(Instruction.i64Load, { align: 0, offset });
+      } else if (valueType === ValueType.f32) {
+        offset = getf32ReturnOffset(f32Index);
+        f32Index++;
+        sequenceBuilder.load(Instruction.f32Load, { align: 0, offset });
+      } else if (valueType === ValueType.f64) {
+        offset = getf64ReturnOffset(f64Index);
+        f64Index++;
+        sequenceBuilder.load(Instruction.f64Load, { align: 0, offset });
+      }
+    }
   }
   function prepareStack(top: number[], exact: boolean = false) {
     const stack = getStack();
@@ -567,7 +632,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         if (functionType[1].length === 1) {
           stack.push(targets[0]);
         } else {
-          // not yet implemented
+          loadReturnValueOnStack(functionType[1]);
+          stack.push(...targets);
         }
       } else if (statement[0] === InstructionType.callFunctionPointer) {
         const [, functionType, functionPointer, targets, args] = statement;
@@ -588,7 +654,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         if (wasmType === ValueType.i64) {
           instructionSequenceBuilder.f64Const(constant);
         }
-        const v = new ReproducibleVariable(target, instructionSequenceBuilder.instructions);
+        const v = new ReproducibleVariable(target, instructionSequenceBuilder);
         environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.setToFunction) {
         const [, target, functionidentifier] = statement;
@@ -612,7 +678,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         if (wasmType === ValueType.i64) {
           instructionSequenceBuilder.f64Const(offset);
         }
-        const v = new ReproducibleVariable(target, instructionSequenceBuilder.instructions);
+        const v = new ReproducibleVariable(target, instructionSequenceBuilder);
         environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.copy) {
         const [, target, arg] = statement;
@@ -942,7 +1008,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const f = isFloat(environment.compilationUnit, type);
         prepareStack([lhs, rhs]);
         if (f) {
-          throw new Error("And operation is not defined for floating point operands");
+          throw new Error("Or operation is not defined for floating point operands");
         } else {
           if (wasmType === ValueType.i32) {
             builder.numeric(Instruction.i32Or);
@@ -1163,10 +1229,83 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(target);
       } else if (statement[0] === InstructionType.minimum) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Minimum);
+          } else {
+            builder.numeric(Instruction.f64Minimum);
+          }
+        } else {
+          throw new Error("This operation is only defined for floats");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.maximum) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Maximum);
+          } else {
+            builder.numeric(Instruction.f64Maximum);
+          }
+        } else {
+          throw new Error("This operation is only defined for floats");
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.return) {
-        const [, returnValue] = statement;
+        const [, returnValues] = statement;
+        const resultVariablesThatHaveToBeStored = returnValues.slice(1);
+        let i32Index = 0;
+        let i64Index = 0;
+        let f32Index = 0;
+        let f64Index = 0;
+        const index = 0;
+        for (const variable of resultVariablesThatHaveToBeStored) {
+          const type = typeOf(variable);
+          const valueType = convertToWasmType(type);
+          let offset = -1;
+          // TODO: UNSAFE
+          builder.i32Const(0);
+          prepareStack([resultVariablesThatHaveToBeStored[index]]);
+          if (valueType === ValueType.i32) {
+            offset = geti32ReturnOffset(i32Index);
+            i32Index++;
+            builder.store(Instruction.i32Store, { align: 0, offset });
+          } else if (valueType === ValueType.i64) {
+            offset = geti64ReturnOffset(i64Index);
+            i64Index++;
+            builder.store(Instruction.i64Store16, { align: 0, offset });
+          } else if (valueType === ValueType.f32) {
+            offset = getf32ReturnOffset(f32Index);
+            f32Index++;
+            builder.store(Instruction.f32Store, { align: 0, offset });
+          } else if (valueType === ValueType.f64) {
+            offset = getf64ReturnOffset(f64Index);
+            f64Index++;
+            builder.store(Instruction.f64Store, { align: 0, offset });
+          }
+        }
+        if (returnValues.length > 0) {
+          prepareStack([returnValues[0]], true);
+        }
+        builder.return();
       }
       const writtenVars = getWrittenVariables(statement);
       for (const v of writtenVars) {

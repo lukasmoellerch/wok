@@ -3,7 +3,7 @@ export function functionTypesAreEqual(lhs: IFunctionType, rhs: IFunctionType): b
   if (lhs.arguments.length !== rhs.arguments.length) {
     return false;
   }
-  if (rhs.results.length !== rhs.results.length) {
+  if (lhs.results.length !== rhs.results.length) {
     return false;
   }
   for (let i = 0; i < lhs.arguments.length; i++) {

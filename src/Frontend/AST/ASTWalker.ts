@@ -5,26 +5,31 @@ import { BinaryOperatorExpression } from "./Nodes/BinaryOperatorExpression";
 import { Block } from "./Nodes/Block";
 import { ConstantDeclaration } from "./Nodes/ConstantDeclaration";
 import { ConstantFieldDeclaration } from "./Nodes/ConstantFieldDeclaration";
+import { ConstructorCallExpression } from "./Nodes/ConstructorCallExpression";
 import { Declaration, DeclarationBlock } from "./Nodes/DeclarationBlock";
 import { Decorator } from "./Nodes/Decorator";
 import { Expression } from "./Nodes/Expression";
 import { ExpressionWrapper } from "./Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "./Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "./Nodes/FunctionArgumentDeclaration";
+import { FunctionResultDeclaration } from "./Nodes/FunctionResultDeclaration";
 import { IdentifierCallExpression } from "./Nodes/IdentifierCallExpression";
 import { IfStatement } from "./Nodes/IfStatement";
 import { ImplictConversionExpression } from "./Nodes/ImplictConversionExpression";
 import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
 import { IntegerLiteralExpression } from "./Nodes/IntegerLiteralExpression";
+import { MemberReferenceExpression } from "./Nodes/MemberReferenceExpression";
 import { PlaceholderExpression } from "./Nodes/PlaceholderExpression";
 import { PostfixOperatorDeclaration } from "./Nodes/PostfixOperatorDeclaration";
 import { PostfixUnaryOperatorExpression } from "./Nodes/PostfixUnaryOperatorExpression";
 import { PrefixOperatorDeclaration } from "./Nodes/PrefixOperatorDeclaration";
 import { PrefixUnaryOperatorExpression } from "./Nodes/PrefixUnaryOperatorExpression";
+import { ReturnStatement } from "./Nodes/ReturnStatement";
 import { SourceFile } from "./Nodes/SourceFile";
 import { Statement } from "./Nodes/Statement";
 import { StringLiteralExpression } from "./Nodes/StringLiteralExpression";
 import { StructDeclaration } from "./Nodes/StructDeclaration";
+import { TypeReferenceExpression } from "./Nodes/TypeReferenceExpression";
 import { UnboundFunctionDeclaration } from "./Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "./Nodes/VariableDeclaration";
 import { VariableFieldDeclaration } from "./Nodes/VariableFieldDeclaration";
@@ -106,6 +111,13 @@ export class ASTWalker {
     if (block !== undefined) {
       this.walkBlock(block);
     }
+    const resultDeclaration = unboundFunctionDeclaration.resultDeclaration;
+    if (resultDeclaration !== undefined) {
+      this.walkResultDeclaration(resultDeclaration);
+    }
+  }
+  protected walkResultDeclaration(resultDeclaration: FunctionResultDeclaration) {
+    this.walkTypeExpressionWrapper(resultDeclaration.type);
   }
   protected walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
     this.walkTypeExpressionWrapper(argumentDeclaration.type);
@@ -138,6 +150,10 @@ export class ASTWalker {
     }
     if (statement instanceof AssignmentStatement) {
       this.walkAssignmentStatement(statement);
+      return;
+    }
+    if (statement instanceof ReturnStatement) {
+      this.walkReturnStatement(statement);
       return;
     }
     throw new Error();
@@ -197,6 +213,18 @@ export class ASTWalker {
       this.walkImplictConversionExpression(expression);
       return;
     }
+    if (expression instanceof TypeReferenceExpression) {
+      this.walkTypeReferenceExpression(expression);
+      return;
+    }
+    if (expression instanceof ConstructorCallExpression) {
+      this.walkConstructorCallExpression(expression);
+      return;
+    }
+    if (expression instanceof MemberReferenceExpression) {
+      this.walkMemberReferenceExpression(expression);
+      return;
+    }
     throw new Error();
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression) {
@@ -210,6 +238,17 @@ export class ASTWalker {
   }
   protected walkImplictConversionExpression(implictConversionExpression: ImplictConversionExpression) {
     this.walkExpression(implictConversionExpression.value);
+  }
+  protected walkTypeReferenceExpression(_expression: TypeReferenceExpression) {
+
+  }
+  protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression) {
+    for (const expression of constructorCallExpression.args) {
+      this.walkExpression(expression);
+    }
+  }
+  protected walkMemberReferenceExpression(memberReferenceExpression: MemberReferenceExpression) {
+    this.walkExpression(memberReferenceExpression.lhs);
   }
   protected walkIfStatement(ifStatement: IfStatement) {
     this.walkExpressionWrapper(ifStatement.condition);
@@ -235,9 +274,19 @@ export class ASTWalker {
     this.walkLValue(assignmentStatement.target);
     this.walkExpression(assignmentStatement.value);
   }
+  protected walkReturnStatement(returnStatement: ReturnStatement) {
+    const value = returnStatement.value;
+    if (value !== undefined) {
+      this.walkExpressionWrapper(value);
+    }
+  }
   protected walkLValue(lvalue: ILValue) {
     if (lvalue instanceof VariableReferenceExpression) {
       this.walkVariableReferenceExpression(lvalue);
+      return;
+    }
+    if (lvalue instanceof MemberReferenceExpression) {
+      this.walkMemberReferenceExpression(lvalue);
       return;
     }
     throw new Error();

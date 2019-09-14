@@ -4,22 +4,27 @@ import { TypeAttribute } from "../AST/Attributes/TypeAttribute";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
+import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { Expression } from "../AST/Nodes/Expression";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
+import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
+import { ReturnStatement } from "../AST/Nodes/ReturnStatement";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
-import { CompilerError, OperatorNotDefinedForTypeError, WritingToConstantError } from "../Parser/ParserError";
+import { CompilerError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
+import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
+import { VoidType } from "../Type/VoidType";
 import { VariableScopeEntryType } from "../VariableScope/VariableScope";
 
 export class TypeChecker extends ASTWalker {
@@ -108,6 +113,23 @@ export class TypeChecker extends ASTWalker {
       }
     }
   }
+  protected walkReturnStatement(returnStatement: ReturnStatement) {
+    // TODO: Check return type
+    // TODO: Add stack for function declarations for return type checking
+    // TODO: Check for void return type if no value is provided
+    // TODO: Check if all paths in non-void functions returns a value
+    const value = returnStatement.value;
+    if (value === undefined) {
+      return;
+    }
+    const expression = value.expression;
+    if (expression === undefined) {
+      return;
+    }
+    if (expression instanceof Expression) {
+      this.checkExpression(expression);
+    }
+  }
   protected walkAssignmentStatement(assignmentStatement: AssignmentStatement) {
     this.checkLValue(assignmentStatement.target);
     const type = assignmentStatement.target.rhsType;
@@ -125,6 +147,18 @@ export class TypeChecker extends ASTWalker {
       const type = entry.type;
       if (type !== undefined) {
         lValue.rhsType = type;
+      }
+    } else if (lValue instanceof MemberReferenceExpression) {
+      const lhsExpression = lValue.lhs;
+      const lhsLValue = lhsExpression as unknown as ILValue;
+      this.checkLValue(lhsLValue);
+      this.checkExpression(lValue.lhs);
+      const lhsType = lhsExpression.forceType();
+      const memberType = lhsType.typeOfMember(lValue.memberToken.content);
+      if (memberType === undefined) {
+        this.errors.push(new TypeHasNoMemberCalledError(lValue.memberToken.range, lhsType.toString(), lValue.memberToken.content));
+      } else {
+        lValue.rhsType = memberType;
       }
     }
   }
@@ -225,17 +259,55 @@ export class TypeChecker extends ASTWalker {
     } else if (expression instanceof VariableReferenceExpression) {
       const entry = expression.entry;
       if (entry === undefined) {
-        throw new Error();
+        return;
       }
       const type = entry.type;
       if (type === undefined) {
         throw new Error();
       }
       expression.type = type;
+    } else if (expression instanceof ConstructorCallExpression) {
+      const constructedType = expression.type;
+      const argExpressions = expression.args;
+      let functionType: FunctionType | undefined;
+      if (constructedType instanceof StructType) {
+        if (constructedType.constructorDeclaration === undefined) {
+          const proeprtyTypes: IType[] = [];
+          for (const proeprtyName of constructedType.properties) {
+            const type = constructedType.propertyTypeMap.get(proeprtyName);
+            if (type === undefined) {
+              throw new Error();
+            }
+            proeprtyTypes.push(type);
+          }
+          functionType = new FunctionType(this.rootTypeTreeNode, proeprtyTypes, constructedType, undefined);
+        }
+      }
+      if (!(functionType instanceof FunctionType)) {
+        throw new Error();
+      }
+      const argTypes = functionType.args;
+      const resultType = functionType.result;
+      let i = 0;
+      while (i < argTypes.length) {
+        this.checkExpression(argExpressions[i], argTypes[i]);
+        i++;
+      }
+      expression.setType(resultType);
+    } else if (expression instanceof MemberReferenceExpression) {
+      this.checkExpression(expression.lhs, undefined);
+      const lhsType = expression.lhs.forceType();
+      const memberType = lhsType.typeOfMember(expression.memberToken.content);
+      if (memberType === undefined) {
+        this.errors.push(new TypeHasNoMemberCalledError(expression.memberToken.range, lhsType.toString(), expression.memberToken.content));
+        expression.setType(new VoidType(this.rootTypeTreeNode));
+      } else {
+        expression.setType(memberType);
+      }
     }
     if (target !== undefined) {
       const type = expression.type;
-      if (type == undefined) {
+      if (type === undefined) {
         throw new Error();
       }
       if (!type.equals(target)) {

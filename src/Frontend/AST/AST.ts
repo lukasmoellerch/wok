@@ -5,6 +5,6 @@ export interface ITopLevelDeclaration extends IASTNode {
   topLevelDeclarable: void;
 }
 export interface ILValue extends IASTNode {
-  lvalue: void;
+  lvalue: undefined;
   rhsType: IType | undefined;
 }

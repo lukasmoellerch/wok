@@ -1,8 +1,12 @@
 import { ASTWalker } from "../AST/ASTWalker";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
+import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
+import { CircularTypeError, CompilerError } from "../ErrorHandling/CompilerError";
+import { CompileConstructor, CompilerTask, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
 import { VariableScopeEntry, VariableScopeEntryType } from "../VariableScope/VariableScope";
@@ -172,12 +176,19 @@ class AnalyzeProperty extends AnalyzerTaskBase {
 type Task = AnalyzerTaskBase;
 
 export class DependencyAnalyzer extends ASTWalker {
-  private typeIndex: number = 0;
+
+  public compilerTasks: CompilerTask[] = [];
   private typeArray: IType[] = [];
+  private typeMapIndexMapping: Map<IType, number> = new Map();
+  private memoryDependencies: Map<number, Set<IType>> = new Map(); // A has every B as a dependency
+  private dependenciesOfType: Map<IType, Set<number>> = new Map(); // A is a dependency of every B
 
   private finishedTasks: Task[] = [];
   private tasks: Task[] = [];
   private currentTask: Task | undefined;
+  constructor(private errors: CompilerError[]) {
+    super();
+  }
   public walkSourceFile(sourceFile: SourceFile): void {
     for (const topLevelDeclaration of sourceFile.topLevelDeclarations) {
       if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
@@ -203,9 +214,88 @@ export class DependencyAnalyzer extends ASTWalker {
 
       if (task instanceof AnalyzeGlobalUnboundFunction) {
         const declaration = task.entry.declaration as UnboundFunctionDeclaration;
+        this.compilerTasks.push(new CompileUnboundFunctionTask(declaration));
         this.walkUnboundFunctionDeclaration(declaration);
+      } else if (task instanceof AnalyzeType) {
+        const type =
+          task.type;
+        const index = this.typeArray.length;
+        this.typeMapIndexMapping.set(type, index);
+        this.typeArray.push(type);
+        if (type instanceof StructType) {
+          const memoryDependecies: Set<IType> = new Set();
+          const declarationBlock = type.declaration.declarationBlock;
+          const declarations = declarationBlock.declarations;
+          for (const declaration of declarations) {
+            const childType = declaration.typeHint.type;
+            if (childType === undefined) {
+              continue;
+            }
+            const subtask = new AnalyzeType(childType);
+            this.tasks.push(subtask);
+            memoryDependecies.add(childType);
+          }
+          this.memoryDependencies.set(index, memoryDependecies);
+        }
+      } else if (task instanceof AnalyzeConstructor) {
+        this.compilerTasks.push(new CompileConstructor(task.type));
+        const typeTask = new AnalyzeType(task.type);
+        this.tasks.push(typeTask);
       }
       this.finishedTasks.push(task);
+    }
+    for (const dependencies of this.memoryDependencies.entries()) {
+      for (const type of dependencies[1].values()) {
+        const set = this.dependenciesOfType.get(type) || new Set();
+        if (set.size === 0) {
+          this.dependenciesOfType.set(type, set);
+        }
+        set.add(dependencies[0]);
+      }
+    }
+    let i = 0;
+    for (const type of this.typeArray) {
+      if (!this.dependenciesOfType.has(type)) {
+        this.dependenciesOfType.set(type, new Set());
+      }
+      if (!this.memoryDependencies.has(i)) {
+        this.memoryDependencies.set(i, new Set());
+      }
+      i++;
+    }
+    let found = false;
+    do {
+      found = false;
+      for (const [typeIndex, missingDependencies] of this.memoryDependencies.entries()) {
+        const type = this.typeArray[typeIndex];
+        if (missingDependencies.size === 0) {
+          found = true;
+          if (type instanceof StructType) {
+            type.resolveLayout();
+          }
+          for (const t of (this.dependenciesOfType.get(type) || new Set()).values()) {
+            const memoryDependencies = this.memoryDependencies.get(t);
+            if (memoryDependencies !== undefined) {
+              memoryDependencies.delete(type);
+            }
+          }
+          this.memoryDependencies.delete(typeIndex);
+        }
+      }
+    } while (found);
+    if (this.memoryDependencies.size > 0) {
+      for (const circularTypeIndex of this.memoryDependencies.keys()) {
+        const type = this.typeArray[circularTypeIndex];
+        if (type instanceof StructType) {
+          const dependencies = this.memoryDependencies.get(circularTypeIndex);
+          if (dependencies === undefined) {
+            throw new Error();
+          }
+          this.errors.push(new CircularTypeError(type.declaration.nameToken.range, type.toString(), [...dependencies.values()].map((a) => a.toString())));
+        } else {
+          throw new Error();
+        }
+      }
     }
   }
   protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper): void {
@@ -217,6 +307,7 @@ export class DependencyAnalyzer extends ASTWalker {
     this.tasks.push(task);
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression): void {
+    super.walkIdentifierCallExpression(identifierCallExpression);
     const called = identifierCallExpression.lhs;
     const entry = called.entry;
     if (entry === undefined) {
@@ -231,5 +322,10 @@ export class DependencyAnalyzer extends ASTWalker {
   }
   protected walkBinaryOperatorExpression(binaryOperatorExpression: BinaryOperatorExpression): void {
     super.walkBinaryOperatorExpression(binaryOperatorExpression);
+  }
+  protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression): void {
+    const called = constructorCallExpression.type;
+    const task = new AnalyzeConstructor(called, constructorCallExpression.args.length);
+    this.tasks.push(task);
   }
 }
