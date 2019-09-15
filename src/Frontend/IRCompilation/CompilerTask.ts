@@ -4,6 +4,9 @@ export class CompilerTask {
   public toString(): string {
     throw new Error();
   }
+  public irName(): string {
+    throw new Error();
+  }
 }
 export class CompileUnboundFunctionTask extends CompilerTask {
   constructor(public declaration: UnboundFunctionDeclaration) {
@@ -11,6 +14,13 @@ export class CompileUnboundFunctionTask extends CompilerTask {
   }
   public toString(): string {
     return `Compile unbound function ${this.declaration.name.content}`;
+  }
+  public irName(): string {
+    if (this.declaration.decoratorMap.has("export")) {
+      return this.declaration.name.content;
+    } else {
+      return `function#${this.declaration.name.content}`;
+    }
   }
 }
 export class CompileConstructor extends CompilerTask {
@@ -20,20 +30,29 @@ export class CompileConstructor extends CompilerTask {
   public toString(): string {
     return `Compile constructor of ${this.type.toString()}`;
   }
+  public irName(): string {
+    return `constructor#${this.type.toString()}`;
+  }
 }
 export class CompileOperator extends CompilerTask {
-  constructor(public type: IType, public str: string, public arity: string) {
+  constructor(public type: IType, public str: string, public arity: number) {
     super();
   }
   public toString(): string {
     return `Compile operator ${this.str} of ${this.type.toString()}`;
   }
+  public irName(): string {
+    return `operator#${this.type.toString()}#${this.str}#${this.arity}`;
+  }
 }
 export class CompileMethod extends CompilerTask {
-  constructor(public type: IType, public str: string, public arity: string) {
+  constructor(public type: IType, public str: string, public arity: number) {
     super();
   }
   public toString(): string {
     return `Compile method ${this.str} of ${this.type.toString()}`;
+  }
+  public irName(): string {
+    return `method#${this.type.toString()}#${this.str}#${this.arity}`;
   }
 }

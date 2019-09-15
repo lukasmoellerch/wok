@@ -20,7 +20,32 @@ export class TypeParser {
     if (nameToken instanceof PlaceholderToken) {
       this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
     }
-    return new TypeReferenceExpression(nameToken, []);
+    const less = this.lexer.character("<");
+    if (less !== undefined) {
+      let greater = this.lexer.character(">") || new PlaceholderToken(this.lexer);
+      let first = true;
+      const args: TypeExpression[] = [];
+      while (greater instanceof PlaceholderToken && !this.lexer.eof()) {
+        if (!first) {
+          this.lexer.whitespace();
+          this.lexer.comma();
+        } else {
+          first = false;
+        }
+        this.lexer.whitespace();
+        const arg = this.parseType();
+        args.push(arg);
+        this.lexer.whitespace();
+        greater = this.lexer.character(">") || new PlaceholderToken(this.lexer);
+      }
+      if (this.lexer.eof()) {
+        // TODO: Handle Error
+        throw new Error();
+      }
+      return new TypeReferenceExpression(nameToken, args);
+    } else {
+      return new TypeReferenceExpression(nameToken, []);
+    }
   }
 }
 

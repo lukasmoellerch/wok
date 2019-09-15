@@ -10,12 +10,28 @@ export class CompilerError {
     return "unknown error";
   }
 }
+export class MemberIsNotCallableError extends CompilerError {
+  constructor(range: SourceRange, private memberName: string, private memberType: string) {
+    super(range);
+  }
+  public toString(): string {
+    return `${this.memberName} is not callable as ${this.memberType} cannot be called`;
+  }
+}
+export class IsNotCallableParserError extends CompilerError {
+  constructor(range: SourceRange) {
+    super(range);
+  }
+  public toString(): string {
+    return `call of non-callable expression`;
+  }
+}
 export class OperatorNotDefinedForTypeError extends CompilerError {
   constructor(range: SourceRange, private type: string, private operator: string) {
     super(range);
   }
   public toString(): string {
-    return `operator "${this.operator}" is not defined for type "${this.type}"`;
+    return `usage of undefined operator "${this.operator}" on an object of type "${this.type}"`;
   }
 }
 export class WritingToConstantError extends CompilerError {

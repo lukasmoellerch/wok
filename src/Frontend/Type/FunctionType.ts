@@ -3,10 +3,23 @@ import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { IType } from "./Type";
 
 export class FunctionType implements IType {
+  public get irFunctionType(): IRFunctionType {
+    const argTypeArray: Type[] = [];
+    for (const argType of this.args) {
+      const irTypes = argType.irVariableTypes();
+      argTypeArray.push(...irTypes);
+    }
+    const resultTypeArray: Type[] = this.result.irVariableTypes();
+    return [argTypeArray, resultTypeArray];
+
+  }
   public name: string = "FunctionType";
   public node: TypeTreeNode;
   constructor(node: TypeTreeNode, public args: IType[], public result: IType, public thisType?: IType) {
     this.node = node;
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    return undefined;
   }
   public irVariableTypes(): Type[] {
     return [];
@@ -45,16 +58,6 @@ export class FunctionType implements IType {
   }
   public hasOperatorCalled(_str: string, _arity: number): boolean {
     return false;
-  }
-  public get irFunctionType(): IRFunctionType {
-    const argTypeArray: Type[] = [];
-    for (const argType of this.args) {
-      const irTypes = argType.irVariableTypes();
-      argTypeArray.push(...irTypes);
-    }
-    const resultTypeArray: Type[] = this.result.irVariableTypes();
-    return [argTypeArray, resultTypeArray];
-
   }
 
 }

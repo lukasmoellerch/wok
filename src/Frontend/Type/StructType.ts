@@ -3,6 +3,7 @@ import { ConstantFieldDeclaration } from "../AST/Nodes/ConstantFieldDeclaration"
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
 import { VariableFieldDeclaration } from "../AST/Nodes/VariableFieldDeclaration";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
+import { FunctionType } from "./FunctionType";
 import { IType } from "./Type";
 
 export class StructType implements IType {
@@ -19,6 +20,21 @@ export class StructType implements IType {
     this.name = name;
     this.node = node;
     this.declaration = declaration;
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    if (this.constructorDeclaration === undefined) {
+      const proeprtyTypes: IType[] = [];
+      for (const proeprtyName of this.properties) {
+        const type = this.propertyTypeMap.get(proeprtyName);
+        if (type === undefined) {
+          throw new Error();
+        }
+        proeprtyTypes.push(type);
+      }
+      const functionType = new FunctionType(this.node.rootTypeTreeNode, proeprtyTypes, this, undefined);
+      return functionType;
+    }
+    return undefined;
   }
   public populatePropertyMapping() {
     if (this.propertyMappingPopulated) {
@@ -64,7 +80,7 @@ export class StructType implements IType {
     return this.irVariableTypesCache;
   }
   public toString(): string {
-    return this.name;
+    return this.node.toString();
   }
   public typeOfMember(str: string): IType | undefined {
     this.populatePropertyMapping();

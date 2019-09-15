@@ -11,6 +11,7 @@ import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclar
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
+import { MemberCallExpression } from "../AST/Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
@@ -19,10 +20,9 @@ import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
-import { CompilerError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
+import { CompilerError, MemberIsNotCallableError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
-import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { VoidType } from "../Type/VoidType";
 import { VariableScopeEntryType } from "../VariableScope/VariableScope";
@@ -267,22 +267,9 @@ export class TypeChecker extends ASTWalker {
       }
       expression.type = type;
     } else if (expression instanceof ConstructorCallExpression) {
-      const constructedType = expression.type;
+      const constructedType = expression.constructedType;
       const argExpressions = expression.args;
-      let functionType: FunctionType | undefined;
-      if (constructedType instanceof StructType) {
-        if (constructedType.constructorDeclaration === undefined) {
-          const proeprtyTypes: IType[] = [];
-          for (const proeprtyName of constructedType.properties) {
-            const type = constructedType.propertyTypeMap.get(proeprtyName);
-            if (type === undefined) {
-              throw new Error();
-            }
-            proeprtyTypes.push(type);
-          }
-          functionType = new FunctionType(this.rootTypeTreeNode, proeprtyTypes, constructedType, undefined);
-        }
-      }
+      const functionType: FunctionType | undefined = constructedType.typeOfConstructor();
       if (!(functionType instanceof FunctionType)) {
         throw new Error();
       }
@@ -303,6 +290,27 @@ export class TypeChecker extends ASTWalker {
         expression.setType(new VoidType(this.rootTypeTreeNode));
       } else {
         expression.setType(memberType);
+      }
+    } else if (expression instanceof MemberCallExpression) {
+      this.checkExpression(expression.lhs, undefined);
+      const lhsType = expression.lhs.forceType();
+      const memberType = lhsType.typeOfMember(expression.memberToken.content);
+      if (memberType === undefined) {
+        this.errors.push(new TypeHasNoMemberCalledError(expression.memberToken.range, lhsType.toString(), expression.memberToken.content));
+        expression.setType(new VoidType(this.rootTypeTreeNode));
+      } else {
+        if (!(memberType instanceof FunctionType)) {
+          this.errors.push(new MemberIsNotCallableError(expression.memberToken.range, expression.memberToken.content, memberType.toString()));
+          expression.setType(new VoidType(this.rootTypeTreeNode));
+        } else {
+          let index = 0;
+          for (const arg of expression.args) {
+            const expectedType = memberType.args[index];
+            this.checkExpression(arg, expectedType);
+            index++;
+          }
+          expression.setType(memberType.result);
+        }
       }
     }
     if (target !== undefined) {

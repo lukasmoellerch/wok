@@ -2,10 +2,14 @@ import { Type } from "../../IR/AST";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "./FunctionType";
 import { IType } from "./Type";
+import { VoidType } from "./VoidType";
 export class PointerType implements IType {
   public stored: IType;
   public name: string = "Pointer";
   public node: TypeTreeNode;
+  private constructorType: FunctionType;
+  private storeMemberType: FunctionType;
+  private loadMemberType: FunctionType;
   constructor(node: TypeTreeNode) {
     const stored = node.resolve("Stored");
     if (stored === undefined) {
@@ -17,6 +21,18 @@ export class PointerType implements IType {
     }
     this.stored = instanceType;
     this.node = node;
+    const uint32 = node.forceResolve("UInt32").instanceType;
+    if (uint32 === undefined) {
+      throw new Error();
+    }
+    const voidType = new VoidType(node);
+    this.constructorType = new FunctionType(node, [uint32], this, undefined);
+
+    this.storeMemberType = new FunctionType(node, [this.stored], voidType, this);
+    this.loadMemberType = new FunctionType(node, [], this.stored, this);
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    return this.constructorType;
   }
   public irVariablesNeededForRepresentation(): number {
     return 1;
@@ -25,13 +41,19 @@ export class PointerType implements IType {
     return [Type.ptr];
   }
   public toString(): string {
-    return `Pointer<${this.stored.toString()}>`;
+    return this.node.toString();
   }
-  public typeOfMember(_str: string): IType | undefined {
+  public typeOfMember(str: string): IType | undefined {
+    if (str === "store") {
+      return this.storeMemberType;
+    }
+    if (str === "load") {
+      return this.loadMemberType;
+    }
     return undefined;
   }
-  public hasMemberCalled(_str: string): boolean {
-    return false;
+  public hasMemberCalled(str: string): boolean {
+    return ["store", "load"].indexOf(str) !== -1;
   }
   public typeOfOperator(_str: string, _arity: number): IType | undefined {
     return undefined;
@@ -52,6 +74,9 @@ export class StringType implements IType {
   public node: TypeTreeNode;
   constructor(node: TypeTreeNode) {
     this.node = node;
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    return undefined;
   }
   public irVariablesNeededForRepresentation(): number {
     return 2;
@@ -96,6 +121,9 @@ export class NativeIntegerType implements IType {
 
     this.binaryOperatorType = new FunctionType(this.node.rootTypeTreeNode, [this], this, this);
     this.unaryOperatorType = new FunctionType(this.node.rootTypeTreeNode, [], this, this);
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    return undefined;
   }
   public irVariableTypes(): Type[] {
     if (this.signed) {

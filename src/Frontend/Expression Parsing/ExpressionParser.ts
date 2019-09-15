@@ -8,6 +8,7 @@ import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
+import { MemberCallExpression } from "../AST/Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
 import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
@@ -15,10 +16,12 @@ import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { TypeReferenceExpression } from "../AST/Nodes/TypeReferenceExpression";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
-import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../ErrorHandling/CompilerError";
+import { CompilerError, ExpressionParsingTerminatedError, IsNotCallableParserError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../ErrorHandling/CompilerError";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/TokenTag";
+import { TypeParser } from "../Parser/TypeParser";
+import { TypeResolver } from "../Type Scope/TypeResolver";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { InfixOperatorEntry, OperatorScope, PostfixOperatorEntry } from "./OperatorScope";
 
@@ -33,7 +36,7 @@ export class ExpressionParser extends ASTWalker {
   public errors: CompilerError[];
   private operatorScope: OperatorScope = new OperatorScope();
   private wrappingTypeTreeNode: TypeTreeNode | undefined;
-  constructor(sourceFile: SourceFile, errors: CompilerError[]) {
+  constructor(sourceFile: SourceFile, errors: CompilerError[], private typeResolver: TypeResolver) {
     super();
     this.sourceFile = sourceFile;
     this.errors = errors;
@@ -124,8 +127,12 @@ export class ExpressionParser extends ASTWalker {
         }
         const constructorCallExpression = new ConstructorCallExpression(type, parsedArguments);
         return constructorCallExpression;
+      } else if (left instanceof MemberReferenceExpression) {
+        const callExpression = new MemberCallExpression(left.lhs, left.memberToken, parsedArguments);
+        return callExpression;
       }
       const placeholderToken = new PlaceholderToken(lexer);
+      this.errors.push(new IsNotCallableParserError(placeholderToken.range));
       return new PlaceholderExpression(placeholderToken);
     }
     const operator = lexer.operator();
@@ -217,19 +224,22 @@ export class ExpressionParser extends ASTWalker {
       const floatingPointLiteralExpression = new FloatingPointLiteralExpression(floatingPointLiteralToken);
       return floatingPointLiteralExpression;
     }
-    const identifierToken = lexer.identifier();
+    const identifierToken = lexer.identifier(false);
     if (identifierToken !== undefined) {
       const node = this.wrappingTypeTreeNode;
       if (node !== undefined) {
         if (node.hsaNamedTemplate(identifierToken.content)) {
-          const resolved = node.resolve(identifierToken.content);
-          if (resolved === undefined) {
+          const parser = new TypeParser(lexer, this.errors);
+          const parsedType = parser.parseType();
+          const resolvedNode = this.typeResolver.resolveTypeExpressionToNode(parsedType, node);
+          if (resolvedNode === undefined) {
             throw new Error();
           }
-          const typeReferenceExpression = new TypeReferenceExpression(resolved);
+          const typeReferenceExpression = new TypeReferenceExpression(resolvedNode);
           return typeReferenceExpression;
         }
       }
+      lexer.identifier();
       const variableReferenceExpression = new VariableReferenceExpression(identifierToken);
       return variableReferenceExpression;
     }

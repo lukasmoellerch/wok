@@ -44,8 +44,15 @@ export class TypeTreeNode {
     if (parent === undefined) {
       return this.treeNodeName;
     } else {
-      return parent.toString() + "." + this.treeNodeName;
+      if (this.args.length > 0) {
+        return parent.parentPrefix() + this.treeNodeName + "<" + this.args.map((a) => a.toString()).join(", ") + ">";
+      } else {
+        return parent.parentPrefix() + this.treeNodeName;
+      }
     }
+  }
+  public parentPrefix(): string {
+    return this.toString() + ".";
   }
   public registerNewNamedTemplate(name: string, template: TypeTreeNodeTemplate) {
     this.namedTemplates.set(name, template);
@@ -97,5 +104,10 @@ export class GlobalTypeTreeNode extends TypeTreeNode {
   constructor() {
     super(undefined, [], "global", "global");
   }
-
+  public toString(): string {
+    return "global";
+  }
+  public parentPrefix(): string {
+    return "";
+  }
 }

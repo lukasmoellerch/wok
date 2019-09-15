@@ -18,6 +18,7 @@ import { IfStatement } from "./Nodes/IfStatement";
 import { ImplictConversionExpression } from "./Nodes/ImplictConversionExpression";
 import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
 import { IntegerLiteralExpression } from "./Nodes/IntegerLiteralExpression";
+import { MemberCallExpression } from "./Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "./Nodes/MemberReferenceExpression";
 import { PlaceholderExpression } from "./Nodes/PlaceholderExpression";
 import { PostfixOperatorDeclaration } from "./Nodes/PostfixOperatorDeclaration";
@@ -225,6 +226,10 @@ export class ASTWalker {
       this.walkMemberReferenceExpression(expression);
       return;
     }
+    if (expression instanceof MemberCallExpression) {
+      this.walkMemberCallExpression(expression);
+      return;
+    }
     throw new Error();
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression) {
@@ -234,13 +239,13 @@ export class ASTWalker {
     }
   }
   protected walkStringLiteralExpression(_stringLiteralExpression: StringLiteralExpression) {
-
+    return;
   }
   protected walkImplictConversionExpression(implictConversionExpression: ImplictConversionExpression) {
     this.walkExpression(implictConversionExpression.value);
   }
   protected walkTypeReferenceExpression(_expression: TypeReferenceExpression) {
-
+    return;
   }
   protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression) {
     for (const expression of constructorCallExpression.args) {
@@ -249,6 +254,9 @@ export class ASTWalker {
   }
   protected walkMemberReferenceExpression(memberReferenceExpression: MemberReferenceExpression) {
     this.walkExpression(memberReferenceExpression.lhs);
+  }
+  protected walkMemberCallExpression(memberCallExpression: MemberCallExpression) {
+    this.walkExpression(memberCallExpression.lhs);
   }
   protected walkIfStatement(ifStatement: IfStatement) {
     this.walkExpressionWrapper(ifStatement.condition);

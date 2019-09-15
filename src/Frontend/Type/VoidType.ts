@@ -1,5 +1,6 @@
 import { Type } from "../../IR/AST";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
+import { FunctionType } from "./FunctionType";
 import { IType } from "./Type";
 
 export class VoidType implements IType {
@@ -7,6 +8,9 @@ export class VoidType implements IType {
   public name: string = "void";
   constructor(node: TypeTreeNode) {
     this.node = node;
+  }
+  public typeOfConstructor(): FunctionType | undefined {
+    return undefined;
   }
   public irVariableTypes(): Type[] {
     return [];

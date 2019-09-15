@@ -2,10 +2,15 @@ import { ASTWalker } from "../AST/ASTWalker";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
+import { MemberCallExpression } from "../AST/Nodes/MemberCallExpression";
+import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
+import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
+import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { CircularTypeError, CompilerError } from "../ErrorHandling/CompilerError";
-import { CompileConstructor, CompilerTask, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { FunctionType } from "../Type/FunctionType";
 import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
@@ -148,29 +153,29 @@ class AnalyzeOperator extends AnalyzerTaskBase {
     return `[OPERATOR] ${this.type.toString()} ${this.operator} ${this.arity}`;
   }
 }
-class AnalyzeProperty extends AnalyzerTaskBase {
+class AnalyzeMember extends AnalyzerTaskBase {
   public taskType = AnalyzerTaskType.property;
   public type: IType;
-  public propertyName: string;
-  constructor(type: IType, propertyName: string) {
+  public memberName: string;
+  constructor(type: IType, memberName: string) {
     super();
     this.type = type;
-    this.propertyName = propertyName;
+    this.memberName = memberName;
   }
   public equals(other: Task): boolean {
-    if (!(other instanceof AnalyzeProperty)) {
+    if (!(other instanceof AnalyzeMember)) {
       return false;
     }
     if (!this.type.equals(other.type)) {
       return false;
     }
-    if (this.propertyName !== other.propertyName) {
+    if (this.memberName !== other.memberName) {
       return false;
     }
     return true;
   }
   public toString(): string {
-    return `[PROPERTY] ${this.type.toString()} ${this.propertyName}`;
+    return `[MEMBER] ${this.type.toString()} ${this.memberName}`;
   }
 }
 type Task = AnalyzerTaskBase;
@@ -241,6 +246,14 @@ export class DependencyAnalyzer extends ASTWalker {
         this.compilerTasks.push(new CompileConstructor(task.type));
         const typeTask = new AnalyzeType(task.type);
         this.tasks.push(typeTask);
+      } else if (task instanceof AnalyzeOperator) {
+        this.compilerTasks.push(new CompileOperator(task.type, task.operator, task.arity));
+      } else if (task instanceof AnalyzeMember) {
+        const type = task.type;
+        const memberType = type.typeOfMember(task.memberName);
+        if (memberType instanceof FunctionType) {
+          this.compilerTasks.push(new CompileMethod(task.type, task.memberName, memberType.args.length));
+        }
       }
       this.finishedTasks.push(task);
     }
@@ -316,15 +329,37 @@ export class DependencyAnalyzer extends ASTWalker {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const task = new AnalyzeGlobalUnboundFunction(entry);
       this.tasks.push(task);
-    } else {
-      console.log("referencing indirect ");
     }
   }
   protected walkBinaryOperatorExpression(binaryOperatorExpression: BinaryOperatorExpression): void {
     super.walkBinaryOperatorExpression(binaryOperatorExpression);
+    const lhs = binaryOperatorExpression.lhs;
+    const type = lhs.forceType();
+    const task = new AnalyzeOperator(type, binaryOperatorExpression.operator.content, 2);
+    this.tasks.push(task);
+  }
+  protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression): void {
+    super.walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression);
+    // TODO: Implement this
+  }
+  protected walkPostfixUnaryOperatorExpression(postfixUnaryOperatorExpression: PostfixUnaryOperatorExpression): void {
+    super.walkPostfixUnaryOperatorExpression(postfixUnaryOperatorExpression);
+    // TODO: Implement this
+  }
+  protected walkMemberCallExpression(memberCallExpression: MemberCallExpression): void {
+    super.walkMemberCallExpression(memberCallExpression);
+    const type = memberCallExpression.lhs.forceType();
+    const task = new AnalyzeMember(type, memberCallExpression.memberToken.content);
+    this.tasks.push(task);
+  }
+  protected walkMemberReferenceExpression(memberReferenceExpression: MemberReferenceExpression): void {
+    super.walkMemberReferenceExpression(memberReferenceExpression);
+    const type = memberReferenceExpression.lhs.forceType();
+    const task = new AnalyzeMember(type, memberReferenceExpression.memberToken.content);
+    this.tasks.push(task);
   }
   protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression): void {
-    const called = constructorCallExpression.type;
+    const called = constructorCallExpression.constructedType;
     const task = new AnalyzeConstructor(called, constructorCallExpression.args.length);
     this.tasks.push(task);
   }

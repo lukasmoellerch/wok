@@ -20,6 +20,9 @@ struct Vec2 {
 @foreign("printInt") func printInt(str: UInt32)
 @foreign("print") func print(str: String)
 @export("main") func main(max: UInt32) {
+  const ptr = Pointer<UInt32>(99)
+  ptr.store(14)
+  printInt(ptr.load())
   printVec2(getVector())
   var player = Player("Lukas", Vec2(11, 32))
   player.position = Vec2(13, 15)

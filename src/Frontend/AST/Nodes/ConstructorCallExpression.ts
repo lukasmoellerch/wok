@@ -2,11 +2,14 @@ import { IType } from "../../Type/Type";
 import { Expression } from "./Expression";
 
 export class ConstructorCallExpression extends Expression {
-  public type: IType;
+  public constructedType: IType;
   public args: Expression[];
-  constructor(type: IType, args: Expression[]) {
+  constructor(constructedType: IType, args: Expression[]) {
     super();
-    this.type = type;
+    this.constructedType = constructedType;
+    if (constructedType.toString() === "void") {
+      throw new Error();
+    }
     this.args = args;
     this.children = [...args];
   }

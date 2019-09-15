@@ -1,7 +1,10 @@
+import chalk from "chalk";
 import { Block, BlockType, ICompilationUnit, IExternalFunctionDeclaration, IInternalFunctionDeclaration, IMutableGlobal, InstructionType, SSAStatement, Type } from "./AST";
 
 export class IRPrinter {
+  private compilationUnit: ICompilationUnit | undefined;
   public stringifyCompilationUnit(compilationUnit: ICompilationUnit): string {
+    this.compilationUnit = compilationUnit;
     let buffer = "";
     for (const mutableGlobal of compilationUnit.mutableGlobals) {
       buffer += this.stringifyMutableGlobal(mutableGlobal) + "\n";
@@ -44,13 +47,13 @@ export class IRPrinter {
       return buffer;
     } else if (block.type === BlockType.if) {
       let buffer = "";
-      buffer += prefix + `if $${block.condition} {\n`;
+      buffer += prefix + `if ${chalk.redBright("$" + block.condition)} {\n`;
       buffer += this.stringifyBlockArray(prefix + "  ", block.blocks);
       buffer += prefix + "}\n";
       return buffer;
     } else if (block.type === BlockType.ifelse) {
       let buffer = "";
-      buffer += prefix + `if $${block.condition} {\n`;
+      buffer += prefix + `if ${chalk.redBright("$" + block.condition)} {\n`;
       buffer += this.stringifyBlockArray(prefix + "  ", block.true);
       buffer += prefix + "} else {\n";
       buffer += this.stringifyBlockArray(prefix + "  ", block.false);
@@ -61,21 +64,21 @@ export class IRPrinter {
   }
   public stringifyType(type: Type): string {
     if (type === Type.ui32) {
-      return "ui32";
+      return chalk.yellowBright("ui32");
     } else if (type === Type.si32) {
-      return "si32";
+      return chalk.yellowBright("si32");
     } else if (type === Type.ui64) {
-      return "ui64";
+      return chalk.yellowBright("ui64");
     } else if (type === Type.si64) {
-      return "si64";
+      return chalk.yellowBright("si64");
     } else if (type === Type.f32) {
-      return "f32";
+      return chalk.yellowBright("f32");
     } else if (type === Type.f64) {
-      return "f64";
+      return chalk.yellowBright("f64");
     } else if (type === Type.funcptr) {
-      return "funcptr";
+      return chalk.yellowBright("funcptr");
     } else if (type === Type.ptr) {
-      return "ptr";
+      return chalk.yellowBright("ptr");
     }
     throw new Error("Invlid type");
   }
@@ -95,136 +98,143 @@ export class IRPrinter {
   }
   public stringifyStatement(statement: SSAStatement): string {
     if (statement[0] === InstructionType.phi) {
-      return `$${statement[1]} = phi(${statement[2].map((a) => `$${a}`).join(", ")})`;
+      return `${chalk.redBright("$" + statement[1])} = phi(${statement[2].map((a) => chalk.redBright(`$${a}`)).join(", ")})`;
     }
     if (statement[0] === InstructionType.break) {
-      return `break`;
+      return chalk.redBright`break`;
     }
     if (statement[0] === InstructionType.breakIf) {
-      return `breakIf $${statement[1]}`;
+      return `breakIf ${chalk.redBright("$" + statement[1])}`;
     }
     if (statement[0] === InstructionType.breakIfFalse) {
-      return `breakIfFalse $${statement[1]}`;
+      return `breakIfFalse ${chalk.redBright("$" + statement[1])}`;
     }
     if (statement[0] === InstructionType.call) {
-      return `(${statement[2].map((a) => `$${a}`).join(", ")}) = ${statement[1]}(${statement[3].map((a) => `$${a}`).join(", ")})`;
+      return `(${statement[2].map((a) => chalk.redBright(`$${a}`)).join(", ")}) = ${chalk.magentaBright(statement[1])}(${statement[3].map((a) => chalk.redBright(`$${a}`)).join(", ")})`;
     }
     if (statement[0] === InstructionType.callFunctionPointer) {
-      return `(${statement[3].map((a) => `$${a}`).join(", ")}) = $${statement[2]}(${statement[4].map((a) => `$${a}`).join(", ")})`;
+      return `(${statement[3].map((a) => chalk.redBright(`$${a}`)).join(", ")}) = ${chalk.redBright("$" + statement[2])}(${statement[4].map((a) => chalk.redBright(`$${a}`)).join(", ")})`;
     }
     if (statement[0] === InstructionType.setToConstant) {
-      return `$${statement[1]} = ${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.green(statement[2] + "")}`;
     }
     if (statement[0] === InstructionType.setToFunction) {
-      return `$${statement[1]} = &${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = &${statement[2]}`;
     }
     if (statement[0] === InstructionType.setToGlobal) {
-      return `$${statement[1]} = @${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = @${statement[2]}`;
     }
     if (statement[0] === InstructionType.setToDataSegment) {
-      return `$${statement[1]} = dataSegment[${statement[2]}]`;
+      const compilationUnit = this.compilationUnit;
+      if (compilationUnit === undefined) {
+        throw new Error();
+      }
+      const data = compilationUnit.dataSegments[statement[2]].content;
+      const decoder = new TextDecoder("utf-8");
+      const string = decoder.decode(data);
+      return `${chalk.redBright("$" + statement[1])} = &` + chalk.blueBright("\"" + string + "\"");
     }
     if (statement[0] === InstructionType.copy) {
-      return `$${statement[1]} = $${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.load) {
-      return `$${statement[1]} = *((${this.stringifyType(statement[3])}*)$${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = *((${this.stringifyType(statement[3])}*)${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.store) {
-      return `*((${this.stringifyType(statement[3])}*)$${statement[1]}) = $${statement[2]}`;
+      return `*((${this.stringifyType(statement[3])}*)${chalk.redBright("$" + statement[1])}) = ${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.convert) {
-      return `$${statement[1]} = (${this.stringifyType(statement[3])}) $${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = (${this.stringifyType(statement[3])}) ${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.equalToZero) {
-      return `$${statement[1]} = $${statement[2]} == 0`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} == 0`;
     }
     if (statement[0] === InstructionType.equal) {
-      return `$${statement[1]} = $${statement[2]} == $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} == ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.notEqual) {
-      return `$${statement[1]} = $${statement[2]} != $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} != ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.less) {
-      return `$${statement[1]} = $${statement[2]} < $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} < ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.greater) {
-      return `$${statement[1]} = $${statement[2]} > $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} > ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.lessEqual) {
-      return `$${statement[1]} = $${statement[2]} <= $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} <= ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.greaterEqual) {
-      return `$${statement[1]} = $${statement[2]} >= $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} >= ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.countLeadingZeroes) {
-      return `$${statement[1]} = clz($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = clz(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.countTrailingZeroes) {
-      return `$${statement[1]} = ctz($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = ctz(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.add) {
-      return `$${statement[1]} = $${statement[2]} + $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} + ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.subtract) {
-      return `$${statement[1]} = $${statement[2]} - $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} - ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.multiply) {
-      return `$${statement[1]} = $${statement[2]} * $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} * ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.divide) {
-      return `$${statement[1]} = $${statement[2]} / $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} / ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.remainder) {
-      return `$${statement[1]} = $${statement[2]} % $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} % ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.and) {
-      return `$${statement[1]} = $${statement[2]} & $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} & ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.or) {
-      return `$${statement[1]} = $${statement[2]} | $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} | ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.xor) {
-      return `$${statement[1]} = $${statement[2]} ^ $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} ^ ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.shiftLeft) {
-      return `$${statement[1]} = $${statement[2]} << $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} << ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.shiftRight) {
-      return `$${statement[1]} = $${statement[2]} >> $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} >> ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.rotateleft) {
-      return `$${statement[1]} = $${statement[2]} rotl $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} rotl ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.rotateRight) {
-      return `$${statement[1]} = $${statement[2]} rotr $${statement[3]}`;
+      return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])} rotr ${chalk.redBright("$" + statement[3])}`;
     }
     if (statement[0] === InstructionType.absolute) {
-      return `$${statement[1]} = abs($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = abs(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.negate) {
-      return `$${statement[1]} = -$${statement[2]}`;
+      return `${chalk.redBright("$" + statement[1])} = -${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.floor) {
-      return `$${statement[1]} = floor($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = floor(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.truncate) {
-      return `$${statement[1]} = trunc($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = trunc(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.nearest) {
-      return `$${statement[1]} = nearest($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = nearest(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.sqrt) {
-      return `$${statement[1]} = sqrt($${statement[2]})`;
+      return `${chalk.redBright("$" + statement[1])} = sqrt(${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.minimum) {
-      return `$${statement[1]} = min($${statement[2]}, $${statement[3]})`;
+      return `${chalk.redBright("$" + statement[1])} = min(${chalk.redBright("$" + statement[2])}, ${chalk.redBright("$" + statement[3])})`;
     }
     if (statement[0] === InstructionType.maximum) {
-      return `$${statement[1]} = max($${statement[2]}, $${statement[3]})`;
+      return `${chalk.redBright("$" + statement[1])} = max(${chalk.redBright("$" + statement[2])}, ${chalk.redBright("$" + statement[3])})`;
     }
     if (statement[0] === InstructionType.return) {
-      return `return (${statement[1].map((a) => `$${a}`).join(", ")})`;
+      return `return (${statement[1].map((a) => chalk.redBright(`$${a}`)).join(", ")})`;
     }
     return "";
   }

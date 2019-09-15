@@ -17,6 +17,7 @@ import { TypeChecker } from "./Frontend/TypeChecking/TypeChecker";
 import { VariableScope } from "./Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Frontend/VariableScope/VariableScopeBuilder";
 import { compileIR } from "./IR/IRCompiler";
+import { IRPrinter } from "./IR/IRPrinter";
 import { removeCopyStatements } from "./IR/Optimization/CopyRemove";
 import { SSATransformer } from "./IR/SSATransformer";
 import { encodeModule } from "./WASM/Encoding/Encoder";
@@ -44,8 +45,8 @@ export default async function main() {
   const typeScopeBuilder = new TypeScopeBuilder(result);
   const operatorScopeBuilder = new OperatorScopeBuilder(result, parser.errors);
   const variableScopeBuilder = new VariableScopeBuilder(globalTypeScope, result, parser.errors);
-  const expressionParser = new ExpressionParser(result, parser.errors);
   const typeResolver = new TypeResolver(globalTypeScope, parser.errors);
+  const expressionParser = new ExpressionParser(result, parser.errors, typeResolver);
 
   typeScopeBuilder.populateGlobalTypeScope(globalTypeScope);
   operatorScopeBuilder.populateGlobalOperatorScope(globalOperatorScope);
@@ -68,20 +69,17 @@ export default async function main() {
     process.stdout.write(errorFormatter.toString());
     return;
   }
-  for (const task of dependencyAnalyzer.compilerTasks) {
-    console.log(task.toString());
-  }
-  const irCompiler = new IRCompiler(globalTypeScope);
-  irCompiler.compileSourceFile(result);
+  const irCompiler = new IRCompiler(globalTypeScope, dependencyAnalyzer.compilerTasks);
+  irCompiler.compile();
   const compilationUnit = irCompiler.compilationUnit;
-
-  /*const irPrinter = new IRPrinter();
-  const irString = irPrinter.stringifyCompilationUnit(compilationUnit);
-  console.log(irString);*/
 
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
   removeCopyStatements(ssa);
+
+  const irPrinter = new IRPrinter();
+  const irString = irPrinter.stringifyCompilationUnit(ssa);
+  console.log(irString);
 
   const wasmModule = compileIR(ssa);
   const consumer = new TypedArrayBytestreamConsumer();
