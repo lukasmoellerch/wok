@@ -65,21 +65,37 @@ export default async function main() {
   implictConversionWrapper.walkSourceFile(result);
   const dependencyAnalyzer = new DependencyAnalyzer(parser.errors);
   dependencyAnalyzer.walkSourceFile(result);
+  if (process.argv.includes("--print-ast")) {
+    process.stdout.write(result.toString());
+  }
   if (parser.errors.length > 0) {
     process.stdout.write(errorFormatter.toString());
     return;
+  }
+  if (process.argv.includes("--print-tasks")) {
+    for (const task of dependencyAnalyzer.compilerTasks) {
+      process.stdout.write(task.toString() + "\n");
+    }
   }
   const irCompiler = new IRCompiler(globalTypeScope, dependencyAnalyzer.compilerTasks);
   irCompiler.compile();
   const compilationUnit = irCompiler.compilationUnit;
 
+  if (process.argv.includes("--print-ir")) {
+    const irPrinter = new IRPrinter();
+    const irString = irPrinter.stringifyCompilationUnit(compilationUnit);
+    process.stdout.write(irString);
+  }
+
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
   removeCopyStatements(ssa);
 
-  const irPrinter = new IRPrinter();
-  const irString = irPrinter.stringifyCompilationUnit(ssa);
-  console.log(irString);
+  if (process.argv.includes("--print-ssa")) {
+    const irPrinter = new IRPrinter();
+    const irString = irPrinter.stringifyCompilationUnit(ssa);
+    process.stdout.write(irString);
+  }
 
   const wasmModule = compileIR(ssa);
   const consumer = new TypedArrayBytestreamConsumer();

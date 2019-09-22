@@ -5,7 +5,7 @@ export class ErrorFormatter {
   public lines: string[];
   public colorizedLines: string[];
   constructor(public sourceContent: string, public sourcePath: string, public errors: CompilerError[]) {
-    this.lines = sourceContent.split(/[\r\n|\r|\n]/g);
+    this.lines = sourceContent.split(/\n/g);
     this.colorizedLines = this.lines.map((line) => {
       const lexer = new Lexer(sourcePath, line);
       return lexer.group().map(this.colorizeGroupedString).join("");
@@ -46,12 +46,12 @@ export class ErrorFormatter {
     for (const error of this.errors.sort((a, b) => a.range.start.line - b.range.start.line)) {
       let index = error.range.start.line - 1;
       while (index <= (error.range.end.line - 1)) {
-        const lineNumbering = (index + 1).toString().padEnd(lineNumberingLength, " ") + " | ";
+        const lineNumbering = chalk.blue((index + 1).toString().padEnd(lineNumberingLength, " ")) + " ⎸";
         result += lineNumbering + this.colorizedLines[index] + "\n";
 
         if (index === error.range.start.line - 1 && index === error.range.end.line - 1) {
           let line = "";
-          for (let i = 1; i < error.range.start.column + lineNumberingLength + 4; i++) {
+          for (let i = 1; i < error.range.start.column + lineNumberingLength + 3; i++) {
             line += " ";
           }
           let errorLength = error.range.end.column - error.range.start.column;
@@ -59,7 +59,7 @@ export class ErrorFormatter {
           for (let i = 0; i < errorLength; i++) {
             line += "↑";
           }
-          result += chalk.red(line) + "\n";
+          result += chalk.redBright(line) + "\n";
         }
         index++;
       }

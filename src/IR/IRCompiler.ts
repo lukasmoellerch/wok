@@ -2,9 +2,9 @@ import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
 import { ExportDescription, Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
-import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Type, Variable } from "./AST";
-import { IRPrinter } from "./IRPrinter";
-import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToWasm } from "./Utils";
+import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, MemoryIRType, SignedUnsignedWASMType, Type, Variable } from "./AST";
+import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToSignedUnsignedWASMType, mapIRTypeToWasm } from "./Utils";
+
 export function compileIR(ir: ICompilationUnit): IModule {
   const functionIdentifierIndexMapping: Map<FunctionIdentifier, number> = new Map();
   let i = 0;
@@ -162,16 +162,16 @@ export function compileIR(ir: ICompilationUnit): IModule {
       compileBlock(env, block);
     }
     currentOffset = env.currentOffset;
-    /*
-        console.log("<", fn.identifier, ">");
-        console.log("#", functionIdentifierIndexMapping.get(fn.identifier));
-        const defaultTypeSection = wasmBuilder.defaultTypeSection;
-        if (defaultTypeSection) {
-          console.log(defaultTypeSection.types[index]);
-        }
-        console.log(instructionBuilder.debugInstructions.join("\n"));
-        console.log();
-        */
+    if (process.argv.includes("--print-wasm")) {
+      console.log("<", fn.identifier, ">");
+      console.log("#", functionIdentifierIndexMapping.get(fn.identifier));
+      const defaultTypeSection = wasmBuilder.defaultTypeSection;
+      if (defaultTypeSection) {
+        console.log(defaultTypeSection.types[index]);
+      }
+      console.log(instructionBuilder.debugInstructions.join("\n"));
+      console.log();
+    }
 
     const sequenceBuilder = env.sequenceBuilderStack[env.sequenceBuilderStack.length - 1];
     const locals: ILocal[] = [];
@@ -574,8 +574,6 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
     }
 
     for (const statement of block.statements) {
-      const irPrinter = new IRPrinter();
-      const str = irPrinter.stringifyStatement(statement);
       if (isBreakStatement(statement)) {
         savePhiNodeReadVariables();
       }
@@ -686,16 +684,277 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         stack.push(target);
       } else if (statement[0] === InstructionType.load) {
         const [, target, position, type] = statement;
+        const targetType = typeOf(target);
+        const wasmValueType = convertToWasmType(targetType);
+        prepareStack([position]);
+        const memoryArgument = { align: 0, offset: 0 };
+        if (wasmValueType === ValueType.i32) {
+          if (type === MemoryIRType.si8) {
+            builder.load(Instruction.i32LoadS8, memoryArgument);
+          }
+          if (type === MemoryIRType.ui8) {
+            builder.load(Instruction.i32LoadU8, memoryArgument);
+          }
+          if (type === MemoryIRType.si16) {
+            builder.load(Instruction.i32LoadS16, memoryArgument);
+          }
+          if (type === MemoryIRType.ui16) {
+            builder.load(Instruction.i32LoadU16, memoryArgument);
+          }
+          if (type === MemoryIRType.si32) {
+            builder.load(Instruction.i32Load, memoryArgument);
+          }
+          if (type === MemoryIRType.ui32) {
+            builder.load(Instruction.i32Load, memoryArgument);
+          }
+          if (type === MemoryIRType.ptr) {
+            builder.load(Instruction.i32Load, memoryArgument);
+          }
+          if (type === MemoryIRType.funcptr) {
+            builder.load(Instruction.i32Load, memoryArgument);
+          }
+          if (type === MemoryIRType.si64 || type === MemoryIRType.ui64) {
+            builder.load(Instruction.i64Load, memoryArgument);
+            // TODO: Check if correct instruction
+            builder.numeric(Instruction.i64ExtendI32Signed);
+          }
+        } else if (wasmValueType === ValueType.i64) {
+          if (type === MemoryIRType.si8) {
+            builder.load(Instruction.i64LoadS8, memoryArgument);
+          }
+          if (type === MemoryIRType.ui8) {
+            builder.load(Instruction.i64LoadU8, memoryArgument);
+          }
+          if (type === MemoryIRType.si16) {
+            builder.load(Instruction.i64LoadS16, memoryArgument);
+          }
+          if (type === MemoryIRType.ui16) {
+            builder.load(Instruction.i64LoadU16, memoryArgument);
+          }
+          if (type === MemoryIRType.si32) {
+            builder.load(Instruction.i64LoadS32, memoryArgument);
+          }
+          if (type === MemoryIRType.ui32) {
+            builder.load(Instruction.i64LoadU32, memoryArgument);
+          }
+          if (type === MemoryIRType.si64) {
+            builder.load(Instruction.i64Load, memoryArgument);
+          }
+          if (type === MemoryIRType.ui64) {
+            builder.load(Instruction.i64Load, memoryArgument);
+          }
+          if (type === MemoryIRType.ptr) {
+            builder.load(Instruction.i64Load, memoryArgument);
+          }
+          if (type === MemoryIRType.funcptr) {
+            builder.load(Instruction.i64Load, memoryArgument);
+          }
+        } else if (wasmValueType === ValueType.f32) {
+          throw new Error();
+        } else if (wasmValueType === ValueType.f64) {
+          throw new Error();
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.store) {
         const [, value, position, type] = statement;
+        const valueType = typeOf(value);
+        const wasmValueType = convertToWasmType(valueType);
+        prepareStack([value, position]);
+        const memoryArgument = { align: 0, offset: 0 };
+        if (wasmValueType === ValueType.i32) {
+          if (type === MemoryIRType.si8 || type === MemoryIRType.ui8) {
+            builder.store(Instruction.i32Store8, memoryArgument);
+          }
+          if (type === MemoryIRType.si16 || type === MemoryIRType.ui16) {
+            builder.store(Instruction.i32Store16, memoryArgument);
+          }
+          if (type === MemoryIRType.si32 || type === MemoryIRType.ui32 || type === MemoryIRType.ptr || type === MemoryIRType.funcptr) {
+            builder.store(Instruction.i32Store, memoryArgument);
+          }
+          if (type === MemoryIRType.si64 || type === MemoryIRType.ui64) {
+            builder.numeric(Instruction.i32WrapI64);
+            builder.store(Instruction.i64Store, memoryArgument);
+          }
+        } else if (wasmValueType === ValueType.i64) {
+          if (type === MemoryIRType.si8 || type === MemoryIRType.ui8) {
+            builder.store(Instruction.i64Store8, memoryArgument);
+          }
+          if (type === MemoryIRType.si16 || type === MemoryIRType.ui16) {
+            builder.store(Instruction.i64Store16, memoryArgument);
+          }
+          if (type === MemoryIRType.si32 || type === MemoryIRType.ui32) {
+            builder.store(Instruction.i64Store32, memoryArgument);
+          }
+          if (type === MemoryIRType.si64 || type === MemoryIRType.ui64 || type === MemoryIRType.ptr || type === MemoryIRType.funcptr) {
+            builder.store(Instruction.i64Store, memoryArgument);
+          }
+        } else if (wasmValueType === ValueType.f32) {
+          continue;
+        } else if (wasmValueType === ValueType.f64) {
+          continue;
+        }
       } else if (statement[0] === InstructionType.convert) {
-        const [, target, arg, targetType] = statement;
+        const [, target, arg, targetIRType] = statement;
+        const sourceIRType = typeOf(arg);
+        const sourceType = mapIRTypeToSignedUnsignedWASMType(environment.compilationUnit, sourceIRType);
+        const targetType = mapIRTypeToSignedUnsignedWASMType(environment.compilationUnit, targetIRType);
+        prepareStack([arg]);
+        if (sourceType === SignedUnsignedWASMType.ui32) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            builder.numeric(Instruction.i64ExtendI32Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            builder.numeric(Instruction.i64ExtendI32Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            builder.numeric(Instruction.f32ConvertI32Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            builder.numeric(Instruction.f64ConvertI32Unsigned);
+          }
+        } else if (sourceType === SignedUnsignedWASMType.si32) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            builder.numeric(Instruction.i64ExtendI32Signed);
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            builder.numeric(Instruction.i64ExtendI32Signed);
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            builder.numeric(Instruction.f32ConvertI32Signed);
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            builder.numeric(Instruction.f64ConvertI32Signed);
+          }
+        } else if (sourceType === SignedUnsignedWASMType.ui64) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            builder.numeric(Instruction.i32WrapI64);
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            builder.numeric(Instruction.i32WrapI64);
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            builder.numeric(Instruction.f32ConvertI64Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            builder.numeric(Instruction.f64ConvertI64Unsigned);
+          }
+        } else if (sourceType === SignedUnsignedWASMType.si64) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            builder.numeric(Instruction.i32WrapI64);
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            builder.numeric(Instruction.i32WrapI64);
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            builder.numeric(Instruction.f32ConvertI64Signed);
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            builder.numeric(Instruction.f64ConvertI64Signed);
+          }
+        } else if (sourceType === SignedUnsignedWASMType.f32) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            builder.numeric(Instruction.i32TruncateF32Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            builder.numeric(Instruction.i32TruncateF32Signed);
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            builder.numeric(Instruction.i64TruncateF32Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            builder.numeric(Instruction.i64TruncateF32Signed);
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            // identity
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            builder.numeric(Instruction.f64PromoteF32);
+          }
+        } else if (sourceType === SignedUnsignedWASMType.f64) {
+          if (targetType === SignedUnsignedWASMType.ui32) {
+            builder.numeric(Instruction.i32TruncateF64Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.si32) {
+            builder.numeric(Instruction.i32TruncateF64Signed);
+          } else if (targetType === SignedUnsignedWASMType.ui64) {
+            builder.numeric(Instruction.i64TruncateF64Unsigned);
+          } else if (targetType === SignedUnsignedWASMType.si64) {
+            builder.numeric(Instruction.i64TruncateF64Signed);
+          } else if (targetType === SignedUnsignedWASMType.f32) {
+            builder.numeric(Instruction.f32DemoteF64);
+          } else if (targetType === SignedUnsignedWASMType.f64) {
+            // identity
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.equalToZero) {
         const [, target, arg] = statement;
       } else if (statement[0] === InstructionType.equal) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32Equal);
+          } else {
+            builder.numeric(Instruction.f64Equal);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32Equal);
+            } else {
+              builder.numeric(Instruction.i64Equal);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32Equal);
+            } else {
+              builder.numeric(Instruction.i64Equal);
+            }
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.notEqual) {
         const [, target, lhs, rhs] = statement;
+        const lhsType = typeOf(lhs);
+        const rhsType = typeOf(rhs);
+        if (lhsType !== rhsType) {
+          throw new Error();
+        }
+        const type = lhsType;
+        const wasmType = convertToWasmType(type);
+        const f = isFloat(environment.compilationUnit, type);
+        prepareStack([lhs, rhs]);
+        if (f) {
+          if (wasmType === ValueType.f32) {
+            builder.numeric(Instruction.f32NotEqual);
+          } else {
+            builder.numeric(Instruction.f64NotEqual);
+          }
+        } else {
+          const s = isSigned(environment.compilationUnit, type);
+          if (s) {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32NotEqual);
+            } else {
+              builder.numeric(Instruction.i64NotEqual);
+            }
+          } else {
+            if (wasmType === ValueType.i32) {
+              builder.numeric(Instruction.i32NotEqual);
+            } else {
+              builder.numeric(Instruction.i64NotEqual);
+            }
+          }
+        }
+        stack.push(target);
       } else if (statement[0] === InstructionType.less) {
         const [, target, lhs, rhs] = statement;
         const lhsType = typeOf(lhs);
@@ -1276,7 +1535,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         let i64Index = 0;
         let f32Index = 0;
         let f64Index = 0;
-        const index = 0;
+        let index = 0;
         for (const variable of resultVariablesThatHaveToBeStored) {
           const type = typeOf(variable);
           const valueType = convertToWasmType(type);
@@ -1301,6 +1560,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
             f64Index++;
             builder.store(Instruction.f64Store, { align: 0, offset });
           }
+          index++;
         }
         if (returnValues.length > 0) {
           prepareStack([returnValues[0]], true);

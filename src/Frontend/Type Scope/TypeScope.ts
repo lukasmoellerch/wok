@@ -26,6 +26,7 @@ export class TypeTreeNode {
   public namedTemplates: Map<string, TypeTreeNodeTemplate>;
   public parent: TypeTreeNode | undefined;
   public instanceType: IType | undefined;
+  private childTreeNodeCache: Map<string, TypeTreeNode> = new Map()
   constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, instanceType?: IType | undefined) {
     if (parent !== undefined) {
       this.rootTypeTreeNode = parent.rootTypeTreeNode;
@@ -58,11 +59,18 @@ export class TypeTreeNode {
     this.namedTemplates.set(name, template);
   }
   public getChildTreeNode(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
+    const id = `#${name}%(${args.map(arg => arg.toString()).join("$")})`;
+    const cached = this.childTreeNodeCache.get(id);
+    if (cached !== undefined) {
+      return cached;
+    }
     const template = this.namedTemplates.get(name);
     if (template === undefined) {
       return undefined;
     }
-    return template.create(args);
+    const node = template.create(args);
+    this.childTreeNodeCache.set(id, node);
+    return node;
   }
   public resolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
     const node = this.getChildTreeNode(name, args);

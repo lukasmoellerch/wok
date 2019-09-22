@@ -48,6 +48,7 @@ export class TypeScopeBuilder extends ASTWalker {
       scope = template.create([]);
       type.node = scope;
     }
+    structDeclaration.typeCheckingType = type;
     this.scopes.push(scope);
     super.walkStructDeclaration(structDeclaration);
     this.scopes.pop();

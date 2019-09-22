@@ -3,63 +3,29 @@ infix operator + 3 right
 infix operator - 3 right
 infix operator * 4 right
 infix operator == 2 right
+infix operator != 2 right
 infix operator > 2 right
 infix operator < 2 right
 infix operator >= 2 right
 infix operator <= 2 right
 
-struct Player {
-  const name: String
-  const position: Vec2
-}
-struct Vec2 {
-  const x: UInt32
-  const y: UInt32
+struct List {
+  let value: Int
+  let next: UInt32
 }
 
-@foreign("printInt") func printInt(str: UInt32)
+@foreign("printInt") func printInt(str: Int)
 @foreign("print") func print(str: String)
-@export("main") func main(max: UInt32) {
-  const ptr = Pointer<UInt32>(99)
-  ptr.store(14)
-  printInt(ptr.load())
-  printVec2(getVector())
-  var player = Player("Lukas", Vec2(11, 32))
-  player.position = Vec2(13, 15)
-  printVec2(player.position)
-  if isGreaterThanTen(Player("Lukas", Vec2(11, 32)).position.x) {
-    print("Greater")
+@export("main") func main(max: Int) {
+  let first = Pointer<List>(40)
+  first.store(List(13, 60))
+  Pointer<List>(60).store(List(15, 80))
+  Pointer<List>(80).store(List(9, 0))
+  var current = Pointer<List>(40).load()
+  current = Pointer<List>(40).load()
+  while current.next != 0 {
+    printInt(current.value)
+    current = Pointer<List>(current.next).load()
   }
-}
-func getZero(): UInt32 {
-  return 0
-}
-func isGreaterThanTen(x: UInt32): UInt32 {
-  if x > 10 {
-    return 1
-  }
-  return 0
-}
-func getVector(): Vec2 {
-  return Vec2(12, 45)
-}
-func printVec2(vec: Vec2) {
-  printInt(vec.x)
-  printInt(vec.y)
-}
-func fib(n: UInt32) {
-  var f1: UInt32 = 0
-  var f2: UInt32 = 1
-  var fi: UInt32 = 0
-  var i: UInt32 = 0
-  while i < n {
-    fi = f1 + f2
-    f1 = f2
-    f2 = fi
-    i = i + 1
-    printInt(fi)
-  }
-}
-extension Int {
-
+  print("Done")
 }

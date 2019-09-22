@@ -2,19 +2,22 @@ import { ASTWalker } from "../AST/ASTWalker";
 import { Block } from "../AST/Nodes/Block";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
+import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
+import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
-
+export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration;
 export class VariableScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: VariableScope[] = [];
   public errors: CompilerError[];
-  public functionCompilationStack: UnboundFunctionDeclaration[] = [];
+  public functionCompilationStack: FunctionDeclaration[] = [];
+  public selfStack: VariableScopeEntry[] = [];
   constructor(private rootTypeTreeNode: TypeTreeNode, sourceFile: SourceFile, errorBuffer: CompilerError[]) {
     super();
     this.sourceFile = sourceFile;
@@ -39,6 +42,18 @@ export class VariableScopeBuilder extends ASTWalker {
   public walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
     this.functionCompilationStack.push(unboundFunctionDeclaration);
     super.walkUnboundFunctionDeclaration(unboundFunctionDeclaration);
+  }
+  public walkMethodDeclaration(methodDeclaration: MethodDeclaration) {
+    this.functionCompilationStack.push(methodDeclaration);
+    methodDeclaration.variables.push(this.selfStack[this.selfStack.length - 1]);
+
+    const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
+    const scope = new VariableScope(parent);
+    this.scopes.push(scope);
+    this.scopes[this.scopes.length - 1].register(this.selfStack[this.selfStack.length - 1]);
+    methodDeclaration.thisEntry = this.selfStack[this.selfStack.length - 1];
+    super.walkMethodDeclaration(methodDeclaration);
+    this.scopes.pop();
   }
   public walkBlock(block: Block) {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
@@ -87,5 +102,16 @@ export class VariableScopeBuilder extends ASTWalker {
     }
     variableReferenceExpression.resolveToEntry(entry);
     return super.walkVariableReferenceExpression(variableReferenceExpression);
+  }
+  public walkStructDeclaration(structDeclaration: StructDeclaration) {
+    const str = "self";
+    const entryType = VariableScopeEntryType.self;
+    const type = structDeclaration.typeCheckingType;
+    if (type === undefined) {
+      throw new Error();
+    }
+    const entry = new VariableScopeEntry(str, entryType, structDeclaration, type);
+    this.selfStack.push(entry);
+    super.walkStructDeclaration(structDeclaration);
   }
 }

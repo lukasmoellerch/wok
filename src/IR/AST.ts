@@ -18,6 +18,28 @@ export enum Type {
   ptr,
   funcptr,
 }
+export enum SignedUnsignedWASMType {
+  ui32,
+  si32,
+  ui64,
+  si64,
+  f32,
+  f64,
+}
+export enum MemoryIRType {
+  si8,
+  si16,
+  si32,
+  si64,
+  ui8,
+  ui16,
+  ui32,
+  ui64,
+  f32,
+  f64,
+  ptr,
+  funcptr,
+}
 export interface IMutableGlobal {
   identifier: GlobalIdentifier;
   type: Type;
@@ -104,8 +126,8 @@ export type SSAStatement =
   | [InstructionType.setToGlobal, Variable, GlobalIdentifier]
   | [InstructionType.setToDataSegment, Variable, DataSegmentIdentifier]
   | [InstructionType.copy, Variable, Variable]
-  | [InstructionType.load, Variable, Variable, Type]
-  | [InstructionType.store, Variable, Variable, Type]
+  | [InstructionType.load, Variable, Variable, MemoryIRType]
+  | [InstructionType.store, Variable, Variable, MemoryIRType]
   | [InstructionType.convert, Variable, Variable, Type]
   | [InstructionType.equalToZero, Variable, Variable]
   | [InstructionType.equal, Variable, Variable, Variable]

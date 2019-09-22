@@ -100,7 +100,7 @@ export class Lexer {
     [TokenTag.keyword, TokenTagGroup.keyword],
   ];
   private tokenTagGroupsMap: Map<TokenTag, TokenTagGroup> = new Map(this.tokenTagGroups);
-  private keywords = ["func", "operator", "prefix", "infix", "postfix", "var", "const", "while", "if"];
+  private keywords = ["func", "operator", "prefix", "infix", "postfix", "var", "let", "while", "if", "return", "self"];
   constructor(sourcePath: string, sourceString: string) {
     this.sourcePath = sourcePath;
     this.sourceString = sourceString;
@@ -187,6 +187,9 @@ export class Lexer {
   }
   public numberSign(advance: boolean = true): Token | undefined {
     return this.regexReturnToken(advance, TokenTag.dotOperator, this.numberSignRegex);
+  }
+  public errorAdvance() {
+    this.advance(this.sourceString[this.sourceStringOffset]);
   }
   public keyword(str: string, advance: boolean = true): Token | undefined {
     const start = this.getCurrentLocation();

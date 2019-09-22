@@ -3,6 +3,7 @@ import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode, TypeTreeNodeTemplate } 
 import { NativeIntegerType, PointerType, StringType } from "./NativeType";
 
 class PointerTypeTemplate extends TypeTreeNodeTemplate {
+  private createdPointerTypes: PointerType[] = [];
   constructor(private parent: TypeTreeNode) {
     super();
   }
@@ -10,6 +11,7 @@ class PointerTypeTemplate extends TypeTreeNodeTemplate {
     const typeTreeNode = new TypeTreeNode(this.parent, args, "Pointer", "native");
     typeTreeNode.registerNewNamedTemplate("Stored", new ArgumentlessTypeTreeNodeTemplate(args[0]));
     const pointerInstanceType = new PointerType(typeTreeNode);
+    this.createdPointerTypes.push(pointerInstanceType);
     typeTreeNode.instanceType = pointerInstanceType;
     return typeTreeNode;
   }

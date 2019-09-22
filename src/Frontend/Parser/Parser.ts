@@ -9,6 +9,7 @@ import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclar
 import { FunctionResultDeclaration } from "../AST/Nodes/FunctionResultDeclaration";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
+import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
 import { ReturnStatement } from "../AST/Nodes/ReturnStatement";
@@ -36,9 +37,16 @@ export class Parser {
   public parseSourceFile(): SourceFile {
     const topLevelDeclarations: ITopLevelDeclaration[] = [];
     while (!this.lexer.eof()) {
+      let lineBreak = this.lexer.lineBreak();
+      while (lineBreak !== undefined && !this.lexer.eof()) {
+        lineBreak = this.lexer.lineBreak();
+      }
+      if (this.lexer.eof()) {
+        break;
+      }
       const declaration = this.parseDecoratedTopLevelDeclaration();
       if (declaration === undefined) {
-        this.lexer.advance(" ");
+        this.lexer.errorAdvance();
       } else {
         topLevelDeclarations.push(declaration);
       }
@@ -86,7 +94,7 @@ export class Parser {
     return undefined;
   }
   public parseFunction(decorators: Decorator[], functionKeywordToken: Token): UnboundFunctionDeclaration {
-    const ws = this.lexer.whitespace();
+    this.lexer.whitespace();
     const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
     if (nameToken instanceof PlaceholderToken) {
       this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
@@ -201,7 +209,7 @@ export class Parser {
     if (whileKEyword !== undefined) {
       return this.parseWhileStatement(whileKEyword);
     }
-    const constantKeyword = this.lexer.keyword("const");
+    const constantKeyword = this.lexer.keyword("let");
     if (constantKeyword !== undefined) {
       return this.parseConstantDeclaration(constantKeyword);
     }
@@ -595,8 +603,9 @@ export class Parser {
     let endToken = this.lexer.rightCurlyBracket() || new PlaceholderToken(this.lexer);
     let errorToken: Token | undefined;
     while (endToken instanceof PlaceholderToken && !this.lexer.eof()) {
+      const decorators = this.parseDecoratorList();
       this.lexer.whitespace();
-      const constToken = this.lexer.keyword("const");
+      const constToken = this.lexer.keyword("let");
       if (constToken !== undefined) {
         const declaration = this.parseConstantFieldDeclaration(constToken);
         declarations.push(declaration);
@@ -616,18 +625,55 @@ export class Parser {
 
         continue;
       }
+      const funcToken = this.lexer.keyword("func");
+      if (funcToken !== undefined) {
+        const declaration = this.parseMethodDeclaration(decorators, funcToken);
+        declarations.push(declaration);
+        this.lexer.whitespace();
+
+        endToken = this.lexer.rightCurlyBracket() || new PlaceholderToken(this.lexer);
+
+        continue;
+      }
       errorToken = new PlaceholderToken(this.lexer);
-      this.lexer.advance(" ");
+      this.lexer.errorAdvance();
     }
     if (errorToken !== undefined) {
-      this.errors.push(new WrongTokenError(errorToken.range, ["var", "const"]));
-    }
-    if (this.lexer.eof()) {
-      throw new Error();
+      this.errors.push(new WrongTokenError(errorToken.range, ["var", "const", "func", "@"]));
     }
     this.lexer.lineBreak();
     const declarationBlock = new DeclarationBlock(startToken, declarations, endToken);
     return declarationBlock;
+  }
+  public parseMethodDeclaration(decorators: Decorator[], functionKeywordToken: Token): MethodDeclaration {
+    this.lexer.whitespace();
+    const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
+    if (nameToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
+    }
+    const argumentDeclarations = this.parseFunctionArgumentDeclarationList();
+    this.lexer.whitespace();
+    const colon = this.lexer.colon();
+    this.lexer.whitespace();
+    if (colon !== undefined) {
+      const type = this.parseType();
+      let block: Block | undefined;
+      this.lexer.whitespace();
+      const leftCurly = this.lexer.leftCurlyBracket(false);
+      if (leftCurly) {
+        block = this.parseBlock();
+      }
+      const resultDeclaration = new FunctionResultDeclaration(type);
+      return new MethodDeclaration(decorators, functionKeywordToken, nameToken, argumentDeclarations, block, resultDeclaration);
+    } else {
+      let block: Block | undefined;
+      this.lexer.whitespace();
+      const leftCurly = this.lexer.leftCurlyBracket(false);
+      if (leftCurly) {
+        block = this.parseBlock();
+      }
+      return new MethodDeclaration(decorators, functionKeywordToken, nameToken, argumentDeclarations, block);
+    }
   }
   public parseConstantFieldDeclaration(constToken: Token): ConstantFieldDeclaration {
     this.lexer.whitespace();

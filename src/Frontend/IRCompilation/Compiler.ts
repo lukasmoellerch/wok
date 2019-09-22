@@ -27,7 +27,7 @@ import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpre
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
-import { NativeIntegerType, PointerType } from "../Type/NativeType";
+import { NativeIntegerType, PointerType, StringType } from "../Type/NativeType";
 import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { VariableScopeEntry, VariableScopeEntryType } from "../VariableScope/VariableScope";
@@ -330,27 +330,119 @@ export class IRCompiler {
   private compileOperator(_type: IType, _name: string, _arity: number) {
 
   }
-  private compileMethod(_type: IType, _name: string, _arity: number) {
+  private generateStoreInstructions(env: IRFunctionCompilationEnvironment, type: IType, value: IRValue, ptr: IRValue) {
+    const ptrVariable = ptr.irVariables[0];
+    const layout = type.memoryMap();
+    let index = 0;
+    while (index < type.irVariablesNeededForRepresentation()) {
+      const irVariable = value.irVariables[index];
+      const memoryLocation = layout[index];
+      const offset = memoryLocation.baseOffset;
+      if (offset !== 0) {
+        const offsetVariable = env.addIRLocal(IR.Type.ptr);
+        env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, offset]);
+        env.writeStatement([IR.InstructionType.add, offsetVariable, offsetVariable, ptrVariable]);
 
+        env.writeStatement([IR.InstructionType.store, offsetVariable, irVariable, memoryLocation.memoryType]);
+      } else {
+        env.writeStatement([IR.InstructionType.store, ptrVariable, irVariable, memoryLocation.memoryType]);
+      }
+      index++;
+    }
+  }
+  private generateLoadInstructions(env: IRFunctionCompilationEnvironment, type: IType, target: IRValue, ptr: IRValue) {
+    const ptrVariable = ptr.irVariables[0];
+    const layout = type.memoryMap();
+    let index = 0;
+    while (index < type.irVariablesNeededForRepresentation()) {
+      const irVariable = target.irVariables[index];
+      const memoryLocation = layout[index];
+      const offset = memoryLocation.baseOffset;
+      if (offset !== 0) {
+        const offsetVariable = env.addIRLocal(IR.Type.ptr);
+        env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, offset]);
+        env.writeStatement([IR.InstructionType.add, offsetVariable, offsetVariable, ptrVariable]);
+
+        env.writeStatement([IR.InstructionType.load, irVariable, offsetVariable, memoryLocation.memoryType]);
+      } else {
+        env.writeStatement([IR.InstructionType.load, irVariable, ptrVariable, memoryLocation.memoryType]);
+      }
+      index++;
+    }
+  }
+  private compileMethod(type: IType, name: string, arity: number) {
+    const functionType = type.typeOfMember(name);
+    if (functionType === undefined) {
+      throw new Error();
+    }
+    if (!(functionType instanceof FunctionType)) {
+      throw new Error();
+    }
+    const identifier = this.getMethodFunctionName(type, name, arity);
+    const environment = new IRFunctionCompilationEnvironment(identifier, functionType);
+    if (type instanceof PointerType) {
+      if (name === "store") {
+        // this argument
+        const thisValue = environment.generateValueOfType(type);
+        const arg = environment.generateValueOfType(type.stored);
+        this.generateStoreInstructions(environment, type.stored, arg, thisValue);
+      } else if (name === "load") {
+        // this argument
+        const thisValue = environment.generateValueOfType(type);
+        const resultValue = environment.generateValueOfType(type.stored);
+        this.generateLoadInstructions(environment, type.stored, resultValue, thisValue);
+        environment.writeStatement([IR.InstructionType.return, resultValue.irVariables]);
+      }
+    } else if (type instanceof StructType) {
+
+      const declaration = type.methodDeclarationMap.get(name);
+      if (declaration === undefined) {
+        throw new Error();
+      }
+      const thisEntry = declaration.thisEntry;
+      if (thisEntry !== undefined) {
+        thisEntry.type = type;
+      }
+      const block = declaration.block;
+      if (block === undefined) {
+        throw new Error();
+      }
+      const entries = declaration.variables;
+      for (const entry of entries) {
+        if (entry.entryType === VariableScopeEntryType.self) {
+          environment.generateValueForEntry(entry);
+        }
+      }
+      for (const entry of entries) {
+        if (entry.entryType === VariableScopeEntryType.argument) {
+          environment.generateValueForEntry(entry);
+        }
+      }
+      for (const entry of entries) {
+        if (entry.entryType === VariableScopeEntryType.constant) {
+          environment.generateValueForEntry(entry);
+        }
+      }
+      for (const entry of entries) {
+        if (entry.entryType === VariableScopeEntryType.variable) {
+          environment.generateValueForEntry(entry);
+        }
+      }
+      this.compileBlock(environment, block);
+    }
+    environment.finalize();
+
+    environment.declaration.exportedAs = undefined;
+    environment.declaration.inlinable = false;
+    environment.declaration.tableElement = true;
+
+    this.compilationUnit.internalFunctionDeclarations.push(environment.declaration);
+    this.compilationUnit.functionCode.push(environment.irFunction);
   }
   private compileUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
-    const foreignParameters = unboundFunctionDeclaration.decoratorMap.get("foreign");
-    if (foreignParameters !== undefined) {
-      if (foreignParameters.length !== 1) {
-        // TODO Add a compiler error instead of throwing a js error.
-        throw new Error();
-      }
-      const expression = foreignParameters[0].expression;
-      if (expression === undefined) {
-        // Should not happen as a compiler error would be added first
-        throw new Error();
-      }
-      if (!(expression instanceof StringLiteralExpression)) {
-        // TODO Handle this error
-        throw new Error();
-      }
-      const str = expression.stringLiteralToken.content;
-      const externalName = str.substring(1, str.length - 1);
+    const foreignName = this.checkForeign(unboundFunctionDeclaration.decoratorMap);
+    if (foreignName !== undefined) {
+      const externalName = foreignName;
       const name = this.getUnboundFunctionName(unboundFunctionDeclaration);
       const externalFunctionDeclaration: IR.IExternalFunctionDeclaration = {
         identifier: name,
@@ -626,7 +718,11 @@ export class IRCompiler {
           return;
         }
         const lhsIRVariables = target.irVariables;
-        const rhsIRVariables = lhs.irVariables;
+        const indices = type.propertyIrVariableIndexMapping.get(expression.memberToken.content);
+        if (indices === undefined) {
+          throw new Error();
+        }
+        const rhsIRVariables = indices.map(index => lhs.irVariables[index]);
         let index = 0;
         for (const lhsIRVariable of lhsIRVariables) {
           const rhsIRVariable = rhsIRVariables[index];
@@ -639,6 +735,7 @@ export class IRCompiler {
       }
     } else if (expression instanceof MemberCallExpression) {
       this.compileMemberCallExpression(env, expression, target);
+      return;
     }
     throw new Error();
   }
@@ -715,6 +812,19 @@ export class IRCompiler {
       if (type instanceof StructType) {
         const lhs = this.getExpressionAsValue(env, expression.lhs);
         return this.getStructMemberAsValue(env, lhs, expression.memberToken.content);
+      } else if (type instanceof StringType) {
+        const lhs = this.getExpressionAsValue(env, expression.lhs);
+        const memberName = expression.memberToken.content;
+        if (memberName === "length") {
+          const irValue = lhs.irVariables[type.lengthIndex];
+          const index = env.values.length;
+          const memberType = type.typeOfMember(memberName);
+          if (memberType === undefined) {
+            throw new Error();
+          }
+          const value = new IRValue(index, [irValue], memberType);
+          return value;
+        }
       } else {
         throw new Error();
       }
@@ -888,6 +998,32 @@ export class IRCompiler {
         const [rhsIrVariable] = rhsValue.irVariables;
         const [targetVariable] = target.irVariables;
         env.writeStatement([IR.InstructionType.greaterEqual, targetVariable, lhsIRVariable, rhsIrVariable]);
+        return;
+      } else if (operator === "==") {
+        if (target === undefined) {
+          this.compileExpression(env, binaryOperatorExpression.lhs);
+          this.compileExpression(env, binaryOperatorExpression.rhs);
+          return;
+        }
+        const lhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.lhs);
+        const rhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.rhs);
+        const [lhsIRVariable] = lhsValue.irVariables;
+        const [rhsIrVariable] = rhsValue.irVariables;
+        const [targetVariable] = target.irVariables;
+        env.writeStatement([IR.InstructionType.equal, targetVariable, lhsIRVariable, rhsIrVariable]);
+        return;
+      } else if (operator === "!=") {
+        if (target === undefined) {
+          this.compileExpression(env, binaryOperatorExpression.lhs);
+          this.compileExpression(env, binaryOperatorExpression.rhs);
+          return;
+        }
+        const lhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.lhs);
+        const rhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.rhs);
+        const [lhsIRVariable] = lhsValue.irVariables;
+        const [rhsIrVariable] = rhsValue.irVariables;
+        const [targetVariable] = target.irVariables;
+        env.writeStatement([IR.InstructionType.notEqual, targetVariable, lhsIRVariable, rhsIrVariable]);
         return;
       }
     }

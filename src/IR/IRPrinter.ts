@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { Block, BlockType, ICompilationUnit, IExternalFunctionDeclaration, IInternalFunctionDeclaration, IMutableGlobal, InstructionType, SSAStatement, Type } from "./AST";
+import { Block, BlockType, ICompilationUnit, IExternalFunctionDeclaration, IInternalFunctionDeclaration, IMutableGlobal, InstructionType, MemoryIRType, SSAStatement, Type } from "./AST";
 
 export class IRPrinter {
   private compilationUnit: ICompilationUnit | undefined;
@@ -82,6 +82,34 @@ export class IRPrinter {
     }
     throw new Error("Invlid type");
   }
+  public stringifyMemoryType(type: MemoryIRType): string {
+    if (type === MemoryIRType.ui8) {
+      return chalk.yellowBright("ui8");
+    } else if (type === MemoryIRType.si8) {
+      return chalk.yellowBright("si8");
+    } else if (type === MemoryIRType.ui16) {
+      return chalk.yellowBright("ui16");
+    } else if (type === MemoryIRType.si16) {
+      return chalk.yellowBright("si16");
+    } else if (type === MemoryIRType.ui32) {
+      return chalk.yellowBright("ui32");
+    } else if (type === MemoryIRType.si32) {
+      return chalk.yellowBright("si32");
+    } else if (type === MemoryIRType.ui64) {
+      return chalk.yellowBright("ui64");
+    } else if (type === MemoryIRType.si64) {
+      return chalk.yellowBright("si64");
+    } else if (type === MemoryIRType.f32) {
+      return chalk.yellowBright("f32");
+    } else if (type === MemoryIRType.f64) {
+      return chalk.yellowBright("f64");
+    } else if (type === MemoryIRType.funcptr) {
+      return chalk.yellowBright("funcptr");
+    } else if (type === MemoryIRType.ptr) {
+      return chalk.yellowBright("ptr");
+    }
+    throw new Error("Invlid type");
+  }
   public stringifyMutableGlobal(mutableGlobal: IMutableGlobal): string {
     return `mutable global ${mutableGlobal.identifier}: ${mutableGlobal}`;
   }
@@ -138,10 +166,10 @@ export class IRPrinter {
       return `${chalk.redBright("$" + statement[1])} = ${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.load) {
-      return `${chalk.redBright("$" + statement[1])} = *((${this.stringifyType(statement[3])}*)${chalk.redBright("$" + statement[2])})`;
+      return `${chalk.redBright("$" + statement[1])} = *((${this.stringifyMemoryType(statement[3])}*)${chalk.redBright("$" + statement[2])})`;
     }
     if (statement[0] === InstructionType.store) {
-      return `*((${this.stringifyType(statement[3])}*)${chalk.redBright("$" + statement[1])}) = ${chalk.redBright("$" + statement[2])}`;
+      return `*((${this.stringifyMemoryType(statement[3])}*)${chalk.redBright("$" + statement[1])}) = ${chalk.redBright("$" + statement[2])}`;
     }
     if (statement[0] === InstructionType.convert) {
       return `${chalk.redBright("$" + statement[1])} = (${this.stringifyType(statement[3])}) ${chalk.redBright("$" + statement[2])}`;

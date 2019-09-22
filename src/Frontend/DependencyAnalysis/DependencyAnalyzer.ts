@@ -227,21 +227,11 @@ export class DependencyAnalyzer extends ASTWalker {
         const index = this.typeArray.length;
         this.typeMapIndexMapping.set(type, index);
         this.typeArray.push(type);
-        if (type instanceof StructType) {
-          const memoryDependecies: Set<IType> = new Set();
-          const declarationBlock = type.declaration.declarationBlock;
-          const declarations = declarationBlock.declarations;
-          for (const declaration of declarations) {
-            const childType = declaration.typeHint.type;
-            if (childType === undefined) {
-              continue;
-            }
-            const subtask = new AnalyzeType(childType);
-            this.tasks.push(subtask);
-            memoryDependecies.add(childType);
-          }
-          this.memoryDependencies.set(index, memoryDependecies);
+        for (const childType of type.typeReferences()) {
+          const subtask = new AnalyzeType(childType);
+          this.tasks.push(subtask);
         }
+        this.memoryDependencies.set(index, type.memoryReferences());
       } else if (task instanceof AnalyzeConstructor) {
         this.compilerTasks.push(new CompileConstructor(task.type));
         const typeTask = new AnalyzeType(task.type);

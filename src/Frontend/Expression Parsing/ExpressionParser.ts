@@ -49,8 +49,7 @@ export class ExpressionParser extends ASTWalker {
     this.wrappingTypeTreeNode = wrapper.wrappingTypeTreeNode;
     const source = wrapper.raw;
     const lexer = new ExpressionLexer(wrapper.tokens[0].range.sourcePath, source);
-    // TODO: Why + 2???
-    lexer.line = wrapper.tokens[0].range.start.line + 2;
+    lexer.line = wrapper.tokens[0].range.start.line;
     lexer.column = wrapper.tokens[0].range.start.column;
     const expression = this.parseExpressionOrAssignment(lexer);
     wrapper.setExpression(expression);

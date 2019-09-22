@@ -1,5 +1,5 @@
 import { ValueType } from "../WASM/Encoding/Constants";
-import { Block, BlockType, FunctionType, ICompilationUnit, InstructionType, SSAStatement, Type, Variable } from "./AST";
+import { Block, BlockType, FunctionType, ICompilationUnit, InstructionType, SignedUnsignedWASMType, SSAStatement, Type, Variable } from "./AST";
 export function isPhiNode(statement: SSAStatement): boolean {
   return statement[0] === InstructionType.phi;
 }
@@ -91,6 +91,35 @@ export function isSigned(compilationUnit: ICompilationUnit, type: Type): boolean
     return false;
   }
   return false;
+}
+export function mapIRTypeToSignedUnsignedWASMType(compilationUnit: ICompilationUnit, type: Type): SignedUnsignedWASMType {
+  // To temporarily use compilationUnit
+  if (compilationUnit.functionCode) { do { break; } while (true); }
+  if (type === Type.f32) {
+    return SignedUnsignedWASMType.f32;
+  }
+  if (type === Type.f64) {
+    return SignedUnsignedWASMType.f64;
+  }
+  if (type === Type.si32) {
+    return SignedUnsignedWASMType.si32;
+  }
+  if (type === Type.ui32) {
+    return SignedUnsignedWASMType.ui32;
+  }
+  if (type === Type.si64) {
+    return SignedUnsignedWASMType.si64;
+  }
+  if (type === Type.ui64) {
+    return SignedUnsignedWASMType.ui64;
+  }
+  if (type === Type.funcptr) {
+    return SignedUnsignedWASMType.ui32;
+  }
+  if (type === Type.ptr) {
+    return SignedUnsignedWASMType.ui32;
+  }
+  return SignedUnsignedWASMType.ui32;
 }
 export function mapIRTypeToWasm(compilationUnit: ICompilationUnit, type: Type): ValueType {
   // To temporarily use compilationUnit

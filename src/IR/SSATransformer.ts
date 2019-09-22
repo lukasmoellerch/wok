@@ -295,10 +295,10 @@ export class SSATransformer {
       newStatement = [statement[0], statement[1], env.ssaOf(statement[2])];
     }
     if (statement[0] === InstructionType.load) {
-      newStatement = [statement[0], statement[1], env.ssaOf(statement[2]), env.ssaOf(statement[3])];
+      newStatement = [statement[0], statement[1], env.ssaOf(statement[2]), statement[3]];
     }
     if (statement[0] === InstructionType.store) {
-      newStatement = [statement[0], env.ssaOf(statement[1]), env.ssaOf(statement[2]), env.ssaOf(statement[3])];
+      newStatement = [statement[0], env.ssaOf(statement[1]), env.ssaOf(statement[2]), statement[3]];
     }
     if (statement[0] === InstructionType.convert) {
       newStatement = [statement[0], statement[1], env.ssaOf(statement[2]), statement[3]];

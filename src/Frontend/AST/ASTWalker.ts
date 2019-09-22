@@ -20,6 +20,7 @@ import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
 import { IntegerLiteralExpression } from "./Nodes/IntegerLiteralExpression";
 import { MemberCallExpression } from "./Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "./Nodes/MemberReferenceExpression";
+import { MethodDeclaration } from "./Nodes/MethodDeclaration";
 import { PlaceholderExpression } from "./Nodes/PlaceholderExpression";
 import { PostfixOperatorDeclaration } from "./Nodes/PostfixOperatorDeclaration";
 import { PostfixUnaryOperatorExpression } from "./Nodes/PostfixUnaryOperatorExpression";
@@ -83,6 +84,10 @@ export class ASTWalker {
       this.walkVariableFieldDeclaration(declaration);
       return;
     }
+    if (declaration instanceof MethodDeclaration) {
+      this.walkMethodDeclaration(declaration);
+      return;
+    }
     throw new Error();
   }
   protected walkConstantFieldDeclaration(constantFieldDeclaration: ConstantFieldDeclaration) {
@@ -100,6 +105,23 @@ export class ASTWalker {
   }
   protected walkPostfixOperatorDeclaration(_postfixOperatorDeclaration: PostfixOperatorDeclaration) {
     return;
+  }
+
+  protected walkMethodDeclaration(declaration: MethodDeclaration) {
+    for (const decorator of declaration.decorators) {
+      this.walkDecorator(decorator);
+    }
+    for (const argumentDeclaration of declaration.argumentDeclarations) {
+      this.walkArgumentDeclaration(argumentDeclaration);
+    }
+    const block = declaration.block;
+    if (block !== undefined) {
+      this.walkBlock(block);
+    }
+    const resultDeclaration = declaration.resultDeclaration;
+    if (resultDeclaration !== undefined) {
+      this.walkResultDeclaration(resultDeclaration);
+    }
   }
   protected walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
     for (const decorator of unboundFunctionDeclaration.decorators) {
@@ -257,6 +279,9 @@ export class ASTWalker {
   }
   protected walkMemberCallExpression(memberCallExpression: MemberCallExpression) {
     this.walkExpression(memberCallExpression.lhs);
+    for (const arg of memberCallExpression.args) {
+      this.walkExpression(arg);
+    }
   }
   protected walkIfStatement(ifStatement: IfStatement) {
     this.walkExpressionWrapper(ifStatement.condition);

@@ -133,13 +133,13 @@ export class InstructionSequenceBuilder {
   }
   public load(loadInstruction: Instruction, memoryArgument: IMemoryArgument): void {
     this.consumer.write(loadInstruction);
-    this.debugInstructions.push("load " + memoryArgument.align + " " + memoryArgument.offset);
+    this.debugInstructions.push(Instruction[loadInstruction] + " " + memoryArgument.align + " " + memoryArgument.offset);
     encodeNumberAsUnsignedLEB128(memoryArgument.align, this.consumer);
     encodeNumberAsUnsignedLEB128(memoryArgument.offset, this.consumer);
   }
   public store(storeInstruction: Instruction, memoryArgument: IMemoryArgument): void {
     this.consumer.write(storeInstruction);
-    this.debugInstructions.push("store " + memoryArgument.align + " " + memoryArgument.offset);
+    this.debugInstructions.push(Instruction[storeInstruction] + " " + memoryArgument.align + " " + memoryArgument.offset);
     encodeNumberAsUnsignedLEB128(memoryArgument.align, this.consumer);
     encodeNumberAsUnsignedLEB128(memoryArgument.offset, this.consumer);
   }
@@ -148,6 +148,7 @@ export class InstructionSequenceBuilder {
     this.debugInstructions.push("i32Const " + value);
     encodeNumberAsSignedLEB128(value, this.consumer);
   }
+  // TODO: Fix 64-bit number handling
   public i64Const(value: number): void {
     this.consumer.write(Instruction.i64Const);
     this.debugInstructions.push("i64Const " + value);
@@ -158,7 +159,6 @@ export class InstructionSequenceBuilder {
     this.debugInstructions.push("f32Const " + value);
     encodeFloat32(value, this.consumer);
   }
-  // TODO
   public f64Const(value: number): void {
     this.consumer.write(Instruction.f64Const);
     this.debugInstructions.push("f64Const " + value);
