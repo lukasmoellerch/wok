@@ -5,8 +5,10 @@ import { ConstantFieldDeclaration } from "../AST/Nodes/ConstantFieldDeclaration"
 import { Declaration, DeclarationBlock } from "../AST/Nodes/DeclarationBlock";
 import { Decorator } from "../AST/Nodes/Decorator";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
+import { ExtensionDeclaration } from "../AST/Nodes/ExtensionDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { FunctionResultDeclaration } from "../AST/Nodes/FunctionResultDeclaration";
+import { IfElseStatement } from "../AST/Nodes/IfElseStatement";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
 import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
@@ -90,6 +92,11 @@ export class Parser {
     if (structToken !== undefined) {
       const structDeclaration = this.parseStructDeclaration(structToken);
       return structDeclaration;
+    }
+    const extensionToken = this.lexer.keyword("extension");
+    if (extensionToken !== undefined) {
+      const extensionDeclaration = this.parseExtensionDeclaration(extensionToken);
+      return extensionDeclaration;
     }
     return undefined;
   }
@@ -370,12 +377,18 @@ export class Parser {
     }
     return undefined;
   }
-  public parseIfStatement(ifKeyword: Token): IfStatement {
+  public parseIfStatement(ifKeyword: Token): IfStatement | IfElseStatement {
     this.lexer.whitespace();
     const { tokens, leftCurlyBracket } = this.parseExpressionTokensUntilBlock();
     const condition = new ExpressionWrapper(tokens);
     this.lexer.whitespace();
     const block = this.parseBlock(leftCurlyBracket);
+    const elseToken = this.lexer.keyword("else");
+    if (elseToken !== undefined) {
+      const falseBlock = this.parseBlock();
+      this.lexer.lineBreak();
+      return new IfElseStatement(ifKeyword, condition, block, elseToken, falseBlock);
+    }
     this.lexer.lineBreak();
     return new IfStatement(ifKeyword, condition, block);
   }
@@ -578,6 +591,15 @@ export class Parser {
       }
     }
     return decorators;
+  }
+  public parseExtensionDeclaration(keyword: Token): ExtensionDeclaration {
+    this.lexer.whitespace();
+    const type = this.parseType();
+    const typeWrapper = new TypeExpressionWrapper(type);
+    this.lexer.whitespace();
+    const declarationBlock = this.parseDeclarationBlock();
+    const extensionDeclaration = new ExtensionDeclaration(keyword, typeWrapper, declarationBlock);
+    return extensionDeclaration;
   }
   public parseStructDeclaration(keyword: Token): StructDeclaration {
     this.lexer.whitespace();

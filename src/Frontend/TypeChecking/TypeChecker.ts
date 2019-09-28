@@ -6,9 +6,11 @@ import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression"
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { Expression } from "../AST/Nodes/Expression";
+import { ExtensionDeclaration } from "../AST/Nodes/ExtensionDeclaration";
 import { FloatingPointLiteralExpression } from "../AST/Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
+import { IfElseStatement } from "../AST/Nodes/IfElseStatement";
 import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
 import { MemberCallExpression } from "../AST/Nodes/MemberCallExpression";
@@ -64,6 +66,9 @@ export class TypeChecker extends ASTWalker {
 
     this.string = this.rootTypeTreeNode.forceResolve("String").forceInstanceType();
   }
+  protected walkExtensionDeclaration(_extensionDeclaration: ExtensionDeclaration) {
+    return;
+  }
   protected walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
     const entry = argumentDeclaration.entry;
     if (entry === undefined) {
@@ -78,6 +83,14 @@ export class TypeChecker extends ASTWalker {
       this.checkExpression(expression, this.bool);
     }
     super.walkBlock(ifStatement.block);
+  }
+  protected walkIfElseStatmment(ifElseStatement: IfElseStatement) {
+    const expression = ifElseStatement.condition.expression;
+    if (expression instanceof Expression) {
+      this.checkExpression(expression, this.bool);
+    }
+    super.walkBlock(ifElseStatement.trueBlock);
+    super.walkBlock(ifElseStatement.falseBlocK);
   }
   protected walkWhileStatement(whileStatement: WhileStatement) {
     const expression = whileStatement.condition.expression;

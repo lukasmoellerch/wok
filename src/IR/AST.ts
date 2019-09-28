@@ -55,6 +55,7 @@ export interface IInternalFunctionDeclaration {
 export interface IExternalFunctionDeclaration {
   identifier: FunctionIdentifier;
   externalName: string;
+  tableElement: boolean;
   type: FunctionType;
 }
 export interface IInternalFunctionDefinition {

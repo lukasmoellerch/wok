@@ -7,7 +7,7 @@ export class ErrorFormatter {
   constructor(public sourceContent: string, public sourcePath: string, public errors: CompilerError[]) {
     this.lines = sourceContent.split(/\n/g);
     this.colorizedLines = this.lines.map((line) => {
-      const lexer = new Lexer(sourcePath, line);
+      const lexer = new Lexer(sourcePath, line + "\n");
       return lexer.group().map(this.colorizeGroupedString).join("");
     });
   }
@@ -47,7 +47,7 @@ export class ErrorFormatter {
       let index = error.range.start.line - 1;
       while (index <= (error.range.end.line - 1)) {
         const lineNumbering = chalk.blue((index + 1).toString().padEnd(lineNumberingLength, " ")) + " ⎸";
-        result += lineNumbering + this.colorizedLines[index] + "\n";
+        result += lineNumbering + this.colorizedLines[index];
 
         if (index === error.range.start.line - 1 && index === error.range.end.line - 1) {
           let line = "";

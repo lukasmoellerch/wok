@@ -1,4 +1,5 @@
 import * as chalk from "chalk";
+import { SourceRange } from "../Lexer/SourceRange";
 import { TokenContentAttribute } from "./Attributes/TokenContentAttribute";
 import { TypeAttribute } from "./Attributes/TypeAttribute";
 import { VariableScopeEntryAttribute } from "./Attributes/VariableScopeEntryAttribute";
@@ -7,6 +8,7 @@ const astNodeNameStyle = chalk.default.red;
 export interface IASTNode {
   attributes: Map<keyof IAttributeMap, IAttribute>;
   children: IASTNode[];
+  range: SourceRange;
   toString(prefix: string, first: boolean, last: boolean): string;
 }
 interface IAttributeMap {
@@ -33,6 +35,11 @@ export class ASTNode implements IASTNode {
   }
   public deleteAttribute<T extends keyof IAttributeMap>(kind: T) {
     this.attributes.delete(kind);
+  }
+  public get range(): SourceRange {
+    const start = this.children[0].range.start;
+    const end = this.children[this.children.length - 1].range.end;
+    return new SourceRange(start, end);
   }
   public toString(prefix: string = "", first: boolean = true, last: boolean = true): string {
     let str = "";

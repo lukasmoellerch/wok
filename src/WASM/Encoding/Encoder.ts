@@ -75,7 +75,9 @@ export function encodeSection(section: Section, consumer: IBytestreamConsumer) {
     encodeNumberAsUnsignedLEB128(section.elements.length, sectionBuffer);
     for (const element of section.elements) {
       encodeNumberAsUnsignedLEB128(element.table, sectionBuffer);
-      sectionBuffer.write([...element.init]);
+      sectionBuffer.write([...element.offset,
+
+      ]);
       encodeNumberAsUnsignedLEB128(element.init.length, sectionBuffer);
       for (const index of element.init) {
         encodeNumberAsUnsignedLEB128(index, sectionBuffer);

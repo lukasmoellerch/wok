@@ -11,6 +11,7 @@ test("Can compile a basic function that lists even integers up to the parameter"
       {
         identifier: "printInteger",
         type: [[Type.si32], []],
+        tableElement: false,
         externalName: "printInteger",
       },
     ],

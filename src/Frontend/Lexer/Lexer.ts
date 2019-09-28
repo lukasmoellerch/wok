@@ -22,12 +22,14 @@ export class Lexer {
   public sourceString: string;
   public line: number;
   public column: number;
-  protected whitespaceRegex = /[ \t]+/g;
+  protected nonCommentWitespaceRegex = /([ \t]+)/g;
+  protected whitespaceRegex = /([ \t]+|\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))+/g;
   protected sourceStringOffset: number;
   protected sourcePath: string;
   protected newlineRegex = /(\r\n|\r|\n)/g;
-  protected lineBreakRegex = /(\r\n|\r|\n)+/g;
-  protected commentRegex = /\/\*(\*(?!\/)|[^*])*\*\//g;
+  protected nonCommentLineBreakRegex = /(\r\n|\r|\n)+/g;
+  protected lineBreakRegex = /((\r\n|\r|\n)([ \t]+|\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))*)+/g;
+  protected commentRegex = /(\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))+/g;
   protected identifierRegex = /[_a-zA-Z][_a-zA-Z0-9]*/g;
   protected integerLiteralRegex = /(0|[1-9][0-9]*|0[oO]?[0-7]+|0[xX][0-9a-fA-F]+|0[bB][01]+)[lL]?/g;
   protected floatingPointerLiteralRegex = /[+-]?([0-9]*[.])?[0-9]+/g;
@@ -49,8 +51,8 @@ export class Lexer {
   protected atRegex = /@/g;
   protected numberSignRegex = /#/g;
   private tokenizationMethods: Array<[TokenTag, (() => Token | undefined)]> = [
-    [TokenTag.whitespace, this.whitespace],
-    [TokenTag.lineBreak, this.lineBreak],
+    [TokenTag.whitespace, this.nonCommentWhitespace],
+    [TokenTag.lineBreak, this.nonCommentLineBreak],
     [TokenTag.comment, this.comment],
     [TokenTag.identifier, this.identifier],
     [TokenTag.integerLiteral, this.integerLiteral],
@@ -65,6 +67,7 @@ export class Lexer {
     [TokenTag.leftSquareBracket, this.leftSquareBracket],
     [TokenTag.rightSquareBracket, this.rightSquareBracket],
     [TokenTag.leftCurlyBracket, this.leftCurlyBracket],
+    [TokenTag.rightCurlyBracket, this.rightCurlyBracket],
     [TokenTag.comma, this.comma],
     [TokenTag.colon, this.colon],
     [TokenTag.semicolon, this.semicolon],
@@ -90,6 +93,7 @@ export class Lexer {
     [TokenTag.leftSquareBracket, TokenTagGroup.punctuation],
     [TokenTag.rightSquareBracket, TokenTagGroup.punctuation],
     [TokenTag.leftCurlyBracket, TokenTagGroup.punctuation],
+    [TokenTag.rightCurlyBracket, TokenTagGroup.punctuation],
     [TokenTag.comma, TokenTagGroup.punctuation],
     [TokenTag.colon, TokenTagGroup.punctuation],
     [TokenTag.semicolon, TokenTagGroup.punctuation],
@@ -108,8 +112,14 @@ export class Lexer {
     this.line = 1;
     this.column = 1;
   }
+  public nonCommentWhitespace(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.whitespace, this.nonCommentWitespaceRegex);
+  }
   public whitespace(advance: boolean = true): Token | undefined {
     return this.regexReturnToken(advance, TokenTag.whitespace, this.whitespaceRegex);
+  }
+  public nonCommentLineBreak(advance: boolean = true): Token | undefined {
+    return this.regexReturnToken(advance, TokenTag.whitespace, this.nonCommentLineBreakRegex);
   }
   public lineBreak(advance: boolean = true): Token | undefined {
     return this.regexReturnToken(advance, TokenTag.lineBreak, this.lineBreakRegex);

@@ -1,6 +1,6 @@
 import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
 import { ASTBuilder } from "../WASM/ASTBuilder";
-import { ExportDescription, Instruction, Limit, NonValueResultType, ValueType } from "../WASM/Encoding/Constants";
+import { ExportDescription, Instruction, Limit, NonValueResultType, TableType, ValueType } from "../WASM/Encoding/Constants";
 import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
 import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, MemoryIRType, SignedUnsignedWASMType, Type, Variable } from "./AST";
 import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToSignedUnsignedWASMType, mapIRTypeToWasm } from "./Utils";
@@ -15,6 +15,24 @@ export function compileIR(ir: ICompilationUnit): IModule {
   for (const internalFunctionDeclaration of ir.internalFunctionDeclarations) {
     functionIdentifierIndexMapping.set(internalFunctionDeclaration.identifier, i);
     i++;
+  }
+
+  const functionIdentifierTableIndexMapping: Map<FunctionIdentifier, number> = new Map();
+  i = 0;
+  const tableFunctionIdentifierArray: FunctionIdentifier[] = [];
+  for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
+    if (externalFunctionDeclaration.tableElement) {
+      functionIdentifierTableIndexMapping.set(externalFunctionDeclaration.identifier, i);
+      i++;
+      tableFunctionIdentifierArray.push(externalFunctionDeclaration.identifier);
+    }
+  }
+  for (const internalFunctionDeclaration of ir.internalFunctionDeclarations) {
+    if (internalFunctionDeclaration.tableElement) {
+      functionIdentifierTableIndexMapping.set(internalFunctionDeclaration.identifier, i);
+      i++;
+      tableFunctionIdentifierArray.push(internalFunctionDeclaration.identifier);
+    }
   }
 
   const functionIdentifierTypeMapping: Map<FunctionIdentifier, FunctionType> = new Map();
@@ -40,6 +58,15 @@ export function compileIR(ir: ICompilationUnit): IModule {
 
   wasmBuilder.addFunctionSection();
 
+  wasmBuilder.addTableSection([{
+    elementType: TableType.funcref,
+    limits: {
+      kind: Limit.minimumAndMaximum,
+      min: 10,
+      max: 10,
+    },
+  }]);
+
   const memory: ILimit = {
     kind: Limit.minimumAndMaximum,
     min: 1,
@@ -64,6 +91,10 @@ export function compileIR(ir: ICompilationUnit): IModule {
   const i64ReturnOffset: number[] = [];
   const f32ReturnOffset: number[] = [];
   const f64ReturnOffset: number[] = [];
+
+  wasmBuilder.addExportSection();
+  const elementSection = wasmBuilder.addElementSection();
+  wasmBuilder.addCodeSection();
 
   for (const fn of ir.functionCode) {
     const functionType = functionIdentifierTypeMapping.get(fn.identifier);
@@ -129,6 +160,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
       functionType,
       functionIdentifierTypeMapping,
       functionIdentifierIndexMapping,
+      functionIdentifierTableIndexMapping,
       irVariableTypeArray: irTypes,
       wasmVariableTypeArray: variableTypeArray,
       dataSegmentOffsetArray,
@@ -153,6 +185,8 @@ export function compileIR(ir: ICompilationUnit): IModule {
       f64ReturnOffset,
 
       currentOffset,
+
+      wasmBuilder,
     };
     const instructionBuilder = new InstructionSequenceBuilder();
     env.sequenceBuilderStack.push(instructionBuilder);
@@ -204,6 +238,24 @@ export function compileIR(ir: ICompilationUnit): IModule {
   const exportSection = wasmBuilder.defaultExportSection || wasmBuilder.addExportSection();
   exportSection.exports.push(memoryExport);
 
+  const offsetSequenceBuilder = new InstructionSequenceBuilder();
+  offsetSequenceBuilder.i32Const(0);
+  offsetSequenceBuilder.end();
+  const initArray: number[] = [];
+  for (const identifier of tableFunctionIdentifierArray) {
+    const index = functionIdentifierIndexMapping.get(identifier);
+    if (index === undefined) {
+      throw new Error();
+    }
+    initArray.push(index);
+  }
+  const offset = offsetSequenceBuilder.instructions;
+  elementSection.elements.push({
+    table: 0,
+    offset,
+    init: initArray,
+  });
+
   let k = 0;
   const dataSection = wasmBuilder.addDataSection();
   for (const segmentData of ir.dataSegments) {
@@ -236,6 +288,7 @@ export interface ICompilationEnvironment {
   functionType: FunctionType;
   functionIdentifierTypeMapping: Map<FunctionIdentifier, FunctionType>;
   functionIdentifierIndexMapping: Map<FunctionIdentifier, number>;
+  functionIdentifierTableIndexMapping: Map<FunctionIdentifier, number>;
   irVariableTypeArray: Type[];
   wasmVariableTypeArray: ValueType[];
   dataSegmentOffsetArray: number[];
@@ -259,6 +312,8 @@ export interface ICompilationEnvironment {
   f64ReturnOffset: number[];
 
   currentOffset: number;
+
+  wasmBuilder: ASTBuilder;
 
 }
 export function compileBlock(environment: ICompilationEnvironment, block: Block): void {
@@ -635,6 +690,27 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         }
       } else if (statement[0] === InstructionType.callFunctionPointer) {
         const [, functionType, functionPointer, targets, args] = statement;
+        if (args.length !== functionType[0].length) {
+          throw new Error();
+        }
+        if (targets.length !== functionType[1].length) {
+          throw new Error();
+        }
+        // Additional typechecks
+        const argTypeBuffer: ValueType[] = [];
+        for (const argType of functionType[0]) {
+          argTypeBuffer.push(convertToWasmType(argType));
+        }
+        const resultType = functionType[1].length >= 1 ? convertToWasmType(functionType[1][0]) : undefined;
+        prepareStack([...args, functionPointer]);
+        builder.callIndirect(environment.wasmBuilder.functionTypeIndex(argTypeBuffer, resultType));
+
+        if (functionType[1].length === 1) {
+          stack.push(targets[0]);
+        } else {
+          loadReturnValueOnStack(functionType[1]);
+          stack.push(...targets);
+        }
       } else if (statement[0] === InstructionType.setToConstant) {
         const [, target, constant] = statement;
         const type = environment.irVariableTypeArray[target];
@@ -655,7 +731,16 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         const v = new ReproducibleVariable(target, instructionSequenceBuilder);
         environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.setToFunction) {
-        const [, target, functionidentifier] = statement;
+        const [, target, functionIdentifier] = statement;
+        const constant = environment.functionIdentifierTableIndexMapping.get(functionIdentifier);
+        if (constant === undefined) {
+          throw new Error();
+        }
+        const type = environment.irVariableTypeArray[target];
+        const instructionSequenceBuilder = new InstructionSequenceBuilder();
+        instructionSequenceBuilder.i32Const(constant);
+        const v = new ReproducibleVariable(target, instructionSequenceBuilder);
+        environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.setToGlobal) {
         const [, target, globalIdentifier] = statement;
       } else if (statement[0] === InstructionType.setToDataSegment) {

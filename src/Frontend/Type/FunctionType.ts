@@ -24,10 +24,10 @@ export class FunctionType implements IType {
   constructor(node: TypeTreeNode, public args: IType[], public result: IType, public thisType?: IType) {
     this.node = node;
   }
-  typeReferences(): Set<IType> {
+  public typeReferences(): Set<IType> {
     return new Set();
   }
-  memoryReferences(): Set<IType> {
+  public memoryReferences(): Set<IType> {
     return new Set();
   }
   public memoryMap(): MemoryLocation[] {

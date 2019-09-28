@@ -16,16 +16,23 @@ struct List {
 
 @foreign("printInt") func printInt(str: Int)
 @foreign("print") func print(str: String)
+func a(): Int {
+  return 456 // asd
+}
+func b(): Int {
+  return 123
+}
 @export("main") func main(max: Int) {
-  let first = Pointer<List>(40)
-  first.store(List(13, 60))
-  Pointer<List>(60).store(List(15, 80))
-  Pointer<List>(80).store(List(9, 0))
-  var current = Pointer<List>(40).load()
-  current = Pointer<List>(40).load()
-  while current.next != 0 {
-    printInt(current.value)
-    current = Pointer<List>(current.next).load()
+  var q = a
+  if (max < 10) {
+    q = a
+  } else {
+   q = b
   }
-  print("Done")
+  printInt(q())
+}
+extension Int {
+  func addingTwo(): Int {
+    return self + 2
+  }
 }

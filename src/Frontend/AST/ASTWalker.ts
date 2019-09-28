@@ -10,10 +10,12 @@ import { Declaration, DeclarationBlock } from "./Nodes/DeclarationBlock";
 import { Decorator } from "./Nodes/Decorator";
 import { Expression } from "./Nodes/Expression";
 import { ExpressionWrapper } from "./Nodes/ExpressionWrapper";
+import { ExtensionDeclaration } from "./Nodes/ExtensionDeclaration";
 import { FloatingPointLiteralExpression } from "./Nodes/FloatingPointLiteralExpression";
 import { FunctionArgumentDeclaration } from "./Nodes/FunctionArgumentDeclaration";
 import { FunctionResultDeclaration } from "./Nodes/FunctionResultDeclaration";
 import { IdentifierCallExpression } from "./Nodes/IdentifierCallExpression";
+import { IfElseStatement } from "./Nodes/IfElseStatement";
 import { IfStatement } from "./Nodes/IfStatement";
 import { ImplictConversionExpression } from "./Nodes/ImplictConversionExpression";
 import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
@@ -44,6 +46,7 @@ export class ASTWalker {
       this.walkTopLevelDeclaration(delcaration);
     }
   }
+
   protected walkTopLevelDeclaration(topLevelDeclaration: ITopLevelDeclaration) {
     if (topLevelDeclaration instanceof PrefixOperatorDeclaration) {
       this.walkPrefixOperatorDeclaration(topLevelDeclaration);
@@ -65,7 +68,15 @@ export class ASTWalker {
       this.walkStructDeclaration(topLevelDeclaration);
       return;
     }
+    if (topLevelDeclaration instanceof ExtensionDeclaration) {
+      this.walkExtensionDeclaration(topLevelDeclaration);
+      return;
+    }
     throw new Error();
+  }
+  protected walkExtensionDeclaration(extensionDeclaration: ExtensionDeclaration) {
+    this.walkTypeExpressionWrapper(extensionDeclaration.typeExpression);
+    this.walkDeclarationBlock(extensionDeclaration.declarationBlock);
   }
   protected walkStructDeclaration(structDeclaration: StructDeclaration) {
     this.walkDeclarationBlock(structDeclaration.declarationBlock);
@@ -179,6 +190,10 @@ export class ASTWalker {
       this.walkReturnStatement(statement);
       return;
     }
+    if (statement instanceof IfElseStatement) {
+      this.walkIfElseStatmment(statement);
+      return;
+    }
     throw new Error();
   }
   protected walkExpressionWrapper(expressionWrapper: ExpressionWrapper) {
@@ -287,6 +302,11 @@ export class ASTWalker {
     this.walkExpressionWrapper(ifStatement.condition);
     this.walkBlock(ifStatement.block);
   }
+  protected walkIfElseStatmment(statement: IfElseStatement) {
+    this.walkExpressionWrapper(statement.condition);
+    this.walkBlock(statement.trueBlock);
+    this.walkBlock(statement.falseBlocK);
+  }
   protected walkWhileStatement(whileStatement: WhileStatement) {
     this.walkExpressionWrapper(whileStatement.condition);
     this.walkBlock(whileStatement.block);
@@ -322,7 +342,7 @@ export class ASTWalker {
       this.walkMemberReferenceExpression(lvalue);
       return;
     }
-    throw new Error();
+    return;
   }
   protected walkBinaryOperatorExpression(binaryOperatorExpression: BinaryOperatorExpression) {
     this.walkExpression(binaryOperatorExpression.lhs);
@@ -354,4 +374,5 @@ export class ASTWalker {
       this.walkExpressionWrapper(parameter);
     }
   }
+
 }

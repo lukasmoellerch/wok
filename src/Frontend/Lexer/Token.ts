@@ -6,12 +6,15 @@ import { TokenTag } from "./TokenTag";
 export class Token extends ASTNode {
   public tag: TokenTag;
   public content: string;
-  public range: SourceRange;
-  constructor(tag: TokenTag, content: string, range: SourceRange) {
+  public sr: SourceRange;
+  public get range(): SourceRange {
+    return this.sr;
+  }
+  constructor(tag: TokenTag, content: string, sr: SourceRange) {
     super();
     this.tag = tag;
     this.content = content;
-    this.range = range;
+    this.sr = sr;
     this.setAttribute(new TokenContentAttribute(this));
   }
 }

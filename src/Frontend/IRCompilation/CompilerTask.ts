@@ -1,11 +1,15 @@
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { IType } from "../Type/Type";
 export class CompilerTask {
+  public indirectlyReferenced: boolean = false;
   public toString(): string {
     throw new Error();
   }
   public irName(): string {
     throw new Error();
+  }
+  public indirectString(): string {
+    return this.indirectlyReferenced ? "[indirect]" : "[]";
   }
 }
 export class CompileUnboundFunctionTask extends CompilerTask {
@@ -13,7 +17,7 @@ export class CompileUnboundFunctionTask extends CompilerTask {
     super();
   }
   public toString(): string {
-    return `Compile unbound function ${this.declaration.name.content}`;
+    return `Compile unbound function ${this.indirectString()} ${this.declaration.name.content}`;
   }
   public irName(): string {
     if (this.declaration.decoratorMap.has("export")) {
@@ -28,7 +32,7 @@ export class CompileConstructor extends CompilerTask {
     super();
   }
   public toString(): string {
-    return `Compile constructor of ${this.type.toString()}`;
+    return `Compile constructor of ${this.indirectString()} ${this.type.toString()}`;
   }
   public irName(): string {
     return `constructor#${this.type.toString()}`;
@@ -39,7 +43,7 @@ export class CompileOperator extends CompilerTask {
     super();
   }
   public toString(): string {
-    return `Compile operator ${this.str} of ${this.type.toString()}`;
+    return `Compile operator ${this.indirectString()} ${this.str} of ${this.type.toString()}`;
   }
   public irName(): string {
     return `operator#${this.type.toString()}#${this.str}#${this.arity}`;
@@ -50,7 +54,7 @@ export class CompileMethod extends CompilerTask {
     super();
   }
   public toString(): string {
-    return `Compile method ${this.str} of ${this.type.toString()}`;
+    return `Compile method ${this.indirectString()} ${this.str} of ${this.type.toString()}`;
   }
   public irName(): string {
     return `method#${this.type.toString()}#${this.str}#${this.arity}`;

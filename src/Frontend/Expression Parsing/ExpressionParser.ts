@@ -2,6 +2,7 @@ import { ILValue } from "../AST/AST";
 import { ASTWalker } from "../AST/ASTWalker";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
+import { CallExpression } from "../AST/Nodes/CallExpression";
 import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { Expression } from "../AST/Nodes/Expression";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
@@ -16,7 +17,7 @@ import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { TypeReferenceExpression } from "../AST/Nodes/TypeReferenceExpression";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
-import { CompilerError, ExpressionParsingTerminatedError, IsNotCallableParserError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../ErrorHandling/CompilerError";
+import { CompilerError, ExpressionParsingTerminatedError, LValueRequired, UnknownOperatorError, WrongTokenError } from "../ErrorHandling/CompilerError";
 import { Lexer } from "../Lexer/Lexer";
 import { PlaceholderToken } from "../Lexer/PlaceholderToken";
 import { TokenTag } from "../Lexer/TokenTag";
@@ -80,7 +81,7 @@ export class ExpressionParser extends ASTWalker {
       if (Object.prototype.hasOwnProperty.call(lvalue, "lvalue")) {
         return new AssignmentStatement(lvalue, assignmentToken, value);
       } else {
-        this.errors.push(new LValueRequired(assignmentToken.range));
+        this.errors.push(new LValueRequired(left.range));
         return new AssignmentStatement(lvalue, assignmentToken, value);
       }
     }
@@ -129,10 +130,10 @@ export class ExpressionParser extends ASTWalker {
       } else if (left instanceof MemberReferenceExpression) {
         const callExpression = new MemberCallExpression(left.lhs, left.memberToken, parsedArguments);
         return callExpression;
+      } else {
+        const callExpression = new CallExpression(left, parsedArguments);
+        return callExpression;
       }
-      const placeholderToken = new PlaceholderToken(lexer);
-      this.errors.push(new IsNotCallableParserError(placeholderToken.range));
-      return new PlaceholderExpression(placeholderToken);
     }
     const operator = lexer.operator();
     if (operator !== undefined) {

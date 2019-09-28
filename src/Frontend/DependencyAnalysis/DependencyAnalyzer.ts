@@ -8,6 +8,7 @@ import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperato
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
+import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CircularTypeError, CompilerError } from "../ErrorHandling/CompilerError";
 import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
 import { FunctionType } from "../Type/FunctionType";
@@ -24,6 +25,7 @@ enum AnalyzerTaskType {
   property,
 }
 class AnalyzerTaskBase {
+  public indirectlyReferenced: boolean = false;
   public equals(_other: Task): boolean {
     throw new Error();
   }
@@ -183,6 +185,7 @@ type Task = AnalyzerTaskBase;
 export class DependencyAnalyzer extends ASTWalker {
 
   public compilerTasks: CompilerTask[] = [];
+  public indirectlyReferencedTask: Task[] = [];
   private typeArray: IType[] = [];
   private typeMapIndexMapping: Map<IType, number> = new Map();
   private memoryDependencies: Map<number, Set<IType>> = new Map(); // A has every B as a dependency
@@ -219,7 +222,6 @@ export class DependencyAnalyzer extends ASTWalker {
 
       if (task instanceof AnalyzeGlobalUnboundFunction) {
         const declaration = task.entry.declaration as UnboundFunctionDeclaration;
-        this.compilerTasks.push(new CompileUnboundFunctionTask(declaration));
         this.walkUnboundFunctionDeclaration(declaration);
       } else if (task instanceof AnalyzeType) {
         const type =
@@ -233,17 +235,13 @@ export class DependencyAnalyzer extends ASTWalker {
         }
         this.memoryDependencies.set(index, type.memoryReferences());
       } else if (task instanceof AnalyzeConstructor) {
-        this.compilerTasks.push(new CompileConstructor(task.type));
         const typeTask = new AnalyzeType(task.type);
         this.tasks.push(typeTask);
       } else if (task instanceof AnalyzeOperator) {
-        this.compilerTasks.push(new CompileOperator(task.type, task.operator, task.arity));
+        // Do nothing
       } else if (task instanceof AnalyzeMember) {
-        const type = task.type;
-        const memberType = type.typeOfMember(task.memberName);
-        if (memberType instanceof FunctionType) {
-          this.compilerTasks.push(new CompileMethod(task.type, task.memberName, memberType.args.length));
-        }
+        // Do nothing
+
       }
       this.finishedTasks.push(task);
     }
@@ -300,6 +298,25 @@ export class DependencyAnalyzer extends ASTWalker {
         }
       }
     }
+    for (const task of this.finishedTasks) {
+      if (task instanceof AnalyzeGlobalUnboundFunction) {
+        const declaration = task.entry.declaration as UnboundFunctionDeclaration;
+        this.compilerTasks.push(new CompileUnboundFunctionTask(declaration));
+      } else if (task instanceof AnalyzeConstructor) {
+        this.compilerTasks.push(new CompileConstructor(task.type));
+      } else if (task instanceof AnalyzeOperator) {
+        this.compilerTasks.push(new CompileOperator(task.type, task.operator, task.arity));
+      } else if (task instanceof AnalyzeMember) {
+        const type = task.type;
+        const memberType = type.typeOfMember(task.memberName);
+        if (memberType instanceof FunctionType) {
+          this.compilerTasks.push(new CompileMethod(task.type, task.memberName, memberType.args.length));
+        }
+      }
+      if (this.indirectlyReferencedTask.some((other) => other.equals(task))) {
+        this.compilerTasks[this.compilerTasks.length - 1].indirectlyReferenced = true;
+      }
+    }
   }
   protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper): void {
     const type = typeExpressionWrapper.type;
@@ -330,11 +347,9 @@ export class DependencyAnalyzer extends ASTWalker {
   }
   protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression): void {
     super.walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression);
-    // TODO: Implement this
   }
   protected walkPostfixUnaryOperatorExpression(postfixUnaryOperatorExpression: PostfixUnaryOperatorExpression): void {
     super.walkPostfixUnaryOperatorExpression(postfixUnaryOperatorExpression);
-    // TODO: Implement this
   }
   protected walkMemberCallExpression(memberCallExpression: MemberCallExpression): void {
     super.walkMemberCallExpression(memberCallExpression);
@@ -352,5 +367,18 @@ export class DependencyAnalyzer extends ASTWalker {
     const called = constructorCallExpression.constructedType;
     const task = new AnalyzeConstructor(called, constructorCallExpression.args.length);
     this.tasks.push(task);
+  }
+  protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression): void {
+    const entry = variableReferenceExpression.entry;
+    if (entry === undefined) {
+      return;
+    }
+    const entryType = entry.entryType;
+    if (entryType !== VariableScopeEntryType.globalUnboundFunction) {
+      return;
+    }
+    const task = new AnalyzeGlobalUnboundFunction(entry);
+    this.tasks.push(task);
+    this.indirectlyReferencedTask.push(task);
   }
 }

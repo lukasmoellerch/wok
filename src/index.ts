@@ -118,5 +118,5 @@ export default async function main() {
     },
   });
   const memory = instance.exports.memory.buffer as ArrayBuffer;
-  instance.exports.main(50);
+  instance.exports.main(0);
 }
