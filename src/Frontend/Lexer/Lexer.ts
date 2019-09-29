@@ -32,7 +32,7 @@ export class Lexer {
   protected commentRegex = /(\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))+/g;
   protected identifierRegex = /[_a-zA-Z][_a-zA-Z0-9]*/g;
   protected integerLiteralRegex = /(0|[1-9][0-9]*|0[oO]?[0-7]+|0[xX][0-9a-fA-F]+|0[bB][01]+)[lL]?/g;
-  protected floatingPointerLiteralRegex = /[+-]?([0-9]*[.])?[0-9]+/g;
+  protected floatingPointerLiteralRegex = /[+-]?([0-9]*)?\.[0-9]+/g;
   protected stringLiteralRegex = /\"(([^\"]|\\\")*[^\\])?\"/g;
   protected booleanLiteralRegex = /(true|false)/g;
   protected nilLiteralRegex = /nil/g;

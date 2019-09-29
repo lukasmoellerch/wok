@@ -320,7 +320,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
   function geti32ReturnOffset(index: number): number {
     while (environment.i32ReturnOffset.length <= index) {
       environment.i32ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 8;
+      environment.currentOffset += 4;
     }
     return environment.i32ReturnOffset[index];
   }
@@ -334,7 +334,7 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
   function getf32ReturnOffset(index: number): number {
     while (environment.f32ReturnOffset.length <= index) {
       environment.f32ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 8;
+      environment.currentOffset += 4;
     }
     return environment.f32ReturnOffset[index];
   }

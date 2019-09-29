@@ -1,5 +1,6 @@
 import { ASTWalker } from "../AST/ASTWalker";
 import { Block } from "../AST/Nodes/Block";
+import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
@@ -11,7 +12,7 @@ import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpre
 import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
-export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration;
+export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration | SourceFile;
 export class VariableScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: VariableScope[] = [];
@@ -39,9 +40,15 @@ export class VariableScopeBuilder extends ASTWalker {
   public buildScopes() {
     this.walkSourceFile(this.sourceFile);
   }
+  public walkSourceFile(sourceFile: SourceFile) {
+    this.functionCompilationStack.push(sourceFile);
+    super.walkSourceFile(sourceFile);
+    this.functionCompilationStack.pop();
+  }
   public walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
     this.functionCompilationStack.push(unboundFunctionDeclaration);
     super.walkUnboundFunctionDeclaration(unboundFunctionDeclaration);
+    this.functionCompilationStack.pop();
   }
   public walkMethodDeclaration(methodDeclaration: MethodDeclaration) {
     this.functionCompilationStack.push(methodDeclaration);
@@ -54,6 +61,8 @@ export class VariableScopeBuilder extends ASTWalker {
     methodDeclaration.thisEntry = this.selfStack[this.selfStack.length - 1];
     super.walkMethodDeclaration(methodDeclaration);
     this.scopes.pop();
+
+    this.functionCompilationStack.pop();
   }
   public walkBlock(block: Block) {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
@@ -64,7 +73,7 @@ export class VariableScopeBuilder extends ASTWalker {
   }
   public walkVariableDeclaration(variableDeclaration: VariableDeclaration) {
     const str = variableDeclaration.identifierToken.content;
-    const entryType = VariableScopeEntryType.variable;
+    const entryType = this.functionCompilationStack[this.functionCompilationStack.length - 1] instanceof SourceFile ? VariableScopeEntryType.globalVariable : VariableScopeEntryType.variable;
     const type = variableDeclaration.typeHint;
     const entry = new VariableScopeEntry(str, entryType, variableDeclaration, type !== undefined ? type.type : undefined);
     this.scopes[this.scopes.length - 1].register(entry);
@@ -74,7 +83,7 @@ export class VariableScopeBuilder extends ASTWalker {
   }
   public walkConstantDeclaration(constantDeclaration: ConstantDeclaration) {
     const str = constantDeclaration.identifierToken.content;
-    const entryType = VariableScopeEntryType.constant;
+    const entryType = this.functionCompilationStack[this.functionCompilationStack.length - 1] instanceof SourceFile ? VariableScopeEntryType.globalConstant : VariableScopeEntryType.constant;
     const type = constantDeclaration.typeHint;
     const entry = new VariableScopeEntry(str, entryType, constantDeclaration, type !== undefined ? type.type : undefined);
     this.scopes[this.scopes.length - 1].register(entry);
@@ -113,5 +122,16 @@ export class VariableScopeBuilder extends ASTWalker {
     const entry = new VariableScopeEntry(str, entryType, structDeclaration, type);
     this.selfStack.push(entry);
     super.walkStructDeclaration(structDeclaration);
+  }
+  public walkClassDeclaration(classDeclaration: ClassDeclaration) {
+    const str = "self";
+    const entryType = VariableScopeEntryType.self;
+    const type = classDeclaration.typeCheckingType;
+    if (type === undefined) {
+      throw new Error();
+    }
+    const entry = new VariableScopeEntry(str, entryType, classDeclaration, type);
+    this.selfStack.push(entry);
+    super.walkClassDeclaration(classDeclaration);
   }
 }

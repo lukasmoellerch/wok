@@ -1,9 +1,11 @@
 import { ASTWalker } from "../AST/ASTWalker";
 import { Block } from "../AST/Nodes/Block";
+import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
+import { ClassType } from "../Type/ClassType";
 import { StructType } from "../Type/StructType";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
 import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode } from "./TypeScope";
@@ -21,6 +23,13 @@ export class TypeScopeBuilder extends ASTWalker {
       if (declaration instanceof StructDeclaration) {
         const type = new StructType(declaration.nameToken.content, this.scopes[0], declaration);
         const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "struct", type);
+        type.node = node;
+        const template = new ArgumentlessTypeTreeNodeTemplate(node);
+        declaration.template = template;
+        globalScope.registerNewNamedTemplate(declaration.nameToken.content, template);
+      } else if (declaration instanceof ClassDeclaration) {
+        const type = new ClassType(declaration.nameToken.content, this.scopes[0], declaration);
+        const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "class", type);
         type.node = node;
         const template = new ArgumentlessTypeTreeNodeTemplate(node);
         declaration.template = template;
@@ -51,6 +60,21 @@ export class TypeScopeBuilder extends ASTWalker {
     structDeclaration.typeCheckingType = type;
     this.scopes.push(scope);
     super.walkStructDeclaration(structDeclaration);
+    this.scopes.pop();
+  }
+  public walkClassDeclaration(classDeclaration: ClassDeclaration) {
+    const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
+    const template = classDeclaration.template;
+    const type = new ClassType(classDeclaration.nameToken.content, this.scopes[0], classDeclaration);
+    let scope = new TypeTreeNode(parent, [], classDeclaration.nameToken.content, "class", type);
+    type.node = scope;
+    if (template !== undefined) {
+      scope = template.create([]);
+      type.node = scope;
+    }
+    classDeclaration.typeCheckingType = type;
+    this.scopes.push(scope);
+    super.walkClassDeclaration(classDeclaration);
     this.scopes.pop();
   }
   public walkBlock(block: Block) {

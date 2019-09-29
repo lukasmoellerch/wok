@@ -3,6 +3,7 @@ import { ILValue, ITopLevelDeclaration } from "./AST";
 import { AssignmentStatement } from "./Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "./Nodes/BinaryOperatorExpression";
 import { Block } from "./Nodes/Block";
+import { ClassDeclaration } from "./Nodes/ClassDeclaration";
 import { ConstantDeclaration } from "./Nodes/ConstantDeclaration";
 import { ConstantFieldDeclaration } from "./Nodes/ConstantFieldDeclaration";
 import { ConstructorCallExpression } from "./Nodes/ConstructorCallExpression";
@@ -72,6 +73,14 @@ export class ASTWalker {
       this.walkExtensionDeclaration(topLevelDeclaration);
       return;
     }
+    if (topLevelDeclaration instanceof ClassDeclaration) {
+      this.walkClassDeclaration(topLevelDeclaration);
+      return;
+    }
+    if (topLevelDeclaration instanceof Statement) {
+      this.walkStatement(topLevelDeclaration);
+      return;
+    }
     throw new Error();
   }
   protected walkExtensionDeclaration(extensionDeclaration: ExtensionDeclaration) {
@@ -80,6 +89,9 @@ export class ASTWalker {
   }
   protected walkStructDeclaration(structDeclaration: StructDeclaration) {
     this.walkDeclarationBlock(structDeclaration.declarationBlock);
+  }
+  protected walkClassDeclaration(classDeclaration: ClassDeclaration) {
+    this.walkDeclarationBlock(classDeclaration.declarationBlock);
   }
   protected walkDeclarationBlock(declarationBlock: DeclarationBlock) {
     for (const declaration of declarationBlock.declarations) {

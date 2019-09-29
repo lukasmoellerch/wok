@@ -2,10 +2,12 @@ import { Token } from "../../Lexer/Token";
 import { TypeExpression } from "../../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionWrapper";
 import { VariableScopeEntry } from "../../VariableScope/VariableScope";
+import { ITopLevelDeclaration } from "../AST";
 import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
-export class ConstantDeclaration extends Statement {
+export class ConstantDeclaration extends Statement implements ITopLevelDeclaration {
+  public topLevelDeclarable: void = undefined;
   public constantKeyword: Token;
   public identifierToken: Token;
   public colonToken: Token | undefined;

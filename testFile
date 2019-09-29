@@ -9,6 +9,18 @@ infix operator < 2 right
 infix operator >= 2 right
 infix operator <= 2 right
 
+class A {
+  var a: Int
+  var b: Int
+  func returnASquared(): Int {
+    return self.a * self.b
+  }
+}
+
+class B {
+  let b: Int
+}
+
 struct List {
   let value: Int
   let next: UInt32
@@ -16,6 +28,8 @@ struct List {
 
 @foreign("printInt") func printInt(str: Int)
 @foreign("print") func print(str: String)
+let testVariable = 123
+printInt(testVariable + 345)
 func a(): Int {
   return 456 // asd
 }
@@ -23,6 +37,9 @@ func b(): Int {
   return 123
 }
 @export("main") func main(max: Int) {
+  let ainstance = A(123, 12)
+  ainstance.a = 345 + testVariable
+  ainstance.returnASquared()
   var q = a
   if (max < 10) {
     q = a

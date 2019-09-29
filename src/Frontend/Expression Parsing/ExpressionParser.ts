@@ -209,6 +209,11 @@ export class ExpressionParser extends ASTWalker {
       }
       return enclosedExpression;
     }
+    const floatingPointLiteralToken = lexer.floatingPointLiteral();
+    if (floatingPointLiteralToken !== undefined) {
+      const floatingPointLiteralExpression = new FloatingPointLiteralExpression(floatingPointLiteralToken);
+      return floatingPointLiteralExpression;
+    }
     const integerLiteralToken = lexer.integerLiteral();
     if (integerLiteralToken !== undefined) {
       const integerLiteralExpression = new IntegerLiteralExpression(integerLiteralToken);
@@ -218,11 +223,6 @@ export class ExpressionParser extends ASTWalker {
     if (stringLiteralToken !== undefined) {
       const stringLiteralExpression = new StringLiteralExpression(stringLiteralToken);
       return stringLiteralExpression;
-    }
-    const floatingPointLiteralToken = lexer.floatingPointLiteral();
-    if (floatingPointLiteralToken !== undefined) {
-      const floatingPointLiteralExpression = new FloatingPointLiteralExpression(floatingPointLiteralToken);
-      return floatingPointLiteralExpression;
     }
     const identifierToken = lexer.identifier(false);
     if (identifierToken !== undefined) {

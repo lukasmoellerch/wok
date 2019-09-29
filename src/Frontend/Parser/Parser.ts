@@ -1,5 +1,6 @@
 import { ITopLevelDeclaration } from "../AST/AST";
 import { Block } from "../AST/Nodes/Block";
+import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { ConstantFieldDeclaration } from "../AST/Nodes/ConstantFieldDeclaration";
 import { Declaration, DeclarationBlock } from "../AST/Nodes/DeclarationBlock";
@@ -93,12 +94,17 @@ export class Parser {
       const structDeclaration = this.parseStructDeclaration(structToken);
       return structDeclaration;
     }
+    const classToken = this.lexer.keyword("class");
+    if (classToken !== undefined) {
+      const classDeclaration = this.parseClassDeclaration(classToken);
+      return classDeclaration;
+    }
     const extensionToken = this.lexer.keyword("extension");
     if (extensionToken !== undefined) {
       const extensionDeclaration = this.parseExtensionDeclaration(extensionToken);
       return extensionDeclaration;
     }
-    return undefined;
+    return this.parseStatement();
   }
   public parseFunction(decorators: Decorator[], functionKeywordToken: Token): UnboundFunctionDeclaration {
     this.lexer.whitespace();
@@ -600,6 +606,17 @@ export class Parser {
     const declarationBlock = this.parseDeclarationBlock();
     const extensionDeclaration = new ExtensionDeclaration(keyword, typeWrapper, declarationBlock);
     return extensionDeclaration;
+  }
+  public parseClassDeclaration(keyword: Token): ClassDeclaration {
+    this.lexer.whitespace();
+    const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
+    if (nameToken instanceof PlaceholderToken) {
+      this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
+    }
+    this.lexer.whitespace();
+    const declarationBlock = this.parseDeclarationBlock();
+    const classDeclaration = new ClassDeclaration(keyword, nameToken, declarationBlock);
+    return classDeclaration;
   }
   public parseStructDeclaration(keyword: Token): StructDeclaration {
     this.lexer.whitespace();

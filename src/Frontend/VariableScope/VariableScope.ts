@@ -1,3 +1,4 @@
+import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
@@ -9,10 +10,12 @@ export enum VariableScopeEntryType {
   globalUnboundFunction,
   variable,
   constant,
+  globalVariable,
+  globalConstant,
   argument,
   self,
 }
-export type VariableScopeEntryDeclarationType = UnboundFunctionDeclaration | VariableDeclaration | ConstantDeclaration | FunctionArgumentDeclaration | StructDeclaration;
+export type VariableScopeEntryDeclarationType = UnboundFunctionDeclaration | VariableDeclaration | ConstantDeclaration | FunctionArgumentDeclaration | StructDeclaration | ClassDeclaration;
 let index = 0;
 export class VariableScopeEntry {
   public index: number;

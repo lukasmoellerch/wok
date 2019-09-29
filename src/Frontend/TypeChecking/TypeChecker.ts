@@ -25,6 +25,7 @@ import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { CompilerError, MemberIsNotCallableError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "../Type/FunctionType";
+import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { VoidType } from "../Type/VoidType";
 import { VariableScopeEntryType } from "../VariableScope/VariableScope";
@@ -164,8 +165,10 @@ export class TypeChecker extends ASTWalker {
     } else if (lValue instanceof MemberReferenceExpression) {
       const lhsExpression = lValue.lhs;
       const lhsLValue = lhsExpression as unknown as ILValue;
-      this.checkLValue(lhsLValue);
       this.checkExpression(lValue.lhs);
+      if (lValue.lhs.forceType() instanceof StructType) {
+        this.checkLValue(lhsLValue);
+      }
       const lhsType = lhsExpression.forceType();
       const memberType = lhsType.typeOfMember(lValue.memberToken.content);
       if (memberType === undefined) {

@@ -1,3 +1,4 @@
+import { SourceFile } from "../AST/Nodes/SourceFile";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { IType } from "../Type/Type";
 export class CompilerTask {
@@ -58,5 +59,16 @@ export class CompileMethod extends CompilerTask {
   }
   public irName(): string {
     return `method#${this.type.toString()}#${this.str}#${this.arity}`;
+  }
+}
+export class CompileStart extends CompilerTask {
+  constructor(public sourceFile: SourceFile) {
+    super();
+  }
+  public toString(): string {
+    return `Compile start`;
+  }
+  public irName(): string {
+    return `_start`;
   }
 }

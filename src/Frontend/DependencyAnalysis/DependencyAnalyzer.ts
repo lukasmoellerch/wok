@@ -7,10 +7,12 @@ import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpressio
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
 import { SourceFile } from "../AST/Nodes/SourceFile";
+import { Statement } from "../AST/Nodes/Statement";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CircularTypeError, CompilerError } from "../ErrorHandling/CompilerError";
-import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileStart, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { ClassType } from "../Type/ClassType";
 import { FunctionType } from "../Type/FunctionType";
 import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
@@ -23,6 +25,7 @@ enum AnalyzerTaskType {
   constructor,
   operator,
   property,
+  start,
 }
 class AnalyzerTaskBase {
   public indirectlyReferenced: boolean = false;
@@ -31,6 +34,22 @@ class AnalyzerTaskBase {
   }
   public toString(): string {
     return "[BASE]";
+  }
+}
+class AnalyzeStart extends AnalyzerTaskBase {
+  public sourceFile: SourceFile;
+  constructor(sourceFile: SourceFile) {
+    super();
+    this.sourceFile = sourceFile;
+  }
+  public equals(other: Task): boolean {
+    if (!(other instanceof AnalyzeStart)) {
+      return false;
+    }
+    return other.sourceFile === this.sourceFile;
+  }
+  public toString(): string {
+    return `[START]`;
   }
 }
 class AnalyzeGlobalUnboundFunction extends AnalyzerTaskBase {
@@ -210,6 +229,7 @@ export class DependencyAnalyzer extends ASTWalker {
         }
       }
     }
+    this.tasks.push(new AnalyzeStart(sourceFile));
     while (this.tasks.length > 0) {
       const task = this.tasks.pop();
       if (task === undefined) {
@@ -226,6 +246,11 @@ export class DependencyAnalyzer extends ASTWalker {
       } else if (task instanceof AnalyzeType) {
         const type =
           task.type;
+        if (type instanceof StructType) {
+          type.populatePropertyMapping();
+        } else if (type instanceof ClassType) {
+          type.populatePropertyMapping();
+        }
         const index = this.typeArray.length;
         this.typeMapIndexMapping.set(type, index);
         this.typeArray.push(type);
@@ -241,7 +266,13 @@ export class DependencyAnalyzer extends ASTWalker {
         // Do nothing
       } else if (task instanceof AnalyzeMember) {
         // Do nothing
-
+      } else if (task instanceof AnalyzeStart) {
+        for (const statement of sourceFile.topLevelDeclarations) {
+          if (!(statement instanceof Statement)) {
+            continue;
+          }
+          this.walkStatement(statement);
+        }
       }
       this.finishedTasks.push(task);
     }
@@ -273,6 +304,8 @@ export class DependencyAnalyzer extends ASTWalker {
           found = true;
           if (type instanceof StructType) {
             type.resolveLayout();
+          } else if (type instanceof ClassType) {
+            type.resolveLayout();
           }
           for (const t of (this.dependenciesOfType.get(type) || new Set()).values()) {
             const memoryDependencies = this.memoryDependencies.get(t);
@@ -298,6 +331,7 @@ export class DependencyAnalyzer extends ASTWalker {
         }
       }
     }
+    this.compilerTasks.push(new CompileStart(sourceFile));
     for (const task of this.finishedTasks) {
       if (task instanceof AnalyzeGlobalUnboundFunction) {
         const declaration = task.entry.declaration as UnboundFunctionDeclaration;
