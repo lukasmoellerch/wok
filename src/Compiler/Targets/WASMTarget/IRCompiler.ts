@@ -653,8 +653,8 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         if (savingTo.length === 0) {
           continue;
         }
-        for (let i = 0; i < savingTo.length - 1; i++) {
-          builder.localTee(savingTo[i]);
+        for (let k = 0; k < savingTo.length - 1; k++) {
+          builder.localTee(savingTo[k]);
         }
         builder.localSet(savingTo[savingTo.length - 1]);
         stack.pop();
