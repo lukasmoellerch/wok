@@ -1,5 +1,5 @@
-import { ValueType } from "../WASM/Encoding/Constants";
-import { Block, BlockType, FunctionType, ICompilationUnit, InstructionType, SignedUnsignedWASMType, SSAStatement, Type, Variable } from "./AST";
+import { Block, BlockType, FunctionType, ICompilationUnit, InstructionType, SignedUnsignedWASMType, SSAStatement, Type, Variable } from "../../IR/AST";
+import { ValueType } from "./WASM/Encoding/Constants";
 export function isPhiNode(statement: SSAStatement): boolean {
   return statement[0] === InstructionType.phi;
 }

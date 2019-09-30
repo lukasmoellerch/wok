@@ -1,5 +1,5 @@
+import { getWrittenVariables, isBreakStatement } from "../Targets/WASMTarget/Utils";
 import { Block, BlockType, IBasicBlock, ICompilationUnit, IInternalFunctionDeclaration, IInternalFunctionDefinition, InstructionType, SSAStatement, Type } from "./AST";
-import { getWrittenVariables, isBreakStatement } from "./Utils";
 export class TransformationEnvironment {
   public ssaTypes: Type[] = [];
   public variableTypes: Type[] = [];

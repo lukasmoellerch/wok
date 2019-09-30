@@ -1,6 +1,6 @@
 import * as IR from "../../IR/AST";
-import { TypedArrayBytestreamConsumer } from "../../WASM/Encoding/TypedArrayBytestreamConsumer";
-import { encodeUTF8String } from "../../WASM/Encoding/Utils";
+import { TypedArrayBytestreamConsumer } from "../../Targets/WASMTarget/WASM/Encoding/TypedArrayBytestreamConsumer";
+import { encodeUTF8String } from "../../Targets/WASMTarget/WASM/Encoding/Utils";
 import { ILValue } from "../AST/AST";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";

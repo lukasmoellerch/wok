@@ -1,9 +1,9 @@
-import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "../WASM/AST";
-import { ASTBuilder } from "../WASM/ASTBuilder";
-import { ExportDescription, Instruction, Limit, NonValueResultType, TableType, ValueType } from "../WASM/Encoding/Constants";
-import { InstructionSequenceBuilder } from "../WASM/Encoding/InstructionSequenceBuilder";
-import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, MemoryIRType, SignedUnsignedWASMType, Type, Variable } from "./AST";
+import { Block, BlockType, FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, MemoryIRType, SignedUnsignedWASMType, Type, Variable } from "../../IR/AST";
 import { getAllPhiNodes, getReadVariables, getStatementsInLinearOrder, getWrittenVariables, isBreakStatement, isFloat, isPhiNode, isSigned, mapIRTypeToSignedUnsignedWASMType, mapIRTypeToWasm } from "./Utils";
+import { IExport, ILimit, ILocal, IMemoryExport, IModule } from "./WASM/AST";
+import { ASTBuilder } from "./WASM/ASTBuilder";
+import { ExportDescription, Instruction, Limit, NonValueResultType, TableType, ValueType } from "./WASM/Encoding/Constants";
+import { InstructionSequenceBuilder } from "./WASM/Encoding/InstructionSequenceBuilder";
 
 export function compileIR(ir: ICompilationUnit): IModule {
   const functionIdentifierIndexMapping: Map<FunctionIdentifier, number> = new Map();

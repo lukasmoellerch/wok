@@ -1,5 +1,5 @@
+import { getStatementsInLinearOrder, mapReadVariables } from "../../Targets/WASMTarget/Utils";
 import { Block, BlockType, ICompilationUnit, InstructionType } from "../AST";
-import { getStatementsInLinearOrder, mapReadVariables } from "../Utils";
 
 export function removeCopyStatements(ir: ICompilationUnit) {
   for (const fn of ir.functionCode) {

@@ -1,7 +1,7 @@
-import { encodeModule } from "../WASM/Encoding/Encoder";
-import { TypedArrayBytestreamConsumer } from "../WASM/Encoding/TypedArrayBytestreamConsumer";
-import { BlockType, ICompilationUnit, InstructionType, Type } from "./AST";
+import { BlockType, ICompilationUnit, InstructionType, Type } from "../../IR/AST";
 import { compileIR } from "./IRCompiler";
+import { encodeModule } from "./WASM/Encoding/Encoder";
+import { TypedArrayBytestreamConsumer } from "./WASM/Encoding/TypedArrayBytestreamConsumer";
 declare const WebAssembly: any;
 test("Can compile a basic function that lists even integers up to the parameter", () => {
   const ir: ICompilationUnit = {

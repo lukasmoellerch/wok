@@ -1,6 +1,6 @@
-import { ValueType } from "../WASM/Encoding/Constants";
-import { FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Variable } from "./AST";
+import { FunctionIdentifier, FunctionType, ICompilationUnit, InstructionType, Variable } from "../../IR/AST";
 import { getReadVariables, getStatementsInLinearOrder, getWrittenVariables, mapIRTypeToWasm } from "./Utils";
+import { ValueType } from "./WASM/Encoding/Constants";
 export interface IBucket {
   variables: Variable[];
   usage: Array<[number, number]>;
