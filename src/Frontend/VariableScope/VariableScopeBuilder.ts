@@ -11,6 +11,7 @@ import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
+import { NativeIntegerType } from "../Type/NativeType";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
 export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration | SourceFile;
 export class VariableScopeBuilder extends ASTWalker {
@@ -36,6 +37,12 @@ export class VariableScopeBuilder extends ASTWalker {
         globalScope.register(entry);
       }
     }
+    const str = "HEAP_START";
+    const entryType = VariableScopeEntryType.globalConstant;
+    const type = new NativeIntegerType(this.rootTypeTreeNode, false, 4);
+    const entry = new VariableScopeEntry(str, entryType, this.sourceFile, type);
+    this.sourceFile.variables.push(entry);
+    globalScope.register(entry);
   }
   public buildScopes() {
     this.walkSourceFile(this.sourceFile);
@@ -57,7 +64,7 @@ export class VariableScopeBuilder extends ASTWalker {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
     const scope = new VariableScope(parent);
     this.scopes.push(scope);
-    this.scopes[this.scopes.length - 1].register(this.selfStack[this.selfStack.length - 1]);
+    scope.register(this.selfStack[this.selfStack.length - 1]);
     methodDeclaration.thisEntry = this.selfStack[this.selfStack.length - 1];
     super.walkMethodDeclaration(methodDeclaration);
     this.scopes.pop();
@@ -122,6 +129,7 @@ export class VariableScopeBuilder extends ASTWalker {
     const entry = new VariableScopeEntry(str, entryType, structDeclaration, type);
     this.selfStack.push(entry);
     super.walkStructDeclaration(structDeclaration);
+    this.selfStack.pop();
   }
   public walkClassDeclaration(classDeclaration: ClassDeclaration) {
     const str = "self";
@@ -133,5 +141,6 @@ export class VariableScopeBuilder extends ASTWalker {
     const entry = new VariableScopeEntry(str, entryType, classDeclaration, type);
     this.selfStack.push(entry);
     super.walkClassDeclaration(classDeclaration);
+    this.selfStack.pop();
   }
 }

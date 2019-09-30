@@ -219,7 +219,8 @@ export class DependencyAnalyzer extends ASTWalker {
   public walkSourceFile(sourceFile: SourceFile): void {
     for (const topLevelDeclaration of sourceFile.topLevelDeclarations) {
       if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
-        if (topLevelDeclaration.decoratorMap.get("export") !== undefined) {
+        if (topLevelDeclaration.decoratorMap.get("export") !== undefined
+          || topLevelDeclaration.decoratorMap.get("compile") !== undefined) {
           const entry = topLevelDeclaration.entry;
           if (entry === undefined) {
             throw new Error();
@@ -266,6 +267,18 @@ export class DependencyAnalyzer extends ASTWalker {
         // Do nothing
       } else if (task instanceof AnalyzeMember) {
         // Do nothing
+        const type = task.type;
+        if (type instanceof StructType) {
+          const declaration = type.methodDeclarationMap.get(task.memberName);
+          if (declaration !== undefined) {
+            this.walkMethodDeclaration(declaration);
+          }
+        } else if (type instanceof ClassType) {
+          const declaration = type.methodDeclarationMap.get(task.memberName);
+          if (declaration !== undefined) {
+            this.walkMethodDeclaration(declaration);
+          }
+        }
       } else if (task instanceof AnalyzeStart) {
         for (const statement of sourceFile.topLevelDeclarations) {
           if (!(statement instanceof Statement)) {
@@ -398,6 +411,7 @@ export class DependencyAnalyzer extends ASTWalker {
     this.tasks.push(task);
   }
   protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression): void {
+    super.walkConstructorCallExpression(constructorCallExpression);
     const called = constructorCallExpression.constructedType;
     const task = new AnalyzeConstructor(called, constructorCallExpression.args.length);
     this.tasks.push(task);

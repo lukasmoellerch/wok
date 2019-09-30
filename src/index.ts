@@ -18,7 +18,6 @@ import { VariableScope } from "./Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Frontend/VariableScope/VariableScopeBuilder";
 import { compileIR } from "./IR/IRCompiler";
 import { IRPrinter } from "./IR/IRPrinter";
-import { removeCopyStatements } from "./IR/Optimization/CopyRemove";
 import { SSATransformer } from "./IR/SSATransformer";
 import { encodeModule } from "./WASM/Encoding/Encoder";
 import { TypedArrayBytestreamConsumer } from "./WASM/Encoding/TypedArrayBytestreamConsumer";
@@ -89,7 +88,7 @@ export default async function main() {
 
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
-  removeCopyStatements(ssa);
+  // removeCopyStatements(ssa);
 
   if (process.argv.includes("--print-ssa")) {
     const irPrinter = new IRPrinter();
@@ -113,10 +112,10 @@ export default async function main() {
       print(ptr: number, length: number) {
         const view = new DataView(memory, ptr, length);
         const str = decoder.decode(view);
-        console.log(str);
+        process.stdout.write(str);
       },
     },
   });
   const memory = instance.exports.memory.buffer as ArrayBuffer;
-  instance.exports._start(0);
+  instance.exports._start();
 }

@@ -9,47 +9,64 @@ infix operator < 2 right
 infix operator >= 2 right
 infix operator <= 2 right
 
-class A {
-  var a: Int
-  var b: Int
-  func returnASquared(): Int {
-    return self.a * self.b
-  }
-}
-
-class B {
-  let b: Int
-}
-
-struct List {
-  let value: Int
-  let next: UInt32
-}
-
-@foreign("printInt") func printInt(str: Int)
+@foreign("printInt") func printInt(num: Int)
+@foreign("printInt") func printUInt(num: UInt)
 @foreign("print") func print(str: String)
-let testVariable = 123
-printInt(testVariable + 345)
-func a(): Int {
-  return 456 // asd
+class IntWrapper {
+  let a: Int
 }
-func b(): Int {
-  return 123
+struct Block {
+  var size: UInt32
+  var nextBlockAddr: UInt32
+  var flag: UInt32
 }
-@export("main") func main(max: Int) {
-  let ainstance = A(123, 12)
-  ainstance.a = 345 + testVariable
-  ainstance.returnASquared()
-  var q = a
-  if (max < 10) {
-    q = a
-  } else {
-   q = b
+var brk: UInt32 = HEAP_START
+var headAddr: UInt32 = 0
+var tailAddr: UInt32 = 0
+func getFreeBlock(size: UInt32): UInt32 {
+  var currentAddr = headAddr
+  var current = Pointer<Block>(currentAddr).load()
+  while currentAddr != 0 {
+    if current.flag > 0 {
+      if current.size >= size {
+        return currentAddr
+      }
+    }
+    currentAddr = current.nextBlockAddr
+    current = Pointer<Block>(currentAddr).load()
   }
-  printInt(q())
+  return 0
 }
-extension Int {
-  func addingTwo(): Int {
-    return self + 2
+@compile func malloc(size: UInt32): UInt32 {
+  if size == 0 {
+    return 0
   }
+  let addr = getFreeBlock(size)
+  if addr != 0 {
+    var block = Pointer<Block>(addr).load()
+    block.flag = 0
+    Pointer<Block>(addr).store(block)
+    return addr + 12
+  }
+  let totalSize = 12 + size
+  brk = brk + totalSize
+  let header = Block(size, 0, 0)
+  if headAddr == 0 {
+    headAddr = brk
+  }
+  if tailAddr != 0 {
+    var tail = Pointer<Block>(tailAddr).load()
+    tail.nextBlockAddr = brk
+    Pointer<Block>(tailAddr).store(tail)
+  }
+  tailAddr = brk
+  return brk + 12
 }
+@compile func free(ptr: UInt32) {
+  let headerPtr = ptr - 12
+  var header = Pointer<Block>(headerPtr).load()
+  header.flag = 1
+  Pointer<Block>(headerPtr).store(header)
+}
+
+let q = IntWrapper(21)

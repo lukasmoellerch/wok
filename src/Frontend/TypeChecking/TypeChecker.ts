@@ -15,6 +15,7 @@ import { IfStatement } from "../AST/Nodes/IfStatement";
 import { IntegerLiteralExpression } from "../AST/Nodes/IntegerLiteralExpression";
 import { MemberCallExpression } from "../AST/Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "../AST/Nodes/MemberReferenceExpression";
+import { PlaceholderExpression } from "../AST/Nodes/PlaceholderExpression";
 import { PostfixUnaryOperatorExpression } from "../AST/Nodes/PostfixUnaryOperatorExpression";
 import { PrefixUnaryOperatorExpression } from "../AST/Nodes/PrefixUnaryOperatorExpression";
 import { ReturnStatement } from "../AST/Nodes/ReturnStatement";
@@ -179,6 +180,9 @@ export class TypeChecker extends ASTWalker {
     }
   }
   private checkExpression(expression: Expression, target?: IType | undefined) {
+    if (expression instanceof PlaceholderExpression) {
+      return;
+    }
     if (expression instanceof BinaryOperatorExpression) {
       const lhs = expression.lhs;
       const rhs = expression.rhs;

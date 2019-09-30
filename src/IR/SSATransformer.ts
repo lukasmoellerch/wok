@@ -216,11 +216,27 @@ export class SSATransformer {
             arr.push(ssa);
           }
         }
+        for (const [v, ssa] of previousAssignemnt.entries()) {
+          const arr = phiNodeMapping.get(v);
+          if (arr === undefined) {
+            phiNodeMapping.set(v, [ssa]);
+          } else {
+            arr.push(ssa);
+          }
+        }
       }
       if (breaksTo !== undefined && statements.findIndex(isBreakStatement) !== -1) {
         const assignment = env.getVariableAssignment(block);
         const phiNodeMapping = env.getPhiMapping(breaksTo);
         for (const [v, ssa] of assignment.entries()) {
+          const arr = phiNodeMapping.get(v);
+          if (arr === undefined) {
+            phiNodeMapping.set(v, [ssa]);
+          } else {
+            arr.push(ssa);
+          }
+        }
+        for (const [v, ssa] of previousAssignemnt.entries()) {
           const arr = phiNodeMapping.get(v);
           if (arr === undefined) {
             phiNodeMapping.set(v, [ssa]);

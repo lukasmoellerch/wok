@@ -22,7 +22,7 @@ export function removeCopyStatements(ir: ICompilationUnit) {
     }
     function apply(a: number): number {
       const result = copies.get(a);
-      return result || a;
+      return result !== undefined ? result : a;
     }
     function transform(code: Block[]) {
       for (const block of code) {

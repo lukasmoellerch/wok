@@ -1,6 +1,6 @@
 
 import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode, TypeTreeNodeTemplate } from "../Type Scope/TypeScope";
-import { NativeIntegerType, PointerType, StringType } from "./NativeType";
+import { NativeIntegerType, PointerType, RawPointerType, StringType } from "./NativeType";
 
 class PointerTypeTemplate extends TypeTreeNodeTemplate {
   private createdPointerTypes: PointerType[] = [];
@@ -28,6 +28,8 @@ export function injectNativeTypes(rootNode: TypeTreeNode) {
   rootNode.registerNewNamedTemplate("Int32", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int32", "native", new NativeIntegerType(rootNode, true, 4))));
   rootNode.registerNewNamedTemplate("Int64", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int64", "native", new NativeIntegerType(rootNode, true, 8))));
 
+  rootNode.registerNewNamedTemplate("RawPointer", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "RawPointer", "native", new RawPointerType(rootNode))));
+
   rootNode.registerNewNamedTemplate("Bool", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt8")));
   rootNode.registerNewNamedTemplate("Int", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("Int32")));
   rootNode.registerNewNamedTemplate("UInt", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt32")));
@@ -35,4 +37,5 @@ export function injectNativeTypes(rootNode: TypeTreeNode) {
   rootNode.registerNewNamedTemplate("String", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "String", "native", new StringType(rootNode))));
 
   rootNode.registerNewNamedTemplate("Pointer", new PointerTypeTemplate(rootNode));
+
 }

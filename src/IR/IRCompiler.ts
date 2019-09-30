@@ -83,14 +83,86 @@ export function compileIR(ir: ICompilationUnit): IModule {
     dataSegmentOffsetArray.push(currentOffset);
     const content = segmentData.content;
     const length = content.length;
-    const alignedNewOffset = (Math.ceil((currentOffset + length) / alignment)) * alignment;
-    currentOffset = alignedNewOffset;
+    currentOffset += length;
+    currentOffset = (Math.ceil(currentOffset / alignment)) * alignment;
   }
+  currentOffset = (Math.ceil(currentOffset / alignment)) * alignment;
 
   const i32ReturnOffset: number[] = [];
   const i64ReturnOffset: number[] = [];
   const f32ReturnOffset: number[] = [];
   const f64ReturnOffset: number[] = [];
+  function ensure(type: ValueType, index: number) {
+    if (type === ValueType.i32) {
+      while (i32ReturnOffset.length <= index) {
+        i32ReturnOffset.push(currentOffset);
+        currentOffset += 4;
+      }
+    } else if (type === ValueType.i64) {
+      while (i64ReturnOffset.length <= index) {
+        i64ReturnOffset.push(currentOffset);
+        currentOffset += 8;
+      }
+    } else if (type === ValueType.f32) {
+      while (f32ReturnOffset.length <= index) {
+        f32ReturnOffset.push(currentOffset);
+        currentOffset += 4;
+      }
+    } else if (type === ValueType.f64) {
+      while (f64ReturnOffset.length <= index) {
+        f64ReturnOffset.push(currentOffset);
+        currentOffset += 8;
+      }
+    }
+  }
+  currentOffset = (Math.ceil(currentOffset / alignment)) * alignment;
+  for (const internalFunctionDeclaration of ir.internalFunctionDeclarations) {
+    const functionType = internalFunctionDeclaration.type[1].slice(1);
+    let i32 = 0;
+    let i64 = 0;
+    let f32 = 0;
+    let f64 = 0;
+    for (const t of functionType) {
+      const wasmType = mapIRTypeToWasm(ir, t);
+      if (wasmType === ValueType.i32) {
+        ensure(wasmType, i32);
+        i32++;
+      } else if (wasmType === ValueType.i64) {
+        ensure(wasmType, i64);
+        i64++;
+      } else if (wasmType === ValueType.f32) {
+        ensure(wasmType, f32);
+        f32++;
+      } else if (wasmType === ValueType.f64) {
+        ensure(wasmType, f64);
+        f64++;
+      }
+    }
+  }
+  currentOffset += 64;
+  for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
+    const functionType = externalFunctionDeclaration.type[1].slice(1);
+    let i32 = 0;
+    let i64 = 0;
+    let f32 = 0;
+    let f64 = 0;
+    for (const t of functionType) {
+      const wasmType = mapIRTypeToWasm(ir, t);
+      if (wasmType === ValueType.i32) {
+        ensure(wasmType, i32);
+        i32++;
+      } else if (wasmType === ValueType.i64) {
+        ensure(wasmType, i64);
+        i64++;
+      } else if (wasmType === ValueType.f32) {
+        ensure(wasmType, f32);
+        f32++;
+      } else if (wasmType === ValueType.f64) {
+        ensure(wasmType, f64);
+        f64++;
+      }
+    }
+  }
 
   wasmBuilder.addExportSection();
   const elementSection = wasmBuilder.addElementSection();
@@ -154,7 +226,6 @@ export function compileIR(ir: ICompilationUnit): IModule {
       variableSavedInLocalMap.set(argId, argId);
       argId++;
     }
-
     const env: ICompilationEnvironment = {
       compilationUnit: ir,
       functionType,
@@ -183,8 +254,7 @@ export function compileIR(ir: ICompilationUnit): IModule {
       i64ReturnOffset,
       f32ReturnOffset,
       f64ReturnOffset,
-
-      currentOffset,
+      heapStart: currentOffset,
 
       wasmBuilder,
     };
@@ -195,7 +265,6 @@ export function compileIR(ir: ICompilationUnit): IModule {
     for (const block of fn.code) {
       compileBlock(env, block);
     }
-    currentOffset = env.currentOffset;
     if (process.argv.includes("--print-wasm")) {
       console.log("<", fn.identifier, ">");
       console.log("#", functionIdentifierIndexMapping.get(fn.identifier));
@@ -259,11 +328,11 @@ export function compileIR(ir: ICompilationUnit): IModule {
   let k = 0;
   const dataSection = wasmBuilder.addDataSection();
   for (const segmentData of ir.dataSegments) {
-    const offset = dataSegmentOffsetArray[k];
+    const dataOffset = dataSegmentOffsetArray[k];
     const content = segmentData.content;
 
     const constantOffsetInstructionBuilder = new InstructionSequenceBuilder();
-    constantOffsetInstructionBuilder.i32Const(offset);
+    constantOffsetInstructionBuilder.i32Const(dataOffset);
     constantOffsetInstructionBuilder.end();
     dataSection.segments.push({
       memIndex: 0,
@@ -311,38 +380,22 @@ export interface ICompilationEnvironment {
   f32ReturnOffset: number[];
   f64ReturnOffset: number[];
 
-  currentOffset: number;
+  heapStart: number;
 
   wasmBuilder: ASTBuilder;
 
 }
 export function compileBlock(environment: ICompilationEnvironment, block: Block): void {
   function geti32ReturnOffset(index: number): number {
-    while (environment.i32ReturnOffset.length <= index) {
-      environment.i32ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 4;
-    }
     return environment.i32ReturnOffset[index];
   }
   function geti64ReturnOffset(index: number): number {
-    while (environment.i64ReturnOffset.length <= index) {
-      environment.i64ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 8;
-    }
     return environment.i64ReturnOffset[index];
   }
   function getf32ReturnOffset(index: number): number {
-    while (environment.f32ReturnOffset.length <= index) {
-      environment.f32ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 4;
-    }
     return environment.f32ReturnOffset[index];
   }
   function getf64ReturnOffset(index: number): number {
-    while (environment.f64ReturnOffset.length <= index) {
-      environment.f64ReturnOffset.push(environment.currentOffset);
-      environment.currentOffset += 8;
-    }
     return environment.f64ReturnOffset[index];
   }
   function getSequenceBuilder(): InstructionSequenceBuilder {
@@ -743,6 +796,25 @@ export function compileBlock(environment: ICompilationEnvironment, block: Block)
         environment.reproducibleVariableMapping.set(v.index, v);
       } else if (statement[0] === InstructionType.setToGlobal) {
         const [, target, globalIdentifier] = statement;
+        if (globalIdentifier === "HEAP_START") {
+          const type = Type.ptr;
+          const wasmType = mapIRTypeToWasm(environment.compilationUnit, type);
+          const instructionSequenceBuilder = new InstructionSequenceBuilder();
+          if (wasmType === ValueType.i32) {
+            instructionSequenceBuilder.i32Const(environment.heapStart);
+          }
+          if (wasmType === ValueType.i64) {
+            instructionSequenceBuilder.i64Const(environment.heapStart);
+          }
+          if (wasmType === ValueType.f32) {
+            instructionSequenceBuilder.f32Const(environment.heapStart);
+          }
+          if (wasmType === ValueType.i64) {
+            instructionSequenceBuilder.f64Const(environment.heapStart);
+          }
+          const v = new ReproducibleVariable(target, instructionSequenceBuilder);
+          environment.reproducibleVariableMapping.set(v.index, v);
+        }
       } else if (statement[0] === InstructionType.setToDataSegment) {
         const [, target, dataSegmentIndex] = statement;
         const type = environment.irVariableTypeArray[target];

@@ -319,3 +319,8 @@ export class NativeIntegerType implements IType {
     return false;
   }
 }
+export class RawPointerType extends NativeIntegerType {
+  constructor(node: TypeTreeNode) {
+    super(node, false, 4);
+  }
+}

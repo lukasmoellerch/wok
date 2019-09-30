@@ -117,16 +117,61 @@ class CompilerGlobalValue implements ICompilerLValue, ICompilerRValue {
     this.env = env;
   }
   public writeIRValue(irValue: IRValue): void {
-    const offsetVariable = this.env.addIRLocal(IR.Type.ptr);
-    this.env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, this.baseOffset]);
-    generateStoreInstructions(this.env, this.type, irValue, offsetVariable);
+    if (this.baseOffset === 0) {
+      const heapStart = this.env.addIRLocal(IR.Type.ptr);
+      this.env.writeStatement([IR.InstructionType.setToGlobal, heapStart, "HEAP_START"]);
+      generateStoreInstructions(this.env, this.type, irValue, heapStart);
+    } else {
+      const heapStart = this.env.addIRLocal(IR.Type.ptr);
+      const finalOffset = this.env.addIRLocal(IR.Type.ptr);
+      const offsetVariable = this.env.addIRLocal(IR.Type.ptr);
+      this.env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, this.baseOffset]);
+      this.env.writeStatement([IR.InstructionType.setToGlobal, heapStart, "HEAP_START"]);
+      this.env.writeStatement([IR.InstructionType.add, finalOffset, heapStart, offsetVariable]);
+      generateStoreInstructions(this.env, this.type, irValue, finalOffset);
+    }
+
   }
   public getAsIRValue(): IRValue {
     const temp = this.env.generateValueOfType(this.type);
-    const offsetVariable = this.env.addIRLocal(IR.Type.ptr);
-    this.env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, this.baseOffset]);
-    generateLoadInstructions(this.env, this.type, temp, offsetVariable);
-    return temp;
+    if (this.baseOffset === 0) {
+      const heapStart = this.env.addIRLocal(IR.Type.ptr);
+      this.env.writeStatement([IR.InstructionType.setToGlobal, heapStart, "HEAP_START"]);
+      generateLoadInstructions(this.env, this.type, temp, heapStart);
+      return temp;
+    } else {
+      const heapStart = this.env.addIRLocal(IR.Type.ptr);
+      const finalOffset = this.env.addIRLocal(IR.Type.ptr);
+      const offsetVariable = this.env.addIRLocal(IR.Type.ptr);
+      this.env.writeStatement([IR.InstructionType.setToConstant, offsetVariable, this.baseOffset]);
+      this.env.writeStatement([IR.InstructionType.setToGlobal, heapStart, "HEAP_START"]);
+      this.env.writeStatement([IR.InstructionType.add, finalOffset, heapStart, offsetVariable]);
+      generateLoadInstructions(this.env, this.type, temp, finalOffset);
+      return temp;
+    }
+  }
+}
+class CompilerHeapStartGlobalValue implements ICompilerRValue {
+  public _compilerlvalue: void;
+  public _compilerrvalue: void;
+  private globalName: string;
+  private env: IRFunctionCompilationEnvironment;
+  private type: IType;
+  private offset: number;
+  constructor(env: IRFunctionCompilationEnvironment, globalName: string, type: IType, offset: number) {
+    this.globalName = globalName;
+    this.env = env;
+    this.type = type;
+    this.offset = offset;
+  }
+  public getAsIRValue(): IRValue {
+    const temp = this.env.generateValueOfType(this.type);
+    const temp2 = this.env.generateValueOfType(this.type);
+    this.env.writeStatement([IR.InstructionType.setToGlobal, temp.irVariables[0], this.globalName]);
+    const offset = this.env.generateValueOfType(this.type);
+    this.env.writeStatement([IR.InstructionType.setToConstant, offset.irVariables[0], this.offset]);
+    this.env.writeStatement([IR.InstructionType.add, temp2.irVariables[0], offset.irVariables[0], temp.irVariables[0]]);
+    return temp2;
   }
 }
 function generateStoreInstructions(env: IRFunctionCompilationEnvironment, type: IType, value: IRValue, ptr: number) {
@@ -343,6 +388,7 @@ export class IRCompiler {
   private operatorTaskMap: Map<IType, Map<string, Map<number, CompileOperator>>> = new Map();
   private methodTaskMap: Map<IType, Map<string, Map<number, CompileMethod>>> = new Map();
   private globals: Map<string, CompilerGlobal> = new Map();
+  private globalsSize = -1;
   constructor(private rootTypeTreeNode: TypeTreeNode, private tasks: CompilerTask[]) { }
 
   public compile() {
@@ -374,9 +420,15 @@ export class IRCompiler {
           if (type === undefined) {
             throw new Error();
           }
-          const global = new CompilerGlobal(startIndex, type);
-          this.globals.set(entry.str, global);
-          startIndex += type.memorySize();
+          if (entry.str === "HEAP_START") {
+            const global = new CompilerGlobal(-100, type);
+            this.globals.set(entry.str, global);
+          } else {
+            const global = new CompilerGlobal(startIndex, type);
+            this.globals.set(entry.str, global);
+            startIndex += type.memorySize();
+          }
+          this.globalsSize = startIndex;
         }
       }
     }
@@ -791,6 +843,9 @@ export class IRCompiler {
       if (global === undefined) {
         throw new Error();
       }
+      if (entry.str === "HEAP_START") {
+        return new CompilerHeapStartGlobalValue(env, "HEAP_START", global.type, this.globalsSize);
+      }
       const variable = new CompilerGlobalValue(env, global.type, global.baseOffset);
       return variable;
     } else if (entryType === VariableScopeEntryType.globalVariable) {
@@ -1105,6 +1160,7 @@ export class IRCompiler {
         target.writeIRValue(value.getAsIRValue());
       }
       const type = expression.lhs.forceType();
+      return;
     } else if (expression instanceof MemberCallExpression) {
       if (target instanceof CompilerDirectIRValue) {
         this.compileMemberCallExpression(env, expression, target.irValue);
@@ -1147,7 +1203,9 @@ export class IRCompiler {
     } else if (constructedType instanceof ClassType) {
       if (constructedType.constructorDeclaration === undefined) {
         const basePtr = target ? target.irVariables[0] : env.addIRLocal(IR.Type.ptr);
-        env.writeStatement([IR.InstructionType.setToConstant, basePtr, 12]);
+        const sizeLocal = env.addIRLocal(IR.Type.ptr);
+        env.writeStatement([IR.InstructionType.setToConstant, sizeLocal, constructedType.instanceSizeData]);
+        env.writeStatement([IR.InstructionType.call, "function#malloc", [basePtr], [sizeLocal]]);
         if (target === undefined) {
           return;
         }
