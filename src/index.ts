@@ -107,7 +107,7 @@ export default async function main() {
   const instance = new WebAssembly.Instance(module, {
     env: {
       printInt(int: number) {
-        console.log(int);
+        process.stdout.write(int.toString() + "\n");
       },
       print(ptr: number, length: number) {
         const view = new DataView(memory, ptr, length);
