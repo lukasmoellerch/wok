@@ -77,6 +77,6 @@ export class BigUInt {
     return a;
   }
   public display(): string {
-    return this.buffer.array.reverse().map((a) => a.toString(16)).join(" ");
+    return this.buffer.array.reverse().map((a) => a == 0 ? "0" : a.toString(16)).join(" ");
   }
 }
