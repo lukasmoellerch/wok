@@ -1,4 +1,5 @@
 import { DynamicByteArray } from "../DynamicByteArray";
+import { BigUInt } from "./BigUInt";
 export class BigDecimalUInt {
   public static zero = new BigDecimalUInt("");
   public static tenToThePowerOf(n: number): BigDecimalUInt {
@@ -96,16 +97,36 @@ export class BigDecimalUInt {
     }
     return result;
   }
-  public dividedBySingleDigit(divisor: number): BigDecimalUInt {
+  public dividedBySingleDigit(divisor: number): { carry: number, result: BigDecimalUInt } {
     let carry = 0;
-    const result = BigDecimalUInt.zero;
+    const result = BigDecimalUInt.zero.copy();
     for (let i = this.buffer.length - 1; i >= 0; i--) {
       const temp = 10 * carry + this.buffer.get(i);
       result.buffer.set(i, temp / divisor);
       carry = Math.floor(temp - divisor * result.buffer.get(i));
     }
     result.strip();
-    return result;
+    return { result, carry };
+  }
+  public toBinary(): string {
+    let res = "";
+    let tmp: BigDecimalUInt = this;
+    while (tmp.compare(BigDecimalUInt.zero) === 1) {
+      const { carry, result } = tmp.dividedBySingleDigit(2);
+      res = carry.toString() + res;
+      tmp = result;
+    }
+    return res;
+  }
+  public toBigUInt(): BigUInt {
+    let res = "";
+    let tmp: BigDecimalUInt = this;
+    while (tmp.compare(BigDecimalUInt.zero) === 1) {
+      const { carry, result } = tmp.dividedBySingleDigit(16);
+      res = carry.toString(16) + res;
+      tmp = result;
+    }
+    return new BigUInt(res);
   }
   public multipliedByTen(): BigDecimalUInt {
     const a = this.copy();
