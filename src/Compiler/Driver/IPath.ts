@@ -1,3 +1,3 @@
-export class IPath {
-  
+export interface IPath {
+  parts: string[];
 }
