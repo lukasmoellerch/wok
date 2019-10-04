@@ -1,41 +1,75 @@
 
+import { GenericTypeIdentifier, IGenericTypeTemplate, NonGenericTypeTemplate, SpecializedTypeReference } from "../Type Scope/TypeProvider";
 import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode, TypeTreeNodeTemplate } from "../Type Scope/TypeScope";
 import { NativeIntegerType, PointerType, RawPointerType, StringType } from "./NativeType";
+import { IType } from "./Type";
 
+class PointerGenericTypeTemplate implements IGenericTypeTemplate {
+  public argsNeeded: number = 1;
+  constructor(private node: TypeTreeNode, public identifier: GenericTypeIdentifier) {
+
+  }
+  public createWithoutArguments(): IType {
+    throw new Error("Method not implemented.");
+  }
+  public createWithArguments(args: SpecializedTypeReference[]): IType {
+    return new PointerType(this.node, this.node.typeProvider.get(args[0]));
+  }
+
+}
 class PointerTypeTemplate extends TypeTreeNodeTemplate {
-  private createdPointerTypes: PointerType[] = [];
-  constructor(private parent: TypeTreeNode) {
+  constructor(private parent: TypeTreeNode, private identifier: GenericTypeIdentifier) {
     super();
   }
   public create(args: TypeTreeNode[]): TypeTreeNode {
+    const stored = args[0].typeReference;
+    if (stored === undefined) {
+      throw new Error();
+    }
+    const typeReference = this.parent.typeProvider.specializeGeneric(this.identifier, [stored]);
+
     const typeTreeNode = new TypeTreeNode(this.parent, args, "Pointer", "native");
-    typeTreeNode.registerNewNamedTemplate("Stored", new ArgumentlessTypeTreeNodeTemplate(args[0]));
-    const pointerInstanceType = new PointerType(typeTreeNode);
-    this.createdPointerTypes.push(pointerInstanceType);
-    typeTreeNode.instanceType = pointerInstanceType;
+    typeTreeNode.typeReference = typeReference;
     return typeTreeNode;
   }
 }
 
 export function injectNativeTypes(rootNode: TypeTreeNode) {
-  rootNode.registerNewNamedTemplate("UInt8", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt8", "native", new NativeIntegerType(rootNode, false, 1))));
-  rootNode.registerNewNamedTemplate("UInt16", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt16", "native", new NativeIntegerType(rootNode, false, 2))));
-  rootNode.registerNewNamedTemplate("UInt32", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt32", "native", new NativeIntegerType(rootNode, false, 4))));
-  rootNode.registerNewNamedTemplate("UInt64", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "UInt64", "native", new NativeIntegerType(rootNode, false, 8))));
+  function register(name: string, type: IType) {
+    const node = new TypeTreeNode(rootNode, [], name, "native");
+    const identifier = GenericTypeIdentifier.fromTypeTreeNode(node);
+    const genericTemplate = new NonGenericTypeTemplate(identifier, type);
+    rootNode.typeProvider.ensureGeneric(genericTemplate);
+    node.typeReference = node.typeProvider.specializeGeneric(identifier, []);
+    const typeTreeNodeTemplate = new ArgumentlessTypeTreeNodeTemplate(node);
+    rootNode.registerNewNamedTemplate(name, typeTreeNodeTemplate);
+  }
+  function registerPointer() {
+    const nameNode = new TypeTreeNode(rootNode, [], "Pointer", "native");
+    const identifier = GenericTypeIdentifier.fromTypeTreeNode(nameNode);
+    const genericTemplate = new PointerGenericTypeTemplate(rootNode, identifier);
+    rootNode.typeProvider.ensureGeneric(genericTemplate);
 
-  rootNode.registerNewNamedTemplate("Int8", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int8", "native", new NativeIntegerType(rootNode, true, 1))));
-  rootNode.registerNewNamedTemplate("Int16", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int16", "native", new NativeIntegerType(rootNode, true, 2))));
-  rootNode.registerNewNamedTemplate("Int32", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int32", "native", new NativeIntegerType(rootNode, true, 4))));
-  rootNode.registerNewNamedTemplate("Int64", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "Int64", "native", new NativeIntegerType(rootNode, true, 8))));
+    const template = new PointerTypeTemplate(rootNode, identifier);
 
-  rootNode.registerNewNamedTemplate("RawPointer", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "RawPointer", "native", new RawPointerType(rootNode))));
+    rootNode.registerNewNamedTemplate("Pointer", template);
+  }
+  register("UInt8", new NativeIntegerType(rootNode, false, 1));
+  register("UInt16", new NativeIntegerType(rootNode, false, 2));
+  register("UInt32", new NativeIntegerType(rootNode, false, 4));
+  register("UInt64", new NativeIntegerType(rootNode, false, 8));
 
-  rootNode.registerNewNamedTemplate("Bool", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt8")));
-  rootNode.registerNewNamedTemplate("Int", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("Int32")));
-  rootNode.registerNewNamedTemplate("UInt", new ArgumentlessTypeTreeNodeTemplate(rootNode.forceResolve("UInt32")));
+  register("Int8", new NativeIntegerType(rootNode, true, 1));
+  register("Int16", new NativeIntegerType(rootNode, true, 2));
+  register("Int32", new NativeIntegerType(rootNode, true, 4));
+  register("Int64", new NativeIntegerType(rootNode, true, 8));
 
-  rootNode.registerNewNamedTemplate("String", new ArgumentlessTypeTreeNodeTemplate(new TypeTreeNode(rootNode, [], "String", "native", new StringType(rootNode))));
+  register("RawPointer", new RawPointerType(rootNode));
 
-  rootNode.registerNewNamedTemplate("Pointer", new PointerTypeTemplate(rootNode));
+  register("Bool", new NativeIntegerType(rootNode, false, 1));
+  register("Int", new NativeIntegerType(rootNode, false, 1));
+  register("UInt", new NativeIntegerType(rootNode, false, 1));
 
+  register("String", new StringType(rootNode));
+  registerPointer();
 }

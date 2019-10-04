@@ -8,6 +8,7 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { ClassType } from "../Type/ClassType";
 import { StructType } from "../Type/StructType";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
+import { GenericTypeIdentifier, NonGenericTypeTemplate } from "./TypeProvider";
 import { ArgumentlessTypeTreeNodeTemplate, TypeTreeNode } from "./TypeScope";
 
 export class TypeScopeBuilder extends ASTWalker {
@@ -22,14 +23,22 @@ export class TypeScopeBuilder extends ASTWalker {
     for (const declaration of this.sourceFile.topLevelDeclarations) {
       if (declaration instanceof StructDeclaration) {
         const type = new StructType(declaration.nameToken.content, this.scopes[0], declaration);
-        const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "struct", type);
+        const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "struct");
+        const identifier = GenericTypeIdentifier.fromTypeTreeNode(node);
+        const simple = new NonGenericTypeTemplate(identifier, type);
+        node.typeProvider.ensureGeneric(simple);
+        node.typeReference = node.typeProvider.specializeGeneric(identifier, []);
         type.node = node;
         const template = new ArgumentlessTypeTreeNodeTemplate(node);
         declaration.template = template;
         globalScope.registerNewNamedTemplate(declaration.nameToken.content, template);
       } else if (declaration instanceof ClassDeclaration) {
         const type = new ClassType(declaration.nameToken.content, this.scopes[0], declaration);
-        const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "class", type);
+        const node = new TypeTreeNode(globalScope, [], declaration.nameToken.content, "class");
+        const identifier = GenericTypeIdentifier.fromTypeTreeNode(node);
+        const simple = new NonGenericTypeTemplate(identifier, type);
+        node.typeProvider.ensureGeneric(simple);
+        node.typeReference = node.typeProvider.specializeGeneric(identifier, []);
         type.node = node;
         const template = new ArgumentlessTypeTreeNodeTemplate(node);
         declaration.template = template;
@@ -51,7 +60,11 @@ export class TypeScopeBuilder extends ASTWalker {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
     const template = structDeclaration.template;
     const type = new StructType(structDeclaration.nameToken.content, this.scopes[0], structDeclaration);
-    let scope = new TypeTreeNode(parent, [], structDeclaration.nameToken.content, "struct", type);
+    let scope = new TypeTreeNode(parent, [], structDeclaration.nameToken.content, "struct");
+    const identifier = GenericTypeIdentifier.fromTypeTreeNode(scope);
+    const simple = new NonGenericTypeTemplate(identifier, type);
+    scope.typeProvider.ensureGeneric(simple);
+    scope.typeReference = scope.typeProvider.specializeGeneric(identifier, []);
     type.node = scope;
     if (template !== undefined) {
       scope = template.create([]);
@@ -66,7 +79,11 @@ export class TypeScopeBuilder extends ASTWalker {
     const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
     const template = classDeclaration.template;
     const type = new ClassType(classDeclaration.nameToken.content, this.scopes[0], classDeclaration);
-    let scope = new TypeTreeNode(parent, [], classDeclaration.nameToken.content, "class", type);
+    let scope = new TypeTreeNode(parent, [], classDeclaration.nameToken.content, "class");
+    const identifier = GenericTypeIdentifier.fromTypeTreeNode(scope);
+    const simple = new NonGenericTypeTemplate(identifier, type);
+    scope.typeProvider.ensureGeneric(simple);
+    scope.typeReference = scope.typeProvider.specializeGeneric(identifier, []);
     type.node = scope;
     if (template !== undefined) {
       scope = template.create([]);

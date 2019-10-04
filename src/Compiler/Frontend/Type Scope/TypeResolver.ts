@@ -19,7 +19,7 @@ export class TypeResolver extends ASTWalker {
     if (q === undefined) {
       throw new Error();
     }
-    const type = q.instanceType;
+    const type = q.type;
     if (type === undefined) {
       throw new Error();
     }

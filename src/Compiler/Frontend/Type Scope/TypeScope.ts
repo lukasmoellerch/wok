@@ -1,4 +1,5 @@
 import { IType } from "../Type/Type";
+import { SpecializedTypeReference, TypeProvider } from "./TypeProvider";
 
 export type TypeTreeNodeKind = "struct" | "protocol" | "class" | "component" | "native" | "global" | "block" | "function";
 export class TypeTreeNodeTemplate {
@@ -25,20 +26,23 @@ export class TypeTreeNode {
   public kind: TypeTreeNodeKind;
   public namedTemplates: Map<string, TypeTreeNodeTemplate>;
   public parent: TypeTreeNode | undefined;
-  public instanceType: IType | undefined;
-  private childTreeNodeCache: Map<string, TypeTreeNode> = new Map()
-  constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, instanceType?: IType | undefined) {
+  public typeReference: SpecializedTypeReference | undefined;
+  public typeProvider: TypeProvider;
+  private childTreeNodeCache: Map<string, TypeTreeNode> = new Map();
+  constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, typeReference?: SpecializedTypeReference | undefined) {
     if (parent !== undefined) {
       this.rootTypeTreeNode = parent.rootTypeTreeNode;
+      this.typeProvider = parent.typeProvider;
     } else {
       this.rootTypeTreeNode = this;
+      this.typeProvider = new TypeProvider();
     }
     this.parent = parent;
     this.args = args;
     this.treeNodeName = treeNodeName;
     this.kind = kind;
     this.namedTemplates = new Map();
-    this.instanceType = instanceType;
+    this.typeReference = typeReference;
   }
   public toString(): string {
     const parent = this.parent;
@@ -59,7 +63,7 @@ export class TypeTreeNode {
     this.namedTemplates.set(name, template);
   }
   public getChildTreeNode(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
-    const id = `#${name}%(${args.map(arg => arg.toString()).join("$")})`;
+    const id = `#${name}%(${args.map((arg) => arg.toString()).join("$")})`;
     const cached = this.childTreeNodeCache.get(id);
     if (cached !== undefined) {
       return cached;
@@ -101,11 +105,18 @@ export class TypeTreeNode {
     return result;
   }
   public forceInstanceType(): IType {
-    const result = this.instanceType;
+    const result = this.typeReference;
     if (result === undefined) {
       throw new Error();
     }
-    return result;
+    return this.typeProvider.get(result);
+  }
+  public get type(): IType {
+    const typeReference = this.typeReference;
+    if (typeReference === undefined) {
+      throw new Error();
+    }
+    return this.typeProvider.get(typeReference);
   }
 }
 export class GlobalTypeTreeNode extends TypeTreeNode {

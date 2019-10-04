@@ -8,7 +8,7 @@ export class TypeReferenceExpression extends Expression {
   constructor(node: TypeTreeNode) {
     super();
     this.node = node;
-    this.type = node.instanceType;
+    this.type = node.type;
     this.children = [];
   }
 

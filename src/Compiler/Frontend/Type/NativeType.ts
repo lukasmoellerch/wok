@@ -12,18 +12,10 @@ export class PointerType implements IType {
   private constructorType: FunctionType;
   private storeMemberType: FunctionType;
   private loadMemberType: FunctionType;
-  constructor(node: TypeTreeNode) {
-    const stored = node.resolve("Stored");
-    if (stored === undefined) {
-      throw new Error();
-    }
-    const instanceType = stored.instanceType;
-    if (instanceType === undefined) {
-      throw new Error();
-    }
-    this.stored = instanceType;
+  constructor(node: TypeTreeNode, stored: IType) {
+    this.stored = stored;
     this.node = node;
-    const uint32 = node.forceResolve("UInt32").instanceType;
+    const uint32 = node.forceResolve("UInt32").type;
     if (uint32 === undefined) {
       throw new Error();
     }

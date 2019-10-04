@@ -1,8 +1,6 @@
 import { readFile, writeFile } from "fs";
 import * as path from "path";
 import { promisify } from "util";
-import { Loader } from "./Compiler/Driver/Loader";
-import { NodeNativeFileSystemProvider, Path } from "./Compiler/Driver/NodeFileSystemProvider";
 import { DependencyAnalyzer } from "./Compiler/Frontend/DependencyAnalysis/DependencyAnalyzer";
 import { ErrorFormatter } from "./Compiler/Frontend/ErrorHandling/ErrorFormatter";
 import { ExpressionParser } from "./Compiler/Frontend/Expression Parsing/ExpressionParser";
@@ -33,14 +31,15 @@ import { Parser } from "./Frontend/Parser/Parser";
 import { BigUInt } from './Support/Math/BigUInt';
 */
 export default async function main() {
-  const fileSystemProvider = new NodeNativeFileSystemProvider();
+  /*const fileSystemProvider = new NodeNativeFileSystemProvider();
   const basePathString = path.resolve(process.argv[2] || "./").toString();
   const basePath = new Path(...basePathString.split("/"));
   const loader = new Loader(basePath, fileSystemProvider);
   loader.searchForSourceFilesInBasePath((file) => {
     console.log(file);
   });
-  return;
+  return;*/
+  const basePathString = path.resolve(process.argv[2] || "./").toString();
 
   const content = await promisify(readFile)(basePathString || "testFile");
   const lexer = new Lexer(basePathString, content.toString());
