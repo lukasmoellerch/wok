@@ -1,11 +1,11 @@
-import { IType } from "../../Type/Type";
+import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class ImplictConversionExpression extends Expression {
-  public from: IType;
-  public to: IType;
+  public from: ITypeCheckingType;
+  public to: ITypeCheckingType;
   public value: Expression;
-  constructor(from: IType, to: IType, value: Expression) {
+  constructor(from: ITypeCheckingType, to: ITypeCheckingType, value: Expression) {
     super();
     this.from = from;
     this.to = to;

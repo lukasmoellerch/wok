@@ -1,5 +1,5 @@
-import { IType } from "../Type/Type";
-import { SpecializedTypeReference, TypeProvider } from "./TypeProvider";
+import { ITypeCheckingType } from "../AST/ExpressionType";
+import { TypeProvider } from "./TypeProvider";
 
 export type TypeTreeNodeKind = "struct" | "protocol" | "class" | "component" | "native" | "global" | "block" | "function";
 export class TypeTreeNodeTemplate {
@@ -19,61 +19,21 @@ export class ArgumentlessTypeTreeNodeTemplate extends TypeTreeNodeTemplate {
     return this.typeTreeNode;
   }
 }
-export class TypeTreeNode {
-  public rootTypeTreeNode: TypeTreeNode;
-  public args: TypeTreeNode[];
-  public treeNodeName: string;
-  public kind: TypeTreeNodeKind;
+export class TemplateManager {
   public namedTemplates: Map<string, TypeTreeNodeTemplate>;
-  public parent: TypeTreeNode | undefined;
-  public typeReference: SpecializedTypeReference | undefined;
-  public typeProvider: TypeProvider;
-  private childTreeNodeCache: Map<string, TypeTreeNode> = new Map();
-  constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, typeReference?: SpecializedTypeReference | undefined) {
-    if (parent !== undefined) {
-      this.rootTypeTreeNode = parent.rootTypeTreeNode;
-      this.typeProvider = parent.typeProvider;
-    } else {
-      this.rootTypeTreeNode = this;
-      this.typeProvider = new TypeProvider();
-    }
-    this.parent = parent;
-    this.args = args;
-    this.treeNodeName = treeNodeName;
-    this.kind = kind;
+  constructor(private parent: TypeTreeNode | undefined) {
     this.namedTemplates = new Map();
-    this.typeReference = typeReference;
-  }
-  public toString(): string {
-    const parent = this.parent;
-    if (parent === undefined) {
-      return this.treeNodeName;
-    } else {
-      if (this.args.length > 0) {
-        return parent.parentPrefix() + this.treeNodeName + "<" + this.args.map((a) => a.toString()).join(", ") + ">";
-      } else {
-        return parent.parentPrefix() + this.treeNodeName;
-      }
-    }
-  }
-  public parentPrefix(): string {
-    return this.toString() + ".";
   }
   public registerNewNamedTemplate(name: string, template: TypeTreeNodeTemplate) {
     this.namedTemplates.set(name, template);
   }
   public getChildTreeNode(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
     const id = `#${name}%(${args.map((arg) => arg.toString()).join("$")})`;
-    const cached = this.childTreeNodeCache.get(id);
-    if (cached !== undefined) {
-      return cached;
-    }
     const template = this.namedTemplates.get(name);
     if (template === undefined) {
       return undefined;
     }
     const node = template.create(args);
-    this.childTreeNodeCache.set(id, node);
     return node;
   }
   public resolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
@@ -104,19 +64,62 @@ export class TypeTreeNode {
     }
     return result;
   }
-  public forceInstanceType(): IType {
-    const result = this.typeReference;
-    if (result === undefined) {
-      throw new Error();
+}
+export class TypeTreeNode {
+  public rootTypeTreeNode: TypeTreeNode;
+  public args: TypeTreeNode[];
+  public treeNodeName: string;
+  public kind: TypeTreeNodeKind;
+  public parent: TypeTreeNode | undefined;
+  public typeCheckingType: ITypeCheckingType | undefined;
+  public typeProvider: TypeProvider;
+  public templateManager: TemplateManager;
+  constructor(parent: TypeTreeNode | undefined, args: TypeTreeNode[], treeNodeName: string, kind: TypeTreeNodeKind, typeCheckingType?: ITypeCheckingType, templateManager?: TemplateManager) {
+    this.typeCheckingType = typeCheckingType;
+    const tm = templateManager || new TemplateManager(parent);
+    if (parent !== undefined) {
+      this.rootTypeTreeNode = parent.rootTypeTreeNode;
+      this.typeProvider = parent.typeProvider;
+    } else {
+      this.rootTypeTreeNode = this;
+      this.typeProvider = new TypeProvider();
     }
-    return this.typeProvider.get(result);
+    this.parent = parent;
+    this.args = args;
+    this.treeNodeName = treeNodeName;
+    this.kind = kind;
+    this.templateManager = tm;
   }
-  public get type(): IType {
-    const typeReference = this.typeReference;
-    if (typeReference === undefined) {
-      throw new Error();
+  public toString(): string {
+    const parent = this.parent;
+    if (parent === undefined) {
+      return this.treeNodeName;
+    } else {
+      if (this.args.length > 0) {
+        return parent.parentPrefix() + this.treeNodeName + "<" + this.args.map((a) => a.toString()).join(", ") + ">";
+      } else {
+        return parent.parentPrefix() + this.treeNodeName;
+      }
     }
-    return this.typeProvider.get(typeReference);
+  }
+  public parentPrefix(): string {
+    return this.toString() + ".";
+  }
+
+  public registerNewNamedTemplate(name: string, template: TypeTreeNodeTemplate) {
+    this.templateManager.registerNewNamedTemplate(name, template);
+  }
+  public getChildTreeNode(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
+    return this.templateManager.getChildTreeNode(name, args);
+  }
+  public resolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode | undefined {
+    return this.templateManager.resolve(name, args);
+  }
+  public hsaNamedTemplate(name: string): boolean {
+    return this.templateManager.hsaNamedTemplate(name);
+  }
+  public forceResolve(name: string, args: TypeTreeNode[] = []): TypeTreeNode {
+    return this.templateManager.forceResolve(name, args);
   }
 }
 export class GlobalTypeTreeNode extends TypeTreeNode {

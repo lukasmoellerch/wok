@@ -7,6 +7,7 @@ import { ExpressionParser } from "./Compiler/Frontend/Expression Parsing/Express
 import { OperatorScope } from "./Compiler/Frontend/Expression Parsing/OperatorScope";
 import { OperatorScopeBuilder } from "./Compiler/Frontend/Expression Parsing/OperatorScopeBuilder";
 import { IRCompiler } from "./Compiler/Frontend/IRCompilation/Compiler";
+// import { IRCompiler } from "./Compiler/Frontend/IRCompilation/Compiler";
 import { Lexer } from "./Compiler/Frontend/Lexer/Lexer";
 import { Parser } from "./Compiler/Frontend/Parser/Parser";
 import { TypeResolver } from "./Compiler/Frontend/Type Scope/TypeResolver";
@@ -39,7 +40,7 @@ export default async function main() {
     console.log(file);
   });
   return;*/
-  const basePathString = path.resolve(process.argv[2] || "./").toString();
+  const basePathString = path.resolve(process.argv[2] || "./example/main.wok").toString();
 
   const content = await promisify(readFile)(basePathString || "testFile");
   const lexer = new Lexer(basePathString, content.toString());
@@ -72,8 +73,7 @@ export default async function main() {
   typeChecker.walkSourceFile(result);
   const implictConversionWrapper = new ImplictConversionWrapper();
   implictConversionWrapper.walkSourceFile(result);
-  const dependencyAnalyzer = new DependencyAnalyzer(parser.errors);
-  dependencyAnalyzer.walkSourceFile(result);
+
   if (process.argv.includes("--print-ast")) {
     process.stdout.write(result.toString());
   }
@@ -81,9 +81,11 @@ export default async function main() {
     process.stdout.write(errorFormatter.toString());
     return;
   }
+  const dependencyAnalyzer = new DependencyAnalyzer(parser.errors);
+  dependencyAnalyzer.analyze(result, globalTypeScope.typeProvider);
   if (process.argv.includes("--print-tasks")) {
     for (const task of dependencyAnalyzer.compilerTasks) {
-      process.stdout.write(task.toString() + "\n");
+      console.log(task.toString());
     }
   }
   const irCompiler = new IRCompiler(globalTypeScope, dependencyAnalyzer.compilerTasks);

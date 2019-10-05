@@ -2,6 +2,7 @@ import * as IR from "../../IR/AST";
 import { TypedArrayBytestreamConsumer } from "../../Targets/WASMTarget/WASM/Encoding/TypedArrayBytestreamConsumer";
 import { encodeUTF8String } from "../../Targets/WASMTarget/WASM/Encoding/Utils";
 import { ILValue } from "../AST/AST";
+import { GenericTypeVariableScope, ITypeCheckingType } from "../AST/ExpressionType";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { Block } from "../AST/Nodes/Block";
@@ -27,13 +28,13 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
+import { TypeProvider } from "../Type Scope/TypeProvider";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { ClassType } from "../Type/ClassType";
-import { FunctionType } from "../Type/FunctionType";
-import { NativeIntegerType, PointerType, StringType } from "../Type/NativeType";
+import { functionTemplate, FunctionType } from "../Type/FunctionType";
+import { NativeIntegerType, PointerType, StringType, TypeCheckingNativeIntegerType } from "../Type/NativeType";
 import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
-import { VoidType } from "../Type/VoidType";
 import { VariableScopeEntry, VariableScopeEntryType } from "../VariableScope/VariableScope";
 import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileStart, CompileUnboundFunctionTask } from "./CompilerTask";
 interface ICompilerLValue {
@@ -236,7 +237,8 @@ class IRFunctionCompilationEnvironment {
   public declaration: IR.IInternalFunctionDeclaration;
   public irFunction: IR.IInternalFunctionDefinition;
   public blockArrayStack: IR.Block[][];
-  constructor(functionIdentifier: string, functionType: FunctionType, tableElement: boolean) {
+  public genericTypeVariableScope: GenericTypeVariableScope = new GenericTypeVariableScope();
+  constructor(private typeProvider: TypeProvider, functionIdentifier: string, functionType: FunctionType, tableElement: boolean) {
     const irFunctionType = functionType.irFunctionType;
     this.declaration = {
       identifier: functionIdentifier,
@@ -267,7 +269,7 @@ class IRFunctionCompilationEnvironment {
     if (type === undefined) {
       throw new Error();
     }
-    const irValue = this.generateValueOfType(type);
+    const irValue = this.generateValueOfType(this.resolve(type));
     irValue.name = entry.str;
     this.entryIndexValueIndexMapping.set(index, irValue.index);
     return irValue;
@@ -370,6 +372,11 @@ class IRFunctionCompilationEnvironment {
   public popBlock() {
     this.blockArrayStack.pop();
   }
+  public resolve(type: ITypeCheckingType): IType {
+    const ref = type.compilationType(this.typeProvider, this.genericTypeVariableScope);
+    const t = this.typeProvider.get(ref);
+    return t;
+  }
 }
 class CompilerGlobal {
   constructor(public baseOffset: number, public type: IType) { }
@@ -389,9 +396,13 @@ export class IRCompiler {
   private methodTaskMap: Map<IType, Map<string, Map<number, CompileMethod>>> = new Map();
   private globals: Map<string, CompilerGlobal> = new Map();
   private globalsSize = -1;
-  constructor(private rootTypeTreeNode: TypeTreeNode, private tasks: CompilerTask[]) { }
+  private typeProvider: TypeProvider;
+  constructor(private rootTypeTreeNode: TypeTreeNode, private tasks: CompilerTask[]) {
+    this.typeProvider = rootTypeTreeNode.typeProvider;
+  }
 
   public compile() {
+    const emptyScope = new GenericTypeVariableScope();
     function getMapDefault<K, V>(map: Map<K, V>, key: K, def: V): V {
       const value = map.get(key);
       if (value !== undefined) {
@@ -416,10 +427,11 @@ export class IRCompiler {
       } else if (task instanceof CompileStart) {
         let startIndex = 0;
         for (const entry of task.sourceFile.variables) {
-          const type = entry.type;
-          if (type === undefined) {
+          const tct = entry.type;
+          if (tct === undefined) {
             throw new Error();
           }
+          const type = this.typeProvider.get(tct.compilationType(this.typeProvider, emptyScope));
           if (entry.str === "HEAP_START") {
             const global = new CompilerGlobal(-100, type);
             this.globals.set(entry.str, global);
@@ -548,18 +560,18 @@ export class IRCompiler {
       throw new Error();
     }
     const identifier = this.getMethodFunctionName(type, name, arity);
-    const environment = new IRFunctionCompilationEnvironment(identifier, functionType, tableElement);
+    const environment = new IRFunctionCompilationEnvironment(this.typeProvider, identifier, functionType, tableElement);
     if (type instanceof PointerType) {
       if (name === "store") {
         // this argument
         const thisValue = environment.generateValueOfType(type);
-        const arg = environment.generateValueOfType(type.stored);
-        generateStoreInstructions(environment, type.stored, arg, thisValue.irVariables[0]);
+        const arg = environment.generateValueOfType(this.typeProvider.get(type.stored));
+        generateStoreInstructions(environment, this.typeProvider.get(type.stored), arg, thisValue.irVariables[0]);
       } else if (name === "load") {
         // this argument
         const thisValue = environment.generateValueOfType(type);
-        const resultValue = environment.generateValueOfType(type.stored);
-        generateLoadInstructions(environment, type.stored, resultValue, thisValue.irVariables[0]);
+        const resultValue = environment.generateValueOfType(this.typeProvider.get(type.stored));
+        generateLoadInstructions(environment, this.typeProvider.get(type.stored), resultValue, thisValue.irVariables[0]);
         environment.writeStatement([IR.InstructionType.return, resultValue.irVariables]);
       }
     } else if (type instanceof StructType) {
@@ -568,10 +580,11 @@ export class IRCompiler {
       if (declaration === undefined) {
         throw new Error();
       }
+      /*
       const thisEntry = declaration.thisEntry;
       if (thisEntry !== undefined) {
         thisEntry.type = type;
-      }
+      }*/
       const block = declaration.block;
       if (block === undefined) {
         throw new Error();
@@ -605,9 +618,9 @@ export class IRCompiler {
         throw new Error();
       }
       const thisEntry = declaration.thisEntry;
-      if (thisEntry !== undefined) {
+      /*if (thisEntry !== undefined) {
         thisEntry.type = type;
-      }
+      }*/
       const block = declaration.block;
       if (block === undefined) {
         throw new Error();
@@ -648,8 +661,8 @@ export class IRCompiler {
   private compileStart(sourceFile: SourceFile) {
     const exportName = "start";
     const identifier = "_start";
-    const functionType = new FunctionType(this.rootTypeTreeNode, [], new VoidType(this.rootTypeTreeNode), undefined);
-    const environment = new IRFunctionCompilationEnvironment(identifier, functionType, false);
+    const functionType = this.typeProvider.specialize(functionTemplate, [this.typeProvider.voidIdentifier, this.typeProvider.voidIdentifier]);
+    const environment = new IRFunctionCompilationEnvironment(this.typeProvider, identifier, this.typeProvider.get(functionType) as FunctionType, false);
     for (const statement of sourceFile.topLevelDeclarations) {
       if (!(statement instanceof Statement)) {
         continue;
@@ -666,6 +679,7 @@ export class IRCompiler {
     this.compilationUnit.functionCode.push(environment.irFunction);
   }
   private compileUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration, tableElement: boolean) {
+    const emptyScope = new GenericTypeVariableScope();
     const foreignName = this.checkForeign(unboundFunctionDeclaration.decoratorMap);
     if (foreignName !== undefined) {
       const externalName = foreignName;
@@ -674,7 +688,7 @@ export class IRCompiler {
         identifier: name,
         externalName,
         tableElement,
-        type: unboundFunctionDeclaration.getFunctionType(this.rootTypeTreeNode).irFunctionType,
+        type: (this.typeProvider.get(unboundFunctionDeclaration.getFunctionType(this.rootTypeTreeNode).compilationType(this.typeProvider, emptyScope)) as FunctionType).irFunctionType,
       };
       this.compilationUnit.externalFunctionDeclarations.push(externalFunctionDeclaration);
       return;
@@ -708,7 +722,7 @@ export class IRCompiler {
     const block = unboundFunctionDeclaration.block;
     const identifier = this.getUnboundFunctionName(unboundFunctionDeclaration);
     const functionType = unboundFunctionDeclaration.getFunctionType(this.rootTypeTreeNode);
-    const environment = new IRFunctionCompilationEnvironment(identifier, functionType, tableElement);
+    const environment = new IRFunctionCompilationEnvironment(this.typeProvider, identifier, (this.typeProvider.get(unboundFunctionDeclaration.getFunctionType(this.rootTypeTreeNode).compilationType(this.typeProvider, emptyScope)) as FunctionType), tableElement);
     for (const entry of entries) {
       if (entry.entryType === VariableScopeEntryType.argument) {
         environment.generateValueForEntry(entry);
@@ -935,7 +949,7 @@ export class IRCompiler {
     if (lValue instanceof VariableReferenceExpression) {
       return this.getLValueOfVariableReferenceExpression(env, lValue);
     } else if (lValue instanceof MemberReferenceExpression) {
-      const lhsType = lValue.lhs.forceType();
+      const lhsType = env.resolve(lValue.lhs.forceType());
       if (lhsType instanceof StructType) {
         const lhs = this.getExpressionAsValue(env, lValue.lhs);
         return this.getStructMemberAsValue(env, lhs.getAsIRValue(), lValue.memberToken.content);
@@ -1001,7 +1015,7 @@ export class IRCompiler {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const declaration = entry.declaration as UnboundFunctionDeclaration;
       const name = this.getUnboundFunctionName(declaration);
-      const temporary = env.generateValueOfType(declaration.getFunctionType(this.rootTypeTreeNode));
+      const temporary = env.generateValueOfType(env.resolve(declaration.getFunctionType(this.rootTypeTreeNode)));
       env.writeStatement([IR.InstructionType.setToFunction, temporary.irVariables[0], name]);
       return temporary.toCompilerDirectIRValue(env);
     } else {
@@ -1028,7 +1042,7 @@ export class IRCompiler {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const declaration = entry.declaration as UnboundFunctionDeclaration;
       const name = this.getUnboundFunctionName(declaration);
-      const temporary = env.generateValueOfType(declaration.getFunctionType(this.rootTypeTreeNode));
+      const temporary = env.generateValueOfType(env.resolve(declaration.getFunctionType(this.rootTypeTreeNode)));
       env.writeStatement([IR.InstructionType.setToFunction, temporary.irVariables[0], name]);
       return temporary;
     } else {
@@ -1040,7 +1054,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileBinaryOperatorExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileBinaryOperatorExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1051,7 +1065,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compilePostfixUnaryOperatorExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compilePostfixUnaryOperatorExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1062,7 +1076,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compilePrefixUnaryOperatorExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compilePrefixUnaryOperatorExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1073,7 +1087,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileIntegerLiteralExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileIntegerLiteralExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1084,7 +1098,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileFloatingPointLiteralExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileFloatingPointLiteralExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1095,7 +1109,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileStringLiteralExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileStringLiteralExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1106,7 +1120,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileVariableReferenceExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileVariableReferenceExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1117,7 +1131,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileImplictConversionExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileImplictConversionExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1128,7 +1142,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileIdentifierCallExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileIdentifierCallExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1145,7 +1159,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileConstructorCallExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileConstructorCallExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1165,7 +1179,7 @@ export class IRCompiler {
       if (target instanceof CompilerDirectIRValue) {
         this.compileMemberCallExpression(env, expression, target.irValue);
       } else if (target !== undefined) {
-        const temporary = env.generateValueOfType(expression.forceType());
+        const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
         this.compileMemberCallExpression(env, expression, temporary);
         target.writeIRValue(temporary);
       } else {
@@ -1176,7 +1190,7 @@ export class IRCompiler {
     throw new Error();
   }
   private compileConstructorCallExpression(env: IRFunctionCompilationEnvironment, expression: ConstructorCallExpression, target: IRValue | undefined) {
-    const constructedType = expression.constructedType;
+    const constructedType = env.resolve(expression.constructedType);
     if (constructedType instanceof StructType) {
       if (constructedType.constructorDeclaration === undefined) {
         if (target === undefined) {
@@ -1184,7 +1198,7 @@ export class IRCompiler {
         }
         let propertyIndex = 0;
         for (const arg of expression.args) {
-          const propertyName = constructedType.properties[propertyIndex];
+          const propertyName = constructedType.propertyNames[propertyIndex];
           const value = this.getStructMemberAsValue(env, target, propertyName);
           this.compileExpression(env, arg, value);
           propertyIndex++;
@@ -1238,45 +1252,45 @@ export class IRCompiler {
   }
   private getExpressionAsValue(env: IRFunctionCompilationEnvironment, expression: Expression): ICompilerRValue {
     if (expression instanceof BinaryOperatorExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileBinaryOperatorExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof PostfixUnaryOperatorExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compilePostfixUnaryOperatorExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof PrefixUnaryOperatorExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compilePrefixUnaryOperatorExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof IntegerLiteralExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileIntegerLiteralExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof StringLiteralExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileStringLiteralExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof FloatingPointLiteralExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileFloatingPointLiteralExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof ImplictConversionExpression) {
-      const temporary = env.generateValueOfType(expression.to);
+      const temporary = env.generateValueOfType(env.resolve(expression.to));
       this.compileImplictConversionExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof VariableReferenceExpression) {
       return this.getIRValueOfVariableReferenceExpression(env, expression).toCompilerDirectIRValue(env);
     } else if (expression instanceof IdentifierCallExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileIdentifierCallExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof ConstructorCallExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileConstructorCallExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     } else if (expression instanceof MemberReferenceExpression) {
-      const type = expression.lhs.forceType();
+      const type = env.resolve(expression.lhs.forceType());
       if (type instanceof StructType) {
         const lhs = this.getExpressionAsValue(env, expression.lhs);
         return this.getStructMemberAsValue(env, lhs.getAsIRValue(), expression.memberToken.content);
@@ -1300,7 +1314,7 @@ export class IRCompiler {
         throw new Error();
       }
     } else if (expression instanceof MemberCallExpression) {
-      const temporary = env.generateValueOfType(expression.forceType());
+      const temporary = env.generateValueOfType(env.resolve(expression.forceType()));
       this.compileMemberCallExpression(env, expression, temporary);
       return temporary.toCompilerDirectIRValue(env);
     }
@@ -1333,7 +1347,7 @@ export class IRCompiler {
     const arity = expression.args.length;
     const lhs = this.getExpressionAsValue(env, expression.lhs);
     const args = expression.args.map((arg) => this.getExpressionAsValue(env, arg).getAsIRValue());
-    this.compileMemberCall(env, lhs.getAsIRValue(), type, methodName, arity, args, target);
+    this.compileMemberCall(env, lhs.getAsIRValue(), env.resolve(type), methodName, arity, args, target);
   }
   private compileMemberCall(env: IRFunctionCompilationEnvironment, lhs: IRValue, type: IType, method: string, arity: number, args: IRValue[], target: IRValue | undefined) {
     const irName = this.getMethodFunctionName(type, method, arity);
@@ -1364,26 +1378,28 @@ export class IRCompiler {
   private compileImplictConversionExpression(env: IRFunctionCompilationEnvironment, expression: ImplictConversionExpression, target: IRValue) {
     const fromType = expression.from;
     const toType = expression.to;
-    if (fromType instanceof NativeIntegerType && toType instanceof NativeIntegerType) {
+    if (fromType instanceof TypeCheckingNativeIntegerType && toType instanceof TypeCheckingNativeIntegerType) {
       const value = this.getExpressionAsValue(env, expression.value);
       const [targetIRVariable] = target.irVariables;
       const [valueIRVariable] = value.getAsIRValue().irVariables;
-      const [fromIRType] = fromType.irVariableTypes();
-      const [toIRType] = toType.irVariableTypes();
+      const [fromIRType] = env.resolve(fromType).irVariableTypes();
+      const [toIRType] = env.resolve(toType).irVariableTypes();
       if (fromIRType === toIRType) {
         env.writeStatement([IR.InstructionType.copy, targetIRVariable, valueIRVariable]);
         // env.writeStatement([IR.InstructionType.phi, targetIRVariable, [valueIRVariable]]);
       } else {
-        env.writeStatement([IR.InstructionType.convert, targetIRVariable, valueIRVariable, toType.irVariableTypes()[0]]);
+        env.writeStatement([IR.InstructionType.convert, targetIRVariable, valueIRVariable, env.resolve(toType).irVariableTypes()[0]]);
       }
+    } else {
+      throw new Error();
     }
   }
   private compileBinaryOperatorExpression(env: IRFunctionCompilationEnvironment, binaryOperatorExpression: BinaryOperatorExpression, target: IRValue | undefined) {
-    const lhsType = binaryOperatorExpression.lhs.forceType();
-    const rhsType = binaryOperatorExpression.rhs.forceType();
-    const resultType = binaryOperatorExpression.forceType();
+    const lhsType = env.resolve(binaryOperatorExpression.lhs.forceType());
+    const rhsType = env.resolve(binaryOperatorExpression.rhs.forceType());
+    const resultType = env.resolve(binaryOperatorExpression.forceType());
     const operator = binaryOperatorExpression.operator.content;
-    if (lhsType instanceof NativeIntegerType && lhsType.equals(rhsType) && lhsType.equals(resultType)) {
+    if (lhsType instanceof NativeIntegerType && lhsType.equals(rhsType)) {
       if (operator === "+") {
         if (target === undefined) {
           this.compileExpression(env, binaryOperatorExpression.lhs);
@@ -1525,16 +1541,17 @@ export class IRCompiler {
 
   }
   private compileUnboundFunctionCall(env: IRFunctionCompilationEnvironment, entry: VariableScopeEntry, args: Expression[], target: IRValue | undefined) {
-
+    const emptyScope = new GenericTypeVariableScope();
     const irVariableArray: number[] = [];
     for (const arg of args) {
       const argValue = this.getExpressionAsValue(env, arg);
       irVariableArray.push(...argValue.getAsIRValue().irVariables);
     }
-    const entryType = entry.type;
-    if (entryType === undefined) {
+    const entryTypeTC = entry.type;
+    if (entryTypeTC === undefined) {
       throw new Error();
     }
+    const entryType = this.typeProvider.get(entryTypeTC.compilationType(this.typeProvider, emptyScope));
     if (!(entryType instanceof FunctionType)) {
       throw new Error();
     }
@@ -1575,7 +1592,7 @@ export class IRCompiler {
     }
     const valueIndex = env.values.length;
     const indicies = propertyIndices.map((index) => struct.irVariables[index]);
-    const propertyValue = new IRValue(valueIndex, indicies, propertyType);
+    const propertyValue = new IRValue(valueIndex, indicies, this.typeProvider.get(propertyType));
     return propertyValue.toCompilerDirectIRValue(env);
   }
   private getClassMemberAsValue(env: IRFunctionCompilationEnvironment, classInstance: IRValue, propertyName: string): CompilerPointerIRValue {

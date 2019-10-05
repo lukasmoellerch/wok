@@ -1,10 +1,10 @@
-import { IType } from "../../Type/Type";
+import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class ConstructorCallExpression extends Expression {
-  public constructedType: IType;
+  public constructedType: ITypeCheckingType;
   public args: Expression[];
-  constructor(constructedType: IType, args: Expression[]) {
+  constructor(constructedType: ITypeCheckingType, args: Expression[]) {
     super();
     this.constructedType = constructedType;
     if (constructedType.toString() === "void") {

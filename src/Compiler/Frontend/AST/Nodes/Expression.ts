@@ -1,11 +1,11 @@
-import { IType } from "../../Type/Type";
 import { ASTNode } from "../ASTNode";
 import { TypeAttribute } from "../Attributes/TypeAttribute";
+import { ITypeCheckingType } from "../ExpressionType";
 import { ImplictConversionExpression } from "./ImplictConversionExpression";
 export class Expression extends ASTNode {
-  public type: IType | undefined;
-  public implictConversionTargetType: IType | undefined;
-  public setType(type: IType) {
+  public type: ITypeCheckingType | undefined;
+  public implictConversionTargetType: ITypeCheckingType | undefined;
+  public setType(type: ITypeCheckingType) {
     this.type = type;
     this.setAttribute(new TypeAttribute(type));
   }
@@ -21,7 +21,7 @@ export class Expression extends ASTNode {
       return this;
     }
   }
-  public forceType(): IType {
-    return this.type as IType;
+  public forceType(): ITypeCheckingType {
+    return this.type as ITypeCheckingType;
   }
 }

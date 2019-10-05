@@ -1,10 +1,10 @@
 import { Token } from "../../Lexer/Token";
-import { IType } from "../../Type/Type";
 import { ILValue } from "../AST";
+import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class PlaceholderExpression extends Expression implements ILValue {
-  public rhsType: IType | undefined;
+  public rhsType: ITypeCheckingType | undefined;
   public lvalue: undefined = undefined;
   public token: Token;
   constructor(token: Token) {

@@ -1,11 +1,11 @@
 import chalk from "chalk";
-import { IType } from "../../Type/Type";
 import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionWrapper";
 import { IAttribute } from "../ASTNode";
+import { ITypeCheckingType } from "../ExpressionType";
 export class TypeAttribute implements IAttribute {
   public kind: "type" = "type";
-  public wrapper: TypeExpressionWrapper | IType;
-  constructor(wrapper: TypeExpressionWrapper | IType) {
+  public wrapper: TypeExpressionWrapper | ITypeCheckingType;
+  constructor(wrapper: TypeExpressionWrapper | ITypeCheckingType) {
     this.wrapper = wrapper;
   }
   public toString(): string {

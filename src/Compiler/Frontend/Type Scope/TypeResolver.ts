@@ -1,7 +1,7 @@
 import { ASTWalker } from "../AST/ASTWalker";
+import { ITypeCheckingType } from "../AST/ExpressionType";
 import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclaration";
 import { CompilerError, TypeHasNoMemberCalledError, UndeclaredTypeUsageError } from "../ErrorHandling/CompilerError";
-import { IType } from "../Type/Type";
 import { TypeExpression } from "../Type/UnresolvedType/TypeExpression";
 import { TypeExpressionWrapper } from "../Type/UnresolvedType/TypeExpressionWrapper";
 import { TypeMemberExpression } from "../Type/UnresolvedType/TypeMemberExpression";
@@ -14,12 +14,12 @@ export class TypeResolver extends ASTWalker {
     super();
     this.errors = errors;
   }
-  public resolveTypeExpression(expression: TypeExpression, node: TypeTreeNode): IType {
+  public resolveTypeExpression(expression: TypeExpression, node: TypeTreeNode): ITypeCheckingType {
     const q = this.resolveTypeExpressionToNode(expression, node);
     if (q === undefined) {
       throw new Error();
     }
-    const type = q.type;
+    const type = q.typeCheckingType;
     if (type === undefined) {
       throw new Error();
     }
@@ -62,6 +62,9 @@ export class TypeResolver extends ASTWalker {
     }
     const type = this.resolveTypeExpression(expression, scope);
     typeExpressionWrapper.type = type;
+    if (type === undefined) {
+      debugger;
+    }
     return typeExpressionWrapper;
   }
   protected walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {

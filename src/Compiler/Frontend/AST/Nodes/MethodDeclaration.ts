@@ -1,11 +1,11 @@
 import { Token } from "../../Lexer/Token";
 import { TypeTreeNode } from "../../Type Scope/TypeScope";
-import { FunctionType } from "../../Type/FunctionType";
-import { IType } from "../../Type/Type";
-import { VoidType } from "../../Type/VoidType";
+import { TypeCheckingFunctionType } from "../../Type/FunctionType";
+import { TypeCheckingVoidType } from "../../Type/VoidType";
 import { VariableScopeEntry } from "../../VariableScope/VariableScope";
 import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
+import { ITypeCheckingType } from "../ExpressionType";
 import { Block } from "./Block";
 import { Decorator } from "./Decorator";
 import { ExpressionWrapper } from "./ExpressionWrapper";
@@ -49,10 +49,10 @@ export class MethodDeclaration extends ASTNode implements ITopLevelDeclaration {
       }
     }
   }
-  public getFunctionType(rootTypeTreeNode: TypeTreeNode, thisType: IType): FunctionType {
-    const argTypes = this.argumentDeclarations.map((a) => a.type.type as IType);
+  public getFunctionType(node: TypeTreeNode, thisType: ITypeCheckingType): TypeCheckingFunctionType {
+    const argTypes = this.argumentDeclarations.map((a) => a.type.type as ITypeCheckingType);
     const resultDeclaration = this.resultDeclaration;
-    const resultType = resultDeclaration !== undefined ? (resultDeclaration.type.type || new VoidType(rootTypeTreeNode)) : new VoidType(rootTypeTreeNode);
-    return new FunctionType(rootTypeTreeNode, argTypes, resultType, thisType);
+    const resultType = resultDeclaration !== undefined ? (resultDeclaration.type.type || new TypeCheckingVoidType(node)) : new TypeCheckingVoidType(node);
+    return new TypeCheckingFunctionType(node, argTypes, resultType, thisType);
   }
 }

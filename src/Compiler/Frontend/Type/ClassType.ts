@@ -1,12 +1,52 @@
 import { MemoryIRType, Type } from "../../IR/AST";
+import { GenericTypeVariableScope, ITypeCheckingType } from "../AST/ExpressionType";
 import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ConstantFieldDeclaration } from "../AST/Nodes/ConstantFieldDeclaration";
 import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
 import { VariableFieldDeclaration } from "../AST/Nodes/VariableFieldDeclaration";
+import { SpecializedTypeReference, TypeProvider } from "../Type Scope/TypeProvider";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
-import { FunctionType } from "./FunctionType";
+import { FunctionType, TypeCheckingFunctionType } from "./FunctionType";
 import { IType, MemoryLocation } from "./Type";
+export class TypeCheckingClassType implements ITypeCheckingType {
+  public declaration: ClassDeclaration;
+  public node: TypeTreeNode;
+  public name: string;
+  public memberMap: Map<string, ITypeCheckingType> = new Map();
+  public operatorMap: Map<string, ITypeCheckingType> = new Map();
+  constructor(name: string, node: TypeTreeNode, declaration: ClassDeclaration) {
+    this.name = name;
+    this.node = node;
+    this.declaration = declaration;
+    for (const decl of declaration.declarationBlock.declarations) {
+      if (decl instanceof MethodDeclaration) {
+        this.memberMap.set(decl.name.content, decl.getFunctionType(this.node, this));
+      }
+      if (decl instanceof VariableFieldDeclaration) {
+        this.memberMap.set(decl.nameToken.content, decl.typeHint.type as ITypeCheckingType);
+      }
+      if (decl instanceof ConstantFieldDeclaration) {
+        this.memberMap.set(decl.nameToken.content, decl.typeHint.type as ITypeCheckingType);
+      }
 
+    }
+  }
+  public equals(_other: ITypeCheckingType): boolean {
+    return false;
+  }
+  public typeOfConstructor(): TypeCheckingFunctionType | undefined {
+    return undefined;
+  }
+  public typeOfMember(_str: string): ITypeCheckingType | undefined {
+    return;
+  }
+  public typeOfOperator(_str: string): ITypeCheckingType | undefined {
+    throw new Error("Method not implemented.");
+  }
+  public compilationType(_provider: TypeProvider, _scope: GenericTypeVariableScope): SpecializedTypeReference {
+    throw new Error("Method not implemented.");
+  }
+}
 export class ClassType implements IType {
   public name: string;
   public node: TypeTreeNode;
@@ -23,11 +63,12 @@ export class ClassType implements IType {
     new MemoryLocation(0, MemoryIRType.ptr),
   ];
   private sizeData: number = 8;
-  constructor(name: string, node: TypeTreeNode, declaration: ClassDeclaration) {
-    this.name = name;
-    this.node = node;
-    this.declaration = declaration;
-    for (const methodDeclaration of declaration.declarationBlock.declarations) {
+  private genericVariableScope: GenericTypeVariableScope = new GenericTypeVariableScope();
+  constructor(private typeCheckingType: TypeCheckingClassType) {
+    this.name = typeCheckingType.name;
+    this.node = typeCheckingType.node;
+    this.declaration = typeCheckingType.declaration;
+    for (const methodDeclaration of this.declaration.declarationBlock.declarations) {
       if (!(methodDeclaration instanceof MethodDeclaration)) {
         continue;
       }
@@ -46,7 +87,8 @@ export class ClassType implements IType {
       if (childType === undefined) {
         continue;
       }
-      typeReferences.add(childType);
+      throw new Error();
+      // typeReferences.add(childType.compilationType(this.genericVariableScope));
     }
     return typeReferences;
   }
@@ -62,7 +104,8 @@ export class ClassType implements IType {
       if (childType === undefined) {
         continue;
       }
-      memoryReferences.add(childType);
+      throw new Error();
+      // memoryReferences.add(childType.compilationType(this.genericVariableScope));
     }
     return memoryReferences;
   }
@@ -83,8 +126,10 @@ export class ClassType implements IType {
         }
         proeprtyTypes.push(type);
       }
-      const functionType = new FunctionType(this.node.rootTypeTreeNode, proeprtyTypes, this, undefined);
-      return functionType;
+      throw new Error();
+      // const functionType = new FunctionType;
+      // (this.node.rootTypeTreeNode, proeprtyTypes, this, undefined);
+      // return functionType;
     }
     return undefined;
   }
@@ -103,7 +148,8 @@ export class ClassType implements IType {
         continue;
       }
       this.properties.push(name);
-      this.propertyTypeMap.set(name, type);
+      throw new Error();
+      // this.propertyTypeMap.set(name, type.compilationType(this.genericVariableScope));
     }
     this.propertyMappingPopulated = true;
   }
@@ -117,7 +163,8 @@ export class ClassType implements IType {
         }
         const propertyName = declaration.nameToken.content;
         this.properties.push(propertyName);
-        this.propertyTypeMap.set(propertyName, type);
+        throw new Error();
+        // this.propertyTypeMap.set(propertyName, type.compilationType(this.genericVariableScope));
       }
     }
     this.instanceMemoryMapData = new Map();
@@ -153,8 +200,10 @@ export class ClassType implements IType {
     }
     const methodDeclaration = this.methodDeclarationMap.get(str);
     if (methodDeclaration !== undefined) {
-      const type = methodDeclaration.getFunctionType(this.node.rootTypeTreeNode, this);
-      return type;
+      const type = methodDeclaration.getFunctionType;
+      throw new Error();
+      /*(this.typeCheckingType).compilationType(this.genericVariableScope);
+      return type;*/
     }
     return undefined;
   }

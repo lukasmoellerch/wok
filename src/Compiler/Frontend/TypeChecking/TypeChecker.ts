@@ -1,6 +1,7 @@
 import { ILValue } from "../AST/AST";
 import { ASTWalker } from "../AST/ASTWalker";
 import { TypeAttribute } from "../AST/Attributes/TypeAttribute";
+import { ITypeCheckingType } from "../AST/ExpressionType";
 import { AssignmentStatement } from "../AST/Nodes/AssignmentStatement";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
@@ -25,48 +26,48 @@ import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpre
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
 import { CompilerError, MemberIsNotCallableError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
-import { FunctionType } from "../Type/FunctionType";
+import { TypeCheckingFunctionType } from "../Type/FunctionType";
+import { TypeCheckingNativeIntegerType, TypeCheckingStringType } from "../Type/NativeType";
 import { StructType } from "../Type/StructType";
-import { IType } from "../Type/Type";
-import { VoidType } from "../Type/VoidType";
+import { TypeCheckingVoidType } from "../Type/VoidType";
 import { VariableScopeEntryType } from "../VariableScope/VariableScope";
 
 export class TypeChecker extends ASTWalker {
   public errors: CompilerError[];
-  public u8: IType;
-  public u16: IType;
-  public u32: IType;
-  public u64: IType;
-  public i8: IType;
-  public i16: IType;
-  public i32: IType;
-  public i64: IType;
-  public bool: IType;
-  public integer: IType;
-  public unsignedInteger: IType;
-  public string: IType;
+  public u8: ITypeCheckingType;
+  public u16: ITypeCheckingType;
+  public u32: ITypeCheckingType;
+  public u64: ITypeCheckingType;
+  public i8: ITypeCheckingType;
+  public i16: ITypeCheckingType;
+  public i32: ITypeCheckingType;
+  public i64: ITypeCheckingType;
+  public bool: ITypeCheckingType;
+  public integer: ITypeCheckingType;
+  public unsignedInteger: ITypeCheckingType;
+  public string: ITypeCheckingType;
   public rootTypeTreeNode: TypeTreeNode;
   constructor(rootTypeTreeNode: TypeTreeNode, errors: CompilerError[]) {
     super();
     this.rootTypeTreeNode = rootTypeTreeNode;
     this.errors = errors;
 
-    this.u8 = this.rootTypeTreeNode.forceResolve("UInt8").forceInstanceType();
-    this.u16 = this.rootTypeTreeNode.forceResolve("UInt16").forceInstanceType();
-    this.u32 = this.rootTypeTreeNode.forceResolve("UInt32").forceInstanceType();
-    this.u64 = this.rootTypeTreeNode.forceResolve("UInt64").forceInstanceType();
+    this.u8 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, false, 1);
+    this.u16 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, false, 2);
+    this.u32 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, false, 4);
+    this.u64 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, false, 8);
 
-    this.i8 = this.rootTypeTreeNode.forceResolve("Int8").forceInstanceType();
-    this.i16 = this.rootTypeTreeNode.forceResolve("Int16").forceInstanceType();
-    this.i32 = this.rootTypeTreeNode.forceResolve("Int32").forceInstanceType();
-    this.i64 = this.rootTypeTreeNode.forceResolve("Int64").forceInstanceType();
+    this.i8 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, true, 1);
+    this.i16 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, true, 2);
+    this.i32 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, true, 4);
+    this.i64 = new TypeCheckingNativeIntegerType(rootTypeTreeNode, true, 8);
 
-    this.bool = this.rootTypeTreeNode.forceResolve("Bool").forceInstanceType();
+    this.bool = this.u8;
 
-    this.integer = this.rootTypeTreeNode.forceResolve("Int").forceInstanceType();
-    this.unsignedInteger = this.rootTypeTreeNode.forceResolve("UInt").forceInstanceType();
+    this.integer = this.i32;
+    this.unsignedInteger = this.u32;
 
-    this.string = this.rootTypeTreeNode.forceResolve("String").forceInstanceType();
+    this.string = new TypeCheckingStringType(rootTypeTreeNode);
   }
   protected walkExtensionDeclaration(_extensionDeclaration: ExtensionDeclaration) {
     return;
@@ -77,6 +78,9 @@ export class TypeChecker extends ASTWalker {
       throw new Error();
     }
     entry.type = argumentDeclaration.type.type;
+    if (entry.type instanceof TypeCheckingVoidType || entry.type === undefined) {
+      debugger;
+    }
     super.walkArgumentDeclaration(argumentDeclaration);
   }
   protected walkIfStatement(ifStatement: IfStatement) {
@@ -112,6 +116,9 @@ export class TypeChecker extends ASTWalker {
       const entry = variableDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
+        if (entry.type instanceof TypeCheckingVoidType || entry.type === undefined) {
+          debugger;
+        }
         variableDeclaration.setAttribute(new TypeAttribute(expression.forceType()));
       }
     }
@@ -124,6 +131,9 @@ export class TypeChecker extends ASTWalker {
       const entry = constantDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
+        if (entry.type instanceof TypeCheckingVoidType || entry.type === undefined) {
+          return;
+        }
         constantDeclaration.setAttribute(new TypeAttribute(expression.forceType()));
       }
     }
@@ -179,7 +189,7 @@ export class TypeChecker extends ASTWalker {
       }
     }
   }
-  private checkExpression(expression: Expression, target?: IType | undefined) {
+  private checkExpression(expression: Expression, target?: ITypeCheckingType | undefined) {
     if (expression instanceof PlaceholderExpression) {
       return;
     }
@@ -190,13 +200,13 @@ export class TypeChecker extends ASTWalker {
       const lhsType = lhs.forceType();
       const operator = expression.operator;
       const str = operator.content;
-      const operatorType = lhsType.typeOfOperator(str, 1);
+      const operatorType = lhsType.typeOfOperator(str);
       if (operatorType === undefined) {
         this.errors.push(new OperatorNotDefinedForTypeError(operator.range, lhsType.name, str));
         this.checkExpression(rhs, undefined);
         return;
       }
-      if (!(operatorType instanceof FunctionType)) {
+      if (!(operatorType instanceof TypeCheckingFunctionType)) {
         throw new Error();
       }
       const [operandType] = operatorType.args;
@@ -211,7 +221,7 @@ export class TypeChecker extends ASTWalker {
         throw new Error();
       }
       const functionType = entry.type;
-      if (!(functionType instanceof FunctionType)) {
+      if (!(functionType instanceof TypeCheckingFunctionType)) {
         throw new Error();
       }
       const argTypes = functionType.args;
@@ -252,11 +262,11 @@ export class TypeChecker extends ASTWalker {
       const operandType = operand.forceType();
       const operator = expression.operator;
       const str = operator.content;
-      const operatorType = operandType.typeOfOperator(str, 0);
+      const operatorType = operandType.typeOfOperator(str);
       if (operatorType === undefined) {
         throw new Error();
       }
-      if (!(operatorType instanceof FunctionType)) {
+      if (!(operatorType instanceof TypeCheckingFunctionType)) {
         throw new Error();
       }
       expression.setType(operatorType.result);
@@ -266,11 +276,11 @@ export class TypeChecker extends ASTWalker {
       const operandType = operand.forceType();
       const operator = expression.operator;
       const str = operator.content;
-      const operatorType = operandType.typeOfOperator(str, 0);
+      const operatorType = operandType.typeOfOperator(str);
       if (operatorType === undefined) {
         throw new Error();
       }
-      if (!(operatorType instanceof FunctionType)) {
+      if (!(operatorType instanceof TypeCheckingFunctionType)) {
         throw new Error();
       }
       expression.setType(operatorType.result);
@@ -283,14 +293,15 @@ export class TypeChecker extends ASTWalker {
       }
       const type = entry.type;
       if (type === undefined) {
-        throw new Error();
+        return;
       }
       expression.type = type;
     } else if (expression instanceof ConstructorCallExpression) {
       const constructedType = expression.constructedType;
       const argExpressions = expression.args;
-      const functionType: FunctionType | undefined = constructedType.typeOfConstructor();
-      if (!(functionType instanceof FunctionType)) {
+      const functionType: TypeCheckingFunctionType | undefined = constructedType.typeOfConstructor();
+      if (!(functionType instanceof TypeCheckingFunctionType)) {
+        return;
         throw new Error();
       }
       const argTypes = functionType.args;
@@ -307,7 +318,7 @@ export class TypeChecker extends ASTWalker {
       const memberType = lhsType.typeOfMember(expression.memberToken.content);
       if (memberType === undefined) {
         this.errors.push(new TypeHasNoMemberCalledError(expression.memberToken.range, lhsType.toString(), expression.memberToken.content));
-        expression.setType(new VoidType(this.rootTypeTreeNode));
+        expression.setType(new TypeCheckingVoidType(this.rootTypeTreeNode));
       } else {
         expression.setType(memberType);
       }
@@ -317,11 +328,11 @@ export class TypeChecker extends ASTWalker {
       const memberType = lhsType.typeOfMember(expression.memberToken.content);
       if (memberType === undefined) {
         this.errors.push(new TypeHasNoMemberCalledError(expression.memberToken.range, lhsType.toString(), expression.memberToken.content));
-        expression.setType(new VoidType(this.rootTypeTreeNode));
+        expression.setType(new TypeCheckingVoidType(this.rootTypeTreeNode));
       } else {
-        if (!(memberType instanceof FunctionType)) {
+        if (!(memberType instanceof TypeCheckingFunctionType)) {
           this.errors.push(new MemberIsNotCallableError(expression.memberToken.range, expression.memberToken.content, memberType.toString()));
-          expression.setType(new VoidType(this.rootTypeTreeNode));
+          expression.setType(new TypeCheckingVoidType(this.rootTypeTreeNode));
         } else {
           let index = 0;
           for (const arg of expression.args) {

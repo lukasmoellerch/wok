@@ -1,4 +1,5 @@
 import { ASTWalker } from "../AST/ASTWalker";
+import { GenericTypeVariableScope, ITypeCheckingType } from "../AST/ExpressionType";
 import { BinaryOperatorExpression } from "../AST/Nodes/BinaryOperatorExpression";
 import { ConstructorCallExpression } from "../AST/Nodes/ConstructorCallExpression";
 import { IdentifierCallExpression } from "../AST/Nodes/IdentifierCallExpression";
@@ -12,6 +13,7 @@ import { UnboundFunctionDeclaration } from "../AST/Nodes/UnboundFunctionDeclarat
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CircularTypeError, CompilerError } from "../ErrorHandling/CompilerError";
 import { CompileConstructor, CompileMethod, CompileOperator, CompilerTask, CompileStart, CompileUnboundFunctionTask } from "../IRCompilation/CompilerTask";
+import { TypeProvider } from "../Type Scope/TypeProvider";
 import { ClassType } from "../Type/ClassType";
 import { FunctionType } from "../Type/FunctionType";
 import { StructType } from "../Type/StructType";
@@ -83,7 +85,7 @@ class AnalyzeType extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeType)) {
       return false;
     }
-    if (!this.type.equals(other.type)) {
+    if (this.type !== other.type) {
       return false;
     }
     return true;
@@ -107,7 +109,7 @@ class AnalyzeMethod extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeMethod)) {
       return false;
     }
-    if (!this.type.equals(other.type)) {
+    if (this.type === other.type) {
       return false;
     }
     if (this.method !== other.method) {
@@ -135,7 +137,7 @@ class AnalyzeConstructor extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeConstructor)) {
       return false;
     }
-    if (!this.type.equals(other.type)) {
+    if (this.type === other.type) {
       return false;
     }
     if (this.arity !== other.arity) {
@@ -162,7 +164,7 @@ class AnalyzeOperator extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeOperator)) {
       return false;
     }
-    if (!this.type.equals(other.type)) {
+    if (this.type !== other.type) {
       return false;
     }
     if (this.arity !== other.arity) {
@@ -187,7 +189,7 @@ class AnalyzeMember extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeMember)) {
       return false;
     }
-    if (!this.type.equals(other.type)) {
+    if (this.type !== other.type) {
       return false;
     }
     if (this.memberName !== other.memberName) {
@@ -205,6 +207,7 @@ export class DependencyAnalyzer extends ASTWalker {
 
   public compilerTasks: CompilerTask[] = [];
   public indirectlyReferencedTask: Task[] = [];
+  protected genericTypeVariableScopeStack: GenericTypeVariableScope[] = [];
   private typeArray: IType[] = [];
   private typeMapIndexMapping: Map<IType, number> = new Map();
   private memoryDependencies: Map<number, Set<IType>> = new Map(); // A has every B as a dependency
@@ -213,10 +216,12 @@ export class DependencyAnalyzer extends ASTWalker {
   private finishedTasks: Task[] = [];
   private tasks: Task[] = [];
   private currentTask: Task | undefined;
+  private typeProvider = new TypeProvider();
   constructor(private errors: CompilerError[]) {
     super();
   }
-  public walkSourceFile(sourceFile: SourceFile): void {
+  public analyze(sourceFile: SourceFile, typeProvider: TypeProvider): void {
+    this.typeProvider = typeProvider;
     for (const topLevelDeclaration of sourceFile.topLevelDeclarations) {
       if (topLevelDeclaration instanceof UnboundFunctionDeclaration) {
         if (topLevelDeclaration.decoratorMap.get("export") !== undefined
@@ -247,11 +252,6 @@ export class DependencyAnalyzer extends ASTWalker {
       } else if (task instanceof AnalyzeType) {
         const type =
           task.type;
-        if (type instanceof StructType) {
-          type.populatePropertyMapping();
-        } else if (type instanceof ClassType) {
-          type.populatePropertyMapping();
-        }
         const index = this.typeArray.length;
         this.typeMapIndexMapping.set(type, index);
         this.typeArray.push(type);
@@ -291,6 +291,7 @@ export class DependencyAnalyzer extends ASTWalker {
     }
     for (const dependencies of this.memoryDependencies.entries()) {
       for (const type of dependencies[1].values()) {
+
         const set = this.dependenciesOfType.get(type) || new Set();
         if (set.size === 0) {
           this.dependenciesOfType.set(type, set);
@@ -366,15 +367,17 @@ export class DependencyAnalyzer extends ASTWalker {
     }
   }
   protected walkTypeExpressionWrapper(typeExpressionWrapper: TypeExpressionWrapper): void {
-    const type = typeExpressionWrapper.type;
-    if (type === undefined) {
+    const typeCheckingType = typeExpressionWrapper.type;
+    if (typeCheckingType === undefined) {
       return;
     }
+    const type = this.getCompilationType(typeCheckingType);
+
     const task = new AnalyzeType(type);
     this.tasks.push(task);
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression): void {
-    super.walkIdentifierCallExpression(identifierCallExpression);
+
     const called = identifierCallExpression.lhs;
     const entry = called.entry;
     if (entry === undefined) {
@@ -383,13 +386,15 @@ export class DependencyAnalyzer extends ASTWalker {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const task = new AnalyzeGlobalUnboundFunction(entry);
       this.tasks.push(task);
+      return;
     }
+    super.walkIdentifierCallExpression(identifierCallExpression);
   }
   protected walkBinaryOperatorExpression(binaryOperatorExpression: BinaryOperatorExpression): void {
     super.walkBinaryOperatorExpression(binaryOperatorExpression);
     const lhs = binaryOperatorExpression.lhs;
     const type = lhs.forceType();
-    const task = new AnalyzeOperator(type, binaryOperatorExpression.operator.content, 2);
+    const task = new AnalyzeOperator(this.getCompilationType(type), binaryOperatorExpression.operator.content, 2);
     this.tasks.push(task);
   }
   protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression): void {
@@ -401,19 +406,19 @@ export class DependencyAnalyzer extends ASTWalker {
   protected walkMemberCallExpression(memberCallExpression: MemberCallExpression): void {
     super.walkMemberCallExpression(memberCallExpression);
     const type = memberCallExpression.lhs.forceType();
-    const task = new AnalyzeMember(type, memberCallExpression.memberToken.content);
+    const task = new AnalyzeMember(this.getCompilationType(type), memberCallExpression.memberToken.content);
     this.tasks.push(task);
   }
   protected walkMemberReferenceExpression(memberReferenceExpression: MemberReferenceExpression): void {
     super.walkMemberReferenceExpression(memberReferenceExpression);
     const type = memberReferenceExpression.lhs.forceType();
-    const task = new AnalyzeMember(type, memberReferenceExpression.memberToken.content);
+    const task = new AnalyzeMember(this.getCompilationType(type), memberReferenceExpression.memberToken.content);
     this.tasks.push(task);
   }
   protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression): void {
     super.walkConstructorCallExpression(constructorCallExpression);
     const called = constructorCallExpression.constructedType;
-    const task = new AnalyzeConstructor(called, constructorCallExpression.args.length);
+    const task = new AnalyzeConstructor(this.getCompilationType(called), constructorCallExpression.args.length);
     this.tasks.push(task);
   }
   protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression): void {
@@ -428,5 +433,8 @@ export class DependencyAnalyzer extends ASTWalker {
     const task = new AnalyzeGlobalUnboundFunction(entry);
     this.tasks.push(task);
     this.indirectlyReferencedTask.push(task);
+  }
+  private getCompilationType(type: ITypeCheckingType): IType {
+    return this.typeProvider.get(type.compilationType(this.typeProvider, this.genericTypeVariableScopeStack[this.genericTypeVariableScopeStack.length - 1]));
   }
 }

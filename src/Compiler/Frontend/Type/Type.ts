@@ -1,5 +1,4 @@
 import { MemoryIRType, Type } from "../../IR/AST";
-import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { FunctionType } from "./FunctionType";
 
 export class MemoryLocation {
@@ -7,7 +6,6 @@ export class MemoryLocation {
 }
 export interface IType {
   name: string;
-  node: TypeTreeNode;
   irVariablesNeededForRepresentation(): number;
   irVariableTypes(): Type[];
   toString(): string;
@@ -25,6 +23,4 @@ export interface IType {
 
   typeOfOperator(str: string, arity: number): IType | undefined;
   hasOperatorCalled(str: string, arity: number): boolean;
-
-  equals(other: IType): boolean;
 }

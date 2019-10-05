@@ -11,7 +11,7 @@ import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
-import { NativeIntegerType } from "../Type/NativeType";
+import { TypeCheckingNativeIntegerType } from "../Type/NativeType";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
 export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration | SourceFile;
 export class VariableScopeBuilder extends ASTWalker {
@@ -39,7 +39,7 @@ export class VariableScopeBuilder extends ASTWalker {
     }
     const str = "HEAP_START";
     const entryType = VariableScopeEntryType.globalConstant;
-    const type = new NativeIntegerType(this.rootTypeTreeNode, false, 4);
+    const type = new TypeCheckingNativeIntegerType(this.rootTypeTreeNode, false, 4);
     const entry = new VariableScopeEntry(str, entryType, this.sourceFile, type);
     this.sourceFile.variables.push(entry);
     globalScope.register(entry);
