@@ -9,9 +9,6 @@ export class TypeReferenceExpression extends Expression {
     super();
     this.node = node;
     this.type = node.typeCheckingType;
-    if (this.type === undefined) {
-      debugger;
-    }
     this.children = [];
   }
 }
