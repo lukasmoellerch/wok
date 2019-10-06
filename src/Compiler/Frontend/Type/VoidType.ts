@@ -11,17 +11,17 @@ export class TypeCheckingVoidType implements ITypeCheckingType {
   ) {
 
   }
-  public equals(_other: ITypeCheckingType): boolean {
-    throw new Error("Method not implemented.");
+  public equals(other: ITypeCheckingType): boolean {
+    return other instanceof TypeCheckingVoidType;
   }
   public typeOfConstructor(): TypeCheckingFunctionType | undefined {
-    throw new Error("Method not implemented.");
+    return undefined;
   }
   public typeOfMember(_str: string): ITypeCheckingType | undefined {
-    throw new Error("Method not implemented.");
+    return undefined;
   }
   public typeOfOperator(_str: string): ITypeCheckingType | undefined {
-    throw new Error("Method not implemented.");
+    return undefined;
   }
   public compilationType(_provider: import("../Type Scope/TypeProvider").TypeProvider, _scope: GenericTypeVariableScope): SpecializedTypeReference {
     return new SpecializedTypeReference(-1);
