@@ -30,16 +30,16 @@ export class TypeCheckingVoidType implements ITypeCheckingType {
 export class VoidType implements IType {
   public name: string = "void";
   public typeReferences(): Set<IType> {
-    throw new Error("Method not implemented.");
+    return new Set();
   }
   public memoryReferences(): Set<IType> {
-    throw new Error("Method not implemented.");
+    return new Set();
   }
   public memoryMap(): MemoryLocation[] {
-    throw new Error("Method not implemented.");
+    return [];
   }
   public memorySize(): number {
-    throw new Error("Method not implemented.");
+    return 0;
   }
   public typeOfConstructor(): FunctionType | undefined {
     return undefined;
