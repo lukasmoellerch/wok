@@ -121,8 +121,8 @@ export class TypeScopeBuilder extends ASTWalker {
   }
   private registerStruct(declaration: StructDeclaration, parent: TypeTreeNode, parentTM: TemplateManager): TemplateManager {
     const node = new TypeTreeNode(parent, [], declaration.nameToken.content, "struct");
-    const type = new TypeCheckingStructType(declaration.nameToken.content, node, declaration);
-    node.typeCheckingType = type;
+    const tct = new TypeCheckingStructType(declaration.nameToken.content, node, declaration);
+    node.typeCheckingType = tct;
     for (let i = 0; i < declaration.genericVariables.length; i++) {
       const name = declaration.genericVariables[i].content;
       const typecheckingType = new TypeVariable(node, name, undefined);

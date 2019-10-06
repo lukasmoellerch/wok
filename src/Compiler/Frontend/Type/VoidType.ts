@@ -29,8 +29,6 @@ export class TypeCheckingVoidType implements ITypeCheckingType {
 }
 export class VoidType implements IType {
   public name: string = "void";
-  constructor() {
-  }
   public typeReferences(): Set<IType> {
     throw new Error("Method not implemented.");
   }

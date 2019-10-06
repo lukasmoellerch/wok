@@ -62,9 +62,6 @@ export class TypeResolver extends ASTWalker {
     }
     const type = this.resolveTypeExpression(expression, scope);
     typeExpressionWrapper.type = type;
-    if (type === undefined) {
-      debugger;
-    }
     return typeExpressionWrapper;
   }
   protected walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {

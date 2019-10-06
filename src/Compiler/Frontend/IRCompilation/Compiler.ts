@@ -549,7 +549,7 @@ export class IRCompiler {
     const irType = functionType.irFunctionType;
   }
   private compileOperator(_type: IType, _name: string, _arity: number) {
-
+    throw new Error("NOt supported yet");
   }
   private compileMethod(type: IType, name: string, arity: number, tableElement: boolean) {
     const functionType = type.typeOfMember(name);
@@ -1535,10 +1535,10 @@ export class IRCompiler {
     throw new Error("Custom binary operators are not allowed.");
   }
   private compilePostfixUnaryOperatorExpression(_env: IRFunctionCompilationEnvironment, _postfixUnaryOperatorExpression: PostfixUnaryOperatorExpression, _target: IRValue | undefined) {
-
+    throw new Error("Not supported yet");
   }
   private compilePrefixUnaryOperatorExpression(_env: IRFunctionCompilationEnvironment, _prefixUnaryOperatorExpreession: PrefixUnaryOperatorExpression, _target: IRValue | undefined) {
-
+    throw new Error("Not supported yet");
   }
   private compileUnboundFunctionCall(env: IRFunctionCompilationEnvironment, entry: VariableScopeEntry, args: Expression[], target: IRValue | undefined) {
     const emptyScope = new GenericTypeVariableScope();

@@ -78,9 +78,6 @@ export class TypeChecker extends ASTWalker {
       throw new Error();
     }
     entry.type = argumentDeclaration.type.type;
-    if (entry.type instanceof TypeCheckingVoidType || entry.type === undefined) {
-      debugger;
-    }
     super.walkArgumentDeclaration(argumentDeclaration);
   }
   protected walkIfStatement(ifStatement: IfStatement) {
@@ -116,9 +113,6 @@ export class TypeChecker extends ASTWalker {
       const entry = variableDeclaration.entry;
       if (entry !== undefined) {
         entry.type = expression.type;
-        if (entry.type instanceof TypeCheckingVoidType || entry.type === undefined) {
-          debugger;
-        }
         variableDeclaration.setAttribute(new TypeAttribute(expression.forceType()));
       }
     }

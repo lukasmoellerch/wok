@@ -37,12 +37,14 @@ export class VariableScopeBuilder extends ASTWalker {
         globalScope.register(entry);
       }
     }
-    const str = "HEAP_START";
-    const entryType = VariableScopeEntryType.globalConstant;
-    const type = new TypeCheckingNativeIntegerType(this.rootTypeTreeNode, false, 4);
-    const entry = new VariableScopeEntry(str, entryType, this.sourceFile, type);
-    this.sourceFile.variables.push(entry);
-    globalScope.register(entry);
+    {
+      const str = "HEAP_START";
+      const entryType = VariableScopeEntryType.globalConstant;
+      const type = new TypeCheckingNativeIntegerType(this.rootTypeTreeNode, false, 4);
+      const entry = new VariableScopeEntry(str, entryType, this.sourceFile, type);
+      this.sourceFile.variables.push(entry);
+      globalScope.register(entry);
+    }
   }
   public buildScopes() {
     this.walkSourceFile(this.sourceFile);

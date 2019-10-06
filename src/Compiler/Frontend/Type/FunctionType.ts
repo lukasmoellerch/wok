@@ -86,9 +86,6 @@ export class FunctionType implements IType {
   public name: string = "FunctionType";
   private memoryMapData: MemoryLocation[] = [new MemoryLocation(0, MemoryIRType.funcptr)];
   constructor(public provider: TypeProvider, public args: IType[], public result: IType, public thisType?: IType) {
-    if (result === undefined) {
-      debugger;
-    }
   }
   public typeReferences(): Set<IType> {
     return new Set();
