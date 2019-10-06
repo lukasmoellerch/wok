@@ -549,7 +549,7 @@ export class IRCompiler {
     const irType = functionType.irFunctionType;
   }
   private compileOperator(_type: IType, _name: string, _arity: number) {
-    throw new Error("NOt supported yet");
+    return;
   }
   private compileMethod(type: IType, name: string, arity: number, tableElement: boolean) {
     const functionType = type.typeOfMember(name);
