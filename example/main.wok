@@ -15,7 +15,7 @@ infix operator <= 2 right
 struct Wrapper<T> {
   let child: T
 }
-struct Pair<S, T> {
+class Pair<S, T> {
   let a: S
   let b: T
 }

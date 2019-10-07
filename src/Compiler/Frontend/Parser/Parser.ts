@@ -614,8 +614,36 @@ export class Parser {
       this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
     }
     this.lexer.whitespace();
+    const genericVariables: Token[] = [];
+    const openGenericVariablesToken = this.lexer.character("<");
+    if (openGenericVariablesToken !== undefined) {
+      let first = true;
+      this.lexer.whitespace();
+      let closeGenericVariablesToken = this.lexer.character(">");
+      while (closeGenericVariablesToken === undefined && !this.lexer.eof()) {
+        if (!first) {
+          const comma = this.lexer.character(",") || new PlaceholderToken(this.lexer);
+          this.lexer.whitespace();
+          if (comma instanceof PlaceholderToken) {
+            this.errors.push(new WrongTokenError(comma.range, [TokenTag.comma]));
+            break;
+          }
+        } else {
+          first = false;
+        }
+        const identifier = this.lexer.identifier() || new PlaceholderToken(this.lexer);
+        if (identifier instanceof PlaceholderToken) {
+          this.errors.push(new WrongTokenError(identifier.range, [TokenTag.identifier]));
+          break;
+        }
+        genericVariables.push(identifier);
+        this.lexer.whitespace();
+        closeGenericVariablesToken = this.lexer.character(">");
+      }
+      this.lexer.whitespace();
+    }
     const declarationBlock = this.parseDeclarationBlock();
-    const classDeclaration = new ClassDeclaration(keyword, nameToken, declarationBlock);
+    const classDeclaration = new ClassDeclaration(keyword, nameToken, genericVariables, declarationBlock);
     return classDeclaration;
   }
   public parseStructDeclaration(keyword: Token): StructDeclaration {

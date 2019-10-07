@@ -10,10 +10,12 @@ export class ClassDeclaration extends ASTNode implements ITopLevelDeclaration {
   public classKeyword: Token;
   public nameToken: Token;
   public declarationBlock: DeclarationBlock;
+  public genericVariables: Token[];
   public template: TypeTreeNodeTemplate | undefined;
   public typeCheckingType: TypeCheckingClassType | undefined;
-  constructor(classKeyword: Token, nameToken: Token, declarationBlock: DeclarationBlock) {
+  constructor(classKeyword: Token, nameToken: Token, genericVariables: Token[], declarationBlock: DeclarationBlock) {
     super();
+    this.genericVariables = genericVariables;
     this.classKeyword = classKeyword;
     this.nameToken = nameToken;
     this.declarationBlock = declarationBlock;

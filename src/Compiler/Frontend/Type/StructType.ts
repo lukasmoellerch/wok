@@ -50,7 +50,6 @@ export class TypeCheckingStructType implements ITypeCheckingType {
         this.memberMap.set(decl.nameToken.content, decl);
         this.propertyTypeExpressions.push(decl.typeHint);
       }
-
     }
   }
   public equals(other: ITypeCheckingType): boolean {

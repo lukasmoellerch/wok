@@ -955,7 +955,7 @@ export class IRCompiler {
         return this.getStructMemberAsValue(env, lhs.getAsIRValue(), lValue.memberToken.content);
       } else if (lhsType instanceof ClassType) {
         const lhs = this.getExpressionAsValue(env, lValue.lhs);
-        const memory = lhsType.instanceMemoryMapData.get(lValue.memberToken.content);
+        const memory = lhsType.instancePropertyMemoryLocationMap.get(lValue.memberToken.content);
         if (memory === undefined) {
           throw new Error();
         }
@@ -1225,12 +1225,12 @@ export class IRCompiler {
         }
         let propertyIndex = 0;
         for (const arg of expression.args) {
-          const propertyName = constructedType.properties[propertyIndex];
+          const propertyName = constructedType.propertyNames[propertyIndex];
           const propertyType = constructedType.propertyTypeMap.get(propertyName);
           if (propertyType === undefined) {
             throw new Error();
           }
-          const offset = constructedType.instanceMemoryMapData.get(propertyName);
+          const offset = constructedType.instancePropertyMemoryLocationMap.get(propertyName);
           if (offset === undefined) {
             throw new Error();
           }
@@ -1239,7 +1239,7 @@ export class IRCompiler {
           env.writeStatement([IR.InstructionType.setToConstant, offsetVar, offset.baseOffset]);
           env.writeStatement([IR.InstructionType.add, ptr, offsetVar, basePtr]);
           const value = this.getExpressionAsValue(env, arg);
-          generateStoreInstructions(env, propertyType, value.getAsIRValue(), ptr);
+          generateStoreInstructions(env, this.typeProvider.get(propertyType), value.getAsIRValue(), ptr);
           propertyIndex++;
         }
         return;
@@ -1597,7 +1597,7 @@ export class IRCompiler {
   }
   private getClassMemberAsValue(env: IRFunctionCompilationEnvironment, classInstance: IRValue, propertyName: string): CompilerPointerIRValue {
     const lhsType = classInstance.type as ClassType;
-    const memory = lhsType.instanceMemoryMapData.get(propertyName);
+    const memory = lhsType.instancePropertyMemoryLocationMap.get(propertyName);
     if (memory === undefined) {
       throw new Error();
     }
@@ -1605,6 +1605,7 @@ export class IRCompiler {
     if (memberType === undefined) {
       throw new Error();
     }
+    // 0 here is just a quick hhack
     return new CompilerPointerIRValue(env, memberType, classInstance.toCompilerDirectIRValue(env), memory.baseOffset);
   }
 }
