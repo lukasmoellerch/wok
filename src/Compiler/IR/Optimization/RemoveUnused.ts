@@ -30,8 +30,6 @@ export function removeUnused(ir: ICompilationUnit) {
       }
     }
     search(fn.code);
-    console.log(fn.identifier);
-    console.log(used);
     function transform(code: Block[]) {
       for (const block of code) {
         if (block.type === BlockType.basic) {
