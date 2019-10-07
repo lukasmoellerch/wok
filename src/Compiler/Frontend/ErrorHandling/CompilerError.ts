@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { InfixOperatorDeclaration } from "../AST/Nodes/InfixOperatorDeclaration";
 import { PostfixOperatorDeclaration } from "../AST/Nodes/PostfixOperatorDeclaration";
 import { PrefixOperatorDeclaration } from "../AST/Nodes/PrefixOperatorDeclaration";
@@ -128,6 +129,14 @@ export class CircularTypeError extends CompilerError {
   }
   public toString(): string {
     return `The definition of the type ${this.typeName} results in a circular memory dependency as it contains the following types: ${this.dependencies.map((a) => `"${a}"`).join(", ")}.`;
+  }
+}
+export class WrongNumberOfArgumentsError extends CompilerError {
+  constructor(range: SourceRange, private expected: string[], private got: string[]) {
+    super(range);
+  }
+  public toString(): string {
+    return `This call requires arguments of type\n${this.expected.map((s) => chalk.green(s)).join(", ")}\nbut was called with the following arguments:\n${this.got.map((s) => chalk.red(s)).join(", ")}`;
   }
 }
 export class WrongTokenError extends CompilerError {

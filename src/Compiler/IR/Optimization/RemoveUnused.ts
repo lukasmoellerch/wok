@@ -8,9 +8,6 @@ export function removeUnused(ir: ICompilationUnit) {
       const read = getReadVariables(statement);
       for (const v of read) {
         used.add(v);
-        if (v === 15) {
-          debugger;
-        }
       }
     }
     function search(code: Block[]) {

@@ -24,7 +24,7 @@ import { StringLiteralExpression } from "../AST/Nodes/StringLiteralExpression";
 import { VariableDeclaration } from "../AST/Nodes/VariableDeclaration";
 import { VariableReferenceExpression } from "../AST/Nodes/VariableReferenceExpression";
 import { WhileStatement } from "../AST/Nodes/WhileStatement";
-import { CompilerError, MemberIsNotCallableError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError } from "../ErrorHandling/CompilerError";
+import { CompilerError, MemberIsNotCallableError, OperatorNotDefinedForTypeError, TypeHasNoMemberCalledError, WritingToConstantError, WrongNumberOfArgumentsError } from "../ErrorHandling/CompilerError";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { TypeCheckingFunctionType } from "../Type/FunctionType";
 import { TypeCheckingNativeIntegerType, TypeCheckingStringType } from "../Type/NativeType";
@@ -184,6 +184,9 @@ export class TypeChecker extends ASTWalker {
     }
   }
   private checkExpression(expression: Expression, target?: ITypeCheckingType | undefined) {
+    if (expression === undefined) {
+      return;
+    }
     if (expression instanceof PlaceholderExpression) {
       return;
     }
@@ -296,16 +299,31 @@ export class TypeChecker extends ASTWalker {
       const functionType: TypeCheckingFunctionType | undefined = constructedType.typeOfConstructor();
       if (!(functionType instanceof TypeCheckingFunctionType)) {
         return;
-        throw new Error();
       }
       const argTypes = functionType.args;
       const resultType = functionType.result;
       let i = 0;
-      while (i < argTypes.length) {
-        this.checkExpression(argExpressions[i], argTypes[i]);
-        i++;
+      if (argTypes.length !== argExpressions.length) {
+        const expected = argTypes.map((type) => type.name);
+        const got: string[] = [];
+        for (let k = 0; k < argExpressions.length; k++) {
+          this.checkExpression(argExpressions[k], undefined);
+          const t = argExpressions[k].type;
+          if (t !== undefined) {
+            got.push(t.name);
+          } else {
+            got.push("<?>");
+          }
+        }
+        this.errors.push(new WrongNumberOfArgumentsError(expression.range, expected, got));
+        expression.setType(resultType);
+      } else {
+        while (i < argTypes.length) {
+          this.checkExpression(argExpressions[i], argTypes[i]);
+          i++;
+        }
+        expression.setType(resultType);
       }
-      expression.setType(resultType);
     } else if (expression instanceof MemberReferenceExpression) {
       this.checkExpression(expression.lhs, undefined);
       const lhsType = expression.lhs.forceType();
