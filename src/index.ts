@@ -20,6 +20,7 @@ import { VariableScope } from "./Compiler/Frontend/VariableScope/VariableScope";
 import { VariableScopeBuilder } from "./Compiler/Frontend/VariableScope/VariableScopeBuilder";
 import { IRPrinter } from "./Compiler/IR/IRPrinter";
 import { removeCopyStatements } from "./Compiler/IR/Optimization/CopyRemove";
+import { removeUnused } from "./Compiler/IR/Optimization/RemoveUnused";
 import { SSATransformer } from "./Compiler/IR/SSATransformer";
 import { compileIR } from "./Compiler/Targets/WASMTarget/IRCompiler";
 import { encodeModule } from "./Compiler/Targets/WASMTarget/WASM/Encoding/Encoder";
@@ -41,6 +42,7 @@ export default async function main() {
     console.log(file);
   });
   return;*/
+
   const basePathString = path.resolve(process.argv[2] || "./example/main.wok").toString();
 
   const content = await promisify(readFile)(basePathString || "testFile");
@@ -102,6 +104,7 @@ export default async function main() {
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
   removeCopyStatements(ssa);
+  removeUnused(ssa);
 
   if (process.argv.includes("--print-ssa")) {
     const irPrinter = new IRPrinter();
