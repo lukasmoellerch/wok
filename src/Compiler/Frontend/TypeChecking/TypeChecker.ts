@@ -302,7 +302,6 @@ export class TypeChecker extends ASTWalker {
       }
       const argTypes = functionType.args;
       const resultType = functionType.result;
-      let i = 0;
       if (argTypes.length !== argExpressions.length) {
         const expected = argTypes.map((type) => type.name);
         const got: string[] = [];
@@ -318,6 +317,7 @@ export class TypeChecker extends ASTWalker {
         this.errors.push(new WrongNumberOfArgumentsError(expression.range, expected, got));
         expression.setType(resultType);
       } else {
+        let i = 0;
         while (i < argTypes.length) {
           this.checkExpression(argExpressions[i], argTypes[i]);
           i++;
@@ -346,13 +346,31 @@ export class TypeChecker extends ASTWalker {
           this.errors.push(new MemberIsNotCallableError(expression.memberToken.range, expression.memberToken.content, memberType.toString()));
           expression.setType(new TypeCheckingVoidType(this.rootTypeTreeNode));
         } else {
-          let index = 0;
-          for (const arg of expression.args) {
-            const expectedType = memberType.args[index];
-            this.checkExpression(arg, expectedType);
-            index++;
+          const argExpressions = expression.args;
+          const argTypes = memberType.args;
+          if (argTypes.length !== argExpressions.length) {
+            const expected = argTypes.map((type) => type.name);
+            const got: string[] = [];
+            for (let k = 0; k < argExpressions.length; k++) {
+              this.checkExpression(argExpressions[k], undefined);
+              const t = argExpressions[k].type;
+              if (t !== undefined) {
+                got.push(t.name);
+              } else {
+                got.push("<?>");
+              }
+            }
+            this.errors.push(new WrongNumberOfArgumentsError(expression.range, expected, got));
+            expression.setType(memberType.result);
+          } else {
+            let index = 0;
+            for (const arg of expression.args) {
+              const expectedType = memberType.args[index];
+              this.checkExpression(arg, expectedType);
+              index++;
+            }
+            expression.setType(memberType.result);
           }
-          expression.setType(memberType.result);
         }
       }
     }
