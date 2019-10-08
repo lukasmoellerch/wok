@@ -377,7 +377,6 @@ export class DependencyAnalyzer extends ASTWalker {
     this.tasks.push(task);
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression): void {
-
     const called = identifierCallExpression.lhs;
     const entry = called.entry;
     if (entry === undefined) {
@@ -386,7 +385,6 @@ export class DependencyAnalyzer extends ASTWalker {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const task = new AnalyzeGlobalUnboundFunction(entry);
       this.tasks.push(task);
-      return;
     }
     super.walkIdentifierCallExpression(identifierCallExpression);
   }
