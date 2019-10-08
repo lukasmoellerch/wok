@@ -35,7 +35,6 @@
     "tslint": "^5.18.0"
   },
   "dependencies": {
-    "chalk": "^2.4.2",
-    "typescript": "^3.5.3"
+    "chalk": "^2.4.2"
   }
 }
