@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { readFile, writeFile } from "fs";
 import * as path from "path";
 import { promisify } from "util";
@@ -22,7 +23,8 @@ import { IRPrinter } from "./Compiler/IR/IRPrinter";
 import { removeCopyStatements } from "./Compiler/IR/Optimization/CopyRemove";
 import { removeUnused } from "./Compiler/IR/Optimization/RemoveUnused";
 import { SSATransformer } from "./Compiler/IR/SSATransformer";
-import { compileIR } from "./Compiler/Targets/WASMTarget/IRCompiler";
+import * as JavaTarget from "./Compiler/Targets/JavaTarget/IRCompiler";
+import * as WASMTarget from "./Compiler/Targets/WASMTarget/IRCompiler";
 import { encodeModule } from "./Compiler/Targets/WASMTarget/WASM/Encoding/Encoder";
 import { TypedArrayBytestreamConsumer } from "./Compiler/Targets/WASMTarget/WASM/Encoding/TypedArrayBytestreamConsumer";
 
@@ -103,35 +105,60 @@ export default async function main() {
 
   const ssaTransformer = new SSATransformer();
   const ssa = ssaTransformer.transformCompilationUnit(compilationUnit);
-  removeCopyStatements(ssa);
-  removeUnused(ssa);
+  if (true) { removeCopyStatements(ssa); }
+  if (true) { removeUnused(ssa); }
 
   if (process.argv.includes("--print-ssa")) {
     const irPrinter = new IRPrinter();
     const irString = irPrinter.stringifyCompilationUnit(ssa);
     process.stdout.write(irString);
   }
+  const target = process.argv.includes("--java") ? "java" : "wasm";
+  if (target === "wasm") {
+    const wasmModule = WASMTarget.compileIR(ssa);
+    const consumer = new TypedArrayBytestreamConsumer();
+    encodeModule(wasmModule, consumer);
+    const encoded = consumer.cleanArray;
+    const asyncWriteFile = promisify(writeFile);
+    await asyncWriteFile("./out.wasm", encoded);
+    const module = new WebAssembly.Module(encoded);
+    const decoder = new TextDecoder("utf-8");
+    const instance = new WebAssembly.Instance(module, {
+      env: {
+        printInt(int: number) {
+          process.stdout.write(int.toString() + "\n");
+        },
+        print(ptr: number, length: number) {
+          const view = new DataView(memory, ptr, length);
+          const str = decoder.decode(view);
+          process.stdout.write(str);
+        },
+      },
+    });
+    const memory = instance.exports.memory.buffer as ArrayBuffer;
+    instance.exports._start();
+  } else if (target === "java") {
+    const javaSource = JavaTarget.compileIR(ssa, (name, java) => {
+      if (name === "function_print") {
+        java.writeLine("byte[] chars = new byte[a1];");
+        java.writeLine("for (int i = 0; i < a1; i++) {");
+        java.indent();
+        java.writeLine("chars[i] = bb.get(a0 + i);");
+        java.dedent();
+        java.writeLine("}");
+        java.writeLine("String s = new String(chars, StandardCharsets.UTF_8);");
+        java.writeLine("System.out.print(s);");
+      }
+      if (name === "function_printInt") {
+        java.writeLine("System.out.println(a0);");
+      }
+      if (name === "function_printUInt") {
+        java.writeLine("System.out.println(a0);");
+      }
+    });
+    process.stdout.write(javaSource);
+  } else {
+    process.stderr.write(chalk.red("Target was not defined.\n"));
+  }
 
-  const wasmModule = compileIR(ssa);
-  const consumer = new TypedArrayBytestreamConsumer();
-  encodeModule(wasmModule, consumer);
-  const encoded = consumer.cleanArray;
-  const asyncWriteFile = promisify(writeFile);
-  await asyncWriteFile("./out.wasm", encoded);
-  const module = new WebAssembly.Module(encoded);
-  const decoder = new TextDecoder("utf-8");
-  const instance = new WebAssembly.Instance(module, {
-    env: {
-      printInt(int: number) {
-        process.stdout.write(int.toString() + "\n");
-      },
-      print(ptr: number, length: number) {
-        const view = new DataView(memory, ptr, length);
-        const str = decoder.decode(view);
-        process.stdout.write(str);
-      },
-    },
-  });
-  const memory = instance.exports.memory.buffer as ArrayBuffer;
-  instance.exports._start();
 }
