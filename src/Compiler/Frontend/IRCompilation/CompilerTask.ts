@@ -24,7 +24,7 @@ export class CompileUnboundFunctionTask extends CompilerTask {
     if (this.declaration.decoratorMap.has("export")) {
       return this.declaration.name.content;
     } else {
-      return `function#${this.declaration.name.content}`;
+      return `function_${this.declaration.name.content}`;
     }
   }
 }
@@ -36,7 +36,7 @@ export class CompileConstructor extends CompilerTask {
     return `Compile constructor of ${this.indirectString()} ${this.type.toString()}`;
   }
   public irName(): string {
-    return `constructor#${this.type.toString()}`;
+    return `constructor_${this.type.toString()}`;
   }
 }
 export class CompileOperator extends CompilerTask {
@@ -47,7 +47,7 @@ export class CompileOperator extends CompilerTask {
     return `Compile operator ${this.indirectString()} ${this.str} of ${this.type.toString()}`;
   }
   public irName(): string {
-    return `operator#${this.type.toString()}#${this.str}#${this.arity}`;
+    return `operator_${this.type.toString()}_${this.str}_${this.arity}`;
   }
 }
 export class CompileMethod extends CompilerTask {
@@ -58,7 +58,7 @@ export class CompileMethod extends CompilerTask {
     return `Compile method ${this.indirectString()} ${this.str} of ${this.type.toString()}`;
   }
   public irName(): string {
-    return `method#${this.type.toString()}#${this.str}#${this.arity}`;
+    return `method_${this.type.toString()}_${this.str}_${this.arity}`;
   }
 }
 export class CompileStart extends CompilerTask {

@@ -1219,7 +1219,7 @@ export class IRCompiler {
         const basePtr = target ? target.irVariables[0] : env.addIRLocal(IR.Type.ptr);
         const sizeLocal = env.addIRLocal(IR.Type.ptr);
         env.writeStatement([IR.InstructionType.setToConstant, sizeLocal, constructedType.instanceSizeData]);
-        env.writeStatement([IR.InstructionType.call, "function#malloc", [basePtr], [sizeLocal]]);
+        env.writeStatement([IR.InstructionType.call, "function_malloc", [basePtr], [sizeLocal]]);
         if (target === undefined) {
           return;
         }
