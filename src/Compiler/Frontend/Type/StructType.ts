@@ -31,10 +31,7 @@ export class TypeCheckingStructType implements ITypeCheckingType {
   public operatorMap: Map<string, ITypeCheckingType> = new Map();
   public propertyTypeExpressions: TypeExpressionWrapper[] = [];
   private genericAssignment: Map<string, ITypeCheckingType> = new Map();
-  constructor(name: string, node: TypeTreeNode, declaration: StructDeclaration) {
-    if (node.args.length > 0) {
-      debugger;
-    }
+  constructor(node: TypeTreeNode, declaration: StructDeclaration) {
     this.name = node.toString();
     this.node = node;
     this.declaration = declaration;

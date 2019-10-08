@@ -22,7 +22,7 @@ class StructTypeTreeNode implements TypeTreeNodeTemplate {
   }
   public create(args: TypeTreeNode[]): TypeTreeNode {
     const typeTreeNode = new TypeTreeNode(this.parent, args, this.declaration.nameToken.content, "struct", undefined, this.templateManager);
-    const type = new TypeCheckingStructType(this.declaration.nameToken.content, typeTreeNode, this.declaration);
+    const type = new TypeCheckingStructType(typeTreeNode, this.declaration);
     typeTreeNode.typeCheckingType = type;
     for (let i = 0; i < this.requiredArgs; i++) {
       const name = this.declaration.genericVariables[i].content;
@@ -123,7 +123,7 @@ export class TypeScopeBuilder extends ASTWalker {
   }
   private registerStruct(declaration: StructDeclaration, parent: TypeTreeNode, parentTM: TemplateManager): TemplateManager {
     const node = new TypeTreeNode(parent, [], declaration.nameToken.content, "struct");
-    const tct = new TypeCheckingStructType(declaration.nameToken.content, node, declaration);
+    const tct = new TypeCheckingStructType(node, declaration);
     node.typeCheckingType = tct;
     for (let i = 0; i < declaration.genericVariables.length; i++) {
       const name = declaration.genericVariables[i].content;
@@ -133,7 +133,7 @@ export class TypeScopeBuilder extends ASTWalker {
     }
     this.scopes.push(node);
     if (declaration.genericVariables.length === 0) {
-      const type = new TypeCheckingStructType(declaration.nameToken.content, parent, declaration);
+      const type = new TypeCheckingStructType(parent, declaration);
       type.node = node;
       const template = new ArgumentlessTypeTreeNodeTemplate(node);
       declaration.template = template;
@@ -143,7 +143,7 @@ export class TypeScopeBuilder extends ASTWalker {
       return node.templateManager;
     } else {
       const templateManager = new TemplateManager(parent);
-      const type = new TypeCheckingStructType(declaration.nameToken.content, parent, declaration);
+      const type = new TypeCheckingStructType(parent, declaration);
       const template = new StructTypeTreeNode(templateManager, parent, declaration);
       type.node = node;
       declaration.template = template;
