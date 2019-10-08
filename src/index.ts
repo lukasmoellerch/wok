@@ -98,7 +98,7 @@ export default async function main() {
   if (process.argv.includes("--print-ir")) {
     const irPrinter = new IRPrinter();
     const irString = irPrinter.stringifyCompilationUnit(compilationUnit);
-    process.stdout.write(irString);
+    process.stderr.write(irString);
   }
 
   const ssaTransformer = new SSATransformer();
