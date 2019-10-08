@@ -44,7 +44,7 @@ class ClassTypeTreeNode implements TypeTreeNodeTemplate {
   }
   public create(args: TypeTreeNode[]): TypeTreeNode {
     const typeTreeNode = new TypeTreeNode(this.parent, args, this.declaration.nameToken.content, "class", undefined, this.templateManager);
-    const type = new TypeCheckingClassType(this.declaration.nameToken.content, typeTreeNode, this.declaration);
+    const type = new TypeCheckingClassType(typeTreeNode, this.declaration);
     typeTreeNode.typeCheckingType = type;
     for (let i = 0; i < this.requiredArgs; i++) {
       const name = this.declaration.genericVariables[i].content;
@@ -154,7 +154,7 @@ export class TypeScopeBuilder extends ASTWalker {
   }
   private registerClass(declaration: ClassDeclaration, parent: TypeTreeNode, parentTM: TemplateManager): TemplateManager {
     const node = new TypeTreeNode(parent, [], declaration.nameToken.content, "class");
-    const tct = new TypeCheckingClassType(declaration.nameToken.content, node, declaration);
+    const tct = new TypeCheckingClassType(node, declaration);
     node.typeCheckingType = tct;
     for (let i = 0; i < declaration.genericVariables.length; i++) {
       const name = declaration.genericVariables[i].content;
@@ -164,7 +164,7 @@ export class TypeScopeBuilder extends ASTWalker {
     }
     this.scopes.push(node);
     if (declaration.genericVariables.length === 0) {
-      const type = new TypeCheckingClassType(declaration.nameToken.content, parent, declaration);
+      const type = new TypeCheckingClassType(parent, declaration);
       type.node = node;
       const template = new ArgumentlessTypeTreeNodeTemplate(node);
       declaration.template = template;
@@ -174,7 +174,7 @@ export class TypeScopeBuilder extends ASTWalker {
       return node.templateManager;
     } else {
       const templateManager = new TemplateManager(parent);
-      const type = new TypeCheckingClassType(declaration.nameToken.content, parent, declaration);
+      const type = new TypeCheckingClassType(parent, declaration);
       const template = new ClassTypeTreeNode(templateManager, parent, declaration);
       type.node = node;
       declaration.template = template;
