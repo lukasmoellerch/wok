@@ -1,5 +1,5 @@
 {
-  "name": "selvet",
+  "name": "woklang",
   "version": "1.0.0",
   "description": "A WASM compiler",
   "main": "index.js",
