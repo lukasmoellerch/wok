@@ -162,3 +162,4 @@ export default async function main() {
   }
 
 }
+export const version = "0.0";
