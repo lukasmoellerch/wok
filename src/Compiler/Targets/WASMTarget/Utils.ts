@@ -314,7 +314,7 @@ export function getReadVariables(statement: SSAStatement): Variable[] {
     return statement[3];
   }
   if (statement[0] === InstructionType.callFunctionPointer) {
-    return statement[4];
+    return [statement[2], ...statement[4]];
   }
   if (statement[0] === InstructionType.setToConstant) {
     return [];
