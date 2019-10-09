@@ -4,6 +4,7 @@
     "module": "commonjs",
     "outDir": "./dist",
     "rootDir": "./src",
+    "declaration": true,
     "downlevelIteration": true,
     "strict": true,
     "noImplicitAny": true,
