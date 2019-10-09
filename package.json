@@ -2,8 +2,8 @@
   "name": "woklang",
   "version": "1.0.0",
   "description": "A WASM compiler",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc",
