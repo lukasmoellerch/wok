@@ -4,6 +4,7 @@
   "description": "A WASM compiler",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "prepublish": "tsc",
   "scripts": {
     "test": "jest",
     "build": "tsc",
