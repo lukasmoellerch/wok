@@ -45,9 +45,15 @@ export class VariableScopeBuilder extends ASTWalker {
       this.sourceFile.variables.push(entry);
       globalScope.register(entry);
     }
+    this.scopes.pop();
+    if (this.scopes.length > 0) {
+      throw new Error();
+    }
   }
-  public buildScopes() {
+  public buildScopes(globalScope: VariableScope) {
+    this.scopes.push(globalScope);
     this.walkSourceFile(this.sourceFile);
+    this.scopes.pop();
   }
   public walkSourceFile(sourceFile: SourceFile) {
     this.functionCompilationStack.push(sourceFile);
@@ -55,9 +61,13 @@ export class VariableScopeBuilder extends ASTWalker {
     this.functionCompilationStack.pop();
   }
   public walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {
+    const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
+    const scope = new VariableScope(parent);
+    this.scopes.push(scope);
     this.functionCompilationStack.push(unboundFunctionDeclaration);
     super.walkUnboundFunctionDeclaration(unboundFunctionDeclaration);
     this.functionCompilationStack.pop();
+    this.scopes.pop();
   }
   public walkMethodDeclaration(methodDeclaration: MethodDeclaration) {
     this.functionCompilationStack.push(methodDeclaration);
