@@ -253,6 +253,9 @@ export class TypeCheckingNativeIntegerType implements ITypeCheckingType {
     if (str === "/") {
       return new TypeCheckingFunctionType(this.node, [this], this, this);
     }
+    if (str === "%") {
+      return new TypeCheckingFunctionType(this.node, [this], this, this);
+    }
     if (str === "<") {
       return new TypeCheckingFunctionType(this.node, [this], new TypeCheckingNativeIntegerType(this.node, false, 1), this);
     }
@@ -410,6 +413,9 @@ export class NativeIntegerType implements IType {
         return this.provider.get(this.binaryOperatorType);
       }
       if (str === "/") {
+        return this.provider.get(this.binaryOperatorType);
+      }
+      if (str === "%") {
         return this.provider.get(this.binaryOperatorType);
       }
       if (str === "<") {
