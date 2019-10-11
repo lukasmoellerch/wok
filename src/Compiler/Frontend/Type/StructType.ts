@@ -165,7 +165,7 @@ export class StructType implements IType {
         this.memberTypeMap.set(decl.name.content, t.compilationType(provider, this.genericVariableScope));
       }
     }
-    this.constructorType = provider.specialize(functionTemplate, [provider.voidIdentifier, thisRef]);
+    this.constructorType = provider.specialize(functionTemplate, [provider.voidIdentifier, thisRef, ...this.properties);
   }
   public typeReferences(): Set<IType> {
     const typeReferences: Set<IType> = new Set();
