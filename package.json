@@ -37,6 +37,7 @@
     "tslint": "^5.18.0"
   },
   "dependencies": {
-    "chalk": "^2.4.2"
+    "chalk": "^2.4.2",
+    "commandpost": "^1.4.0"
   }
 }
