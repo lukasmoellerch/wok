@@ -16,7 +16,7 @@ export class IRPrinter {
       buffer += this.stringifyInternalFunctionDeclaration(internalFunctionDeclaration) + "\n";
     }
     for (const code of compilationUnit.functionCode) {
-      buffer += `function ${code.identifier} {\n`;
+      buffer += `func ${code.identifier} {\n`;
       buffer += `  ${code.variableTypes.map((a) => this.stringifyType(a)).join(", ")}\n`;
       buffer += this.stringifyBlockArray("  ", code.code);
       buffer += "}\n";
