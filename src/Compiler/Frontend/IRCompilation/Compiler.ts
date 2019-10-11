@@ -540,13 +540,42 @@ export class IRCompiler {
     }
     return undefined;
   }
-  private compileConstructor(type: IType) {
-    const functionName = this.getConstructorFunctionName(type);
+  private compileConstructor(type: IType, tableEleemnt: boolean = true) {
+    const identifier = this.getConstructorFunctionName(type);
     const functionType = type.typeOfConstructor();
     if (functionType === undefined) {
       throw new Error();
     }
-    const irType = functionType.irFunctionType;
+    console.log(functionType);
+    const environment = new IRFunctionCompilationEnvironment(this.typeProvider, identifier, functionType, tableEleemnt);
+    if (type instanceof StructType) {
+      const declaration = type.constructorDeclaration;
+      console.log(this.typeProvider.lazyMapping);
+      if (declaration === undefined) {
+        const properties = type.propertyNames;
+        const args: IRValue[] = [];
+        for (const propertyName of properties) {
+          const propertyType = type.propertyTypeMap.get(propertyName);
+          if (propertyType === undefined) {
+            throw new Error();
+          }
+          const t = this.typeProvider.get(propertyType);
+          const value = environment.generateValueOfType(t);
+          args.push(value);
+        }
+        environment.writeStatement([IR.InstructionType.return, ([] as number[]).concat.apply([], args.map((arg) => arg.irVariables))]);
+      }
+    } else if (type instanceof ClassType) {
+      return;
+    }
+    environment.finalize();
+
+    environment.declaration.exportedAs = undefined;
+    environment.declaration.inlinable = false;
+    environment.declaration.tableElement = true;
+
+    this.compilationUnit.internalFunctionDeclarations.push(environment.declaration);
+    this.compilationUnit.functionCode.push(environment.irFunction);
   }
   private compileOperator(_type: IType, _name: string, _arity: number) {
     return;
