@@ -385,6 +385,10 @@ export class DependencyAnalyzer extends ASTWalker {
     if (entry.entryType === VariableScopeEntryType.globalUnboundFunction) {
       const task = new AnalyzeGlobalUnboundFunction(entry);
       this.tasks.push(task);
+      for (const arg of identifierCallExpression.args) {
+        this.walkExpression(arg);
+      }
+      return;
     }
     super.walkIdentifierCallExpression(identifierCallExpression);
   }
