@@ -28,6 +28,19 @@ class JavaWriter {
     }
   }
 }
+const functionIdentifierNameMapping: Map<string, string> = new Map();
+function getNameOfFunctionIdentifier(identifier: string): string {
+  if (identifier === "_start") {
+    return identifier;
+  }
+  const ret = functionIdentifierNameMapping.get(identifier);
+  if (ret !== undefined) {
+    return ret;
+  }
+  const name = getFunctionName();
+  functionIdentifierNameMapping.set(identifier, name);
+  return name;
+}
 const adjectives = `deterministic
 constant
 undeclared
@@ -43,8 +56,11 @@ optional
 simple
 complex
 temporary
-computed`.split("\n");
-const nouns = `pointer
+computed
+retained
+released
+drawable`.split("\n");
+const variableNouns = `pointer
 reference
 property
 declaration
@@ -57,9 +73,32 @@ local
 array
 collection
 matrix`.split("\n");
+function getFunctionName() {
+  const adjs = (Math.random() * 3) + 2 | 0;
+  const s = new Set(adjectives);
+  let result = "";
+  let first = true;
+  for (let j = 0; j < adjs; j++) {
+    let random = [...s][(Math.random() * s.size) | 0];
+    s.delete(random);
+    if (first) {
+      first = false;
+    } else {
+      random = random[0].toUpperCase() + random.substr(1);
+    }
+    result += random;
+  }
+  if (Math.random() < 0.02) {
+    return result.toUpperCase();
+  }
+  return result + "Method";
+}
+let counter = 8;
 function getVariableName() {
-  if (Math.random() < 0.5) {
-    return String.fromCharCode(97 + (Math.random() * 10 + 16 | 0));
+  if (Math.random() < 0.8) {
+    const v = String.fromCharCode(97 + (counter % 26 | 0));
+    counter++;
+    return v;
   }
   const adjs = (Math.random() * 3) | 0;
   const s = new Set(adjectives);
@@ -76,14 +115,45 @@ function getVariableName() {
     result += random;
   }
   if (!first) {
-    const q = nouns[Math.random() * nouns.length | 0];
+    const q = variableNouns[Math.random() * variableNouns.length | 0];
     result += q[0].toUpperCase() + q.substr(1);
   } else {
-    result += nouns[Math.random() * nouns.length | 0];
+    result += variableNouns[Math.random() * variableNouns.length | 0];
   }
   if (Math.random() < 0.02) {
     return result.toUpperCase();
   }
+  return result;
+}
+const interfaceNouns = `interface
+operator
+typeface
+constuctor
+destructor
+descriptor
+method
+mapping
+hashmap
+association
+set
+vector
+array
+denominstor
+enumerator
+iterator
+comparator`.split("\n");
+function getInterfaceName() {
+  const adjs = (Math.random() * 3) | 0;
+  const s = new Set(adjectives);
+  let result = "I";
+  for (let j = 0; j < adjs; j++) {
+    let random = [...s][(Math.random() * s.size) | 0];
+    s.delete(random);
+    random = random[0].toUpperCase() + random.substr(1);
+    result += random;
+  }
+  const q = interfaceNouns[Math.random() * interfaceNouns.length | 0];
+  result += q[0].toUpperCase() + q.substr(1);
   return result;
 }
 export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, java: JavaWriter) => void): string {
@@ -124,12 +194,78 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
   for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
     functionIdentifierTypeMapping.set(externalFunctionDeclaration.identifier, externalFunctionDeclaration.type);
   }
+  let tableElementIndex = 0;
+  const tableElementArray: string[] = [];
+  const functionIdentifierTableElementIndex: Map<string, number> = new Map();
+  const tableFuctionPerType: Map<string, FunctionIdentifier[]> = new Map();
+  for (const internalFunctionDeclaration of ir.internalFunctionDeclarations) {
+    if (!internalFunctionDeclaration.tableElement) {
+      continue;
+    }
+    const functionTypeString = JSON.stringify(internalFunctionDeclaration.type);
+    const array = tableFuctionPerType.get(functionTypeString);
+    if (array !== undefined) {
+      array.push(internalFunctionDeclaration.identifier);
+    } else {
+      tableFuctionPerType.set(functionTypeString, [internalFunctionDeclaration.identifier]);
+    }
+    functionIdentifierTableElementIndex.set(internalFunctionDeclaration.identifier, tableElementIndex);
+    tableElementIndex++;
+    tableElementArray.push(internalFunctionDeclaration.identifier);
+  }
+  for (const externalFunctionDeclaration of ir.externalFunctionDeclarations) {
+    if (!externalFunctionDeclaration.tableElement) {
+      continue;
+    }
+    const functionTypeString = JSON.stringify(externalFunctionDeclaration.type);
+    const array = tableFuctionPerType.get(functionTypeString);
+    if (array !== undefined) {
+      array.push(externalFunctionDeclaration.identifier);
+    } else {
+      tableFuctionPerType.set(functionTypeString, [externalFunctionDeclaration.identifier]);
+    }
+    functionIdentifierTableElementIndex.set(externalFunctionDeclaration.identifier, tableElementIndex);
+    tableElementIndex++;
+    tableElementArray.push(externalFunctionDeclaration.identifier);
+  }
   java.writeLine("import java.nio.*;");
   java.writeLine("import java.util.*;");
   java.writeLine("import java.nio.charset.StandardCharsets;");
   java.writeLine("public class Main {");
   java.indent();
   java.writeLine("public static ByteBuffer bb;");
+  const dispatchTableNameMapping: Map<string, string> = new Map();
+  const usedInterfaceNames: Set<string> = new Set();
+  for (const [typeString, fns] of tableFuctionPerType.entries()) {
+    let name: string = "";
+    do {
+      name = getInterfaceName();
+    } while (name === "" || usedInterfaceNames.has(name));
+    usedInterfaceNames.add(name);
+    const type = JSON.parse(typeString) as FunctionType;
+    const returnType = type[1].length === 0 ? "void" : mapIRTypeToJavaType(type[1][0]);
+    const argTypes = type[0].map((t) => mapIRTypeToJavaType(t));
+    java.writeLine(`interface ${name} {`);
+    java.indent();
+    java.writeLine(`${returnType} call(${argTypes.map((f, b) => `${f} a${b}`).join(", ")});`);
+    java.dedent();
+    java.writeLine("}");
+    const dispatchName = `dispatch${name}`;
+    java.writeLine(`private static ${name}[] ${dispatchName} = new ${name}[] {`);
+    java.indent();
+    const v = new Set(fns);
+    for (let x = 0; x < tableElementArray.length; x++) {
+      const xIdentifier = tableElementArray[x];
+      if (v.has(xIdentifier)) {
+        java.writeLine(`Main::${getNameOfFunctionIdentifier(xIdentifier)},`);
+      } else {
+        java.writeLine("null,");
+      }
+    }
+    dispatchTableNameMapping.set(typeString, dispatchName);
+    java.dedent();
+    java.writeLine("};");
+  }
   let iCount = 0;
   let lCount = 0;
   for (const declaration of functionIdentifierTypeMapping.values()) {
@@ -174,7 +310,7 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
     if (type === undefined) {
       throw new Error();
     }
-    java.writeLine(`private static ${mapIRTypeToJavaType(type[1][0])} ${name} (${type[0].map((t, q) => (mapIRTypeToJavaType(t) + " a" + q)).join(", ")}){`);
+    java.writeLine(`private static ${mapIRTypeToJavaType(type[1][0])} ${getNameOfFunctionIdentifier(name)}(${type[0].map((t, q) => (mapIRTypeToJavaType(t) + " a" + q)).join(", ")}){`);
     java.indent();
     writeExternal(name, java);
     java.dedent();
@@ -215,7 +351,7 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
       usedNames.add(name);
       variableNames.push(name);
     }
-    java.writeLine(`private static ${mapIRTypeToJavaType(type[1][0])} ${identifier}(${type[0].map((t, q) => (mapIRTypeToJavaType(t) + " " + variableNames[q])).join(", ")}){`);
+    java.writeLine(`private static ${mapIRTypeToJavaType(type[1][0])} ${getNameOfFunctionIdentifier(identifier)}(${type[0].map((t, q) => (mapIRTypeToJavaType(t) + " " + variableNames[q])).join(", ")}){`);
     java.indent();
     for (const _argType of type[0]) {
       i++;
@@ -269,10 +405,10 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
                 throw new Error();
               }
               if (res.length === 0) {
-                java.writeLine(`${statement[1]}(${statement[3].map((a) => variableNames[a]).join(", ")});`);
+                java.writeLine(`${getNameOfFunctionIdentifier(statement[1])}(${statement[3].map((a) => variableNames[a]).join(", ")});`);
               } else {
                 const first = res[0];
-                java.writeLine(`${variableNames[first]} = ${statement[1]}(${statement[3].map((a) => variableNames[a]).join(", ")});`);
+                java.writeLine(`${variableNames[first]} = ${getNameOfFunctionIdentifier(statement[1])}(${statement[3].map((a) => variableNames[a]).join(", ")});`);
                 let ints = 0;
                 let longs = 0;
                 for (let c = 1; c < functionType[1].length; c++) {
@@ -290,13 +426,41 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
               }
             }
             if (statement[0] === InstructionType.callFunctionPointer) {
-              java.writeLine(``);
+              const [, functionType, b, res, args] = statement;
+              const dispatchTableName = dispatchTableNameMapping.get(JSON.stringify(functionType));
+              if (dispatchTableName === undefined) {
+                throw new Error();
+              }
+              if (res.length === 0) {
+                java.writeLine(`${dispatchTableName}[${variableNames[b]}].call(${args.map((a) => variableNames[a]).join(", ")});`);
+              } else {
+                const first = res[0];
+                java.writeLine(`${variableNames[first]} = ${dispatchTableName}[${variableNames[b]}].call(${args.map((a) => variableNames[a]).join(", ")});`);
+                let ints = 0;
+                let longs = 0;
+                for (let c = 1; c < functionType[1].length; c++) {
+                  const t = functionType[1][c];
+                  const javaType = mapIRTypeToJavaType(t);
+                  const varName = variableNames[res[c]];
+                  if (javaType === "int") {
+                    java.writeLine(`${varName} = reti${ints};`);
+                    ints++;
+                  } else if (javaType === "long") {
+                    java.writeLine(`${varName} = retl${longs};`);
+                    longs++;
+                  }
+                }
+              }
             }
             if (statement[0] === InstructionType.setToConstant) {
               java.writeLine(`${variableNames[statement[1]]} = ${statement[2]};`);
             }
             if (statement[0] === InstructionType.setToFunction) {
-              java.writeLine(`${variableNames[statement[1]]} = ${statement[2]};`);
+              const index = functionIdentifierTableElementIndex.get(statement[2]);
+              if (index === undefined) {
+                throw new Error();
+              }
+              java.writeLine(`${variableNames[statement[1]]} = ${index};`);
             }
             if (statement[0] === InstructionType.setToGlobal) {
               if (statement[2] === "HEAP_START") {
