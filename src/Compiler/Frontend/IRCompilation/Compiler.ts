@@ -1452,6 +1452,19 @@ export class IRCompiler {
         const [targetVariable] = target.irVariables;
         env.writeStatement([IR.InstructionType.divide, targetVariable, lhsIRVariable, rhsIrVariable]);
         return;
+      } else if (operator === "%") {
+        if (target === undefined) {
+          this.compileExpression(env, binaryOperatorExpression.lhs);
+          this.compileExpression(env, binaryOperatorExpression.rhs);
+          return;
+        }
+        const lhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.lhs);
+        const rhsValue = this.getExpressionAsValue(env, binaryOperatorExpression.rhs);
+        const [lhsIRVariable] = lhsValue.getAsIRValue().irVariables;
+        const [rhsIrVariable] = rhsValue.getAsIRValue().irVariables;
+        const [targetVariable] = target.irVariables;
+        env.writeStatement([IR.InstructionType.remainder, targetVariable, lhsIRVariable, rhsIrVariable]);
+        return;
       } else if (operator === "<") {
         if (target === undefined) {
           this.compileExpression(env, binaryOperatorExpression.lhs);
