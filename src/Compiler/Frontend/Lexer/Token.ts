@@ -4,6 +4,7 @@ import { SourceRange } from "./SourceRange";
 import { TokenTag } from "./TokenTag";
 
 export class Token extends ASTNode {
+  public name = "Token";
   public tag: TokenTag;
   public content: string;
   public sr: SourceRange;
