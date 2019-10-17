@@ -2,6 +2,7 @@ import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class ConstructorCallExpression extends Expression {
+  public name = "ConstructorCallExpression";
   public constructedType: ITypeCheckingType;
   public args: Expression[];
   constructor(constructedType: ITypeCheckingType, args: Expression[]) {

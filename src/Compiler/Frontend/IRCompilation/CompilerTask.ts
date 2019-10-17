@@ -18,13 +18,13 @@ export class CompileUnboundFunctionTask extends CompilerTask {
     super();
   }
   public toString(): string {
-    return `Compile unbound function ${this.indirectString()} ${this.declaration.name.content}`;
+    return `Compile unbound function ${this.indirectString()} ${this.declaration.nameToken.content}`;
   }
   public irName(): string {
     if (this.declaration.decoratorMap.has("export")) {
-      return this.declaration.name.content;
+      return this.declaration.nameToken.content;
     } else {
-      return `function_${this.declaration.name.content}`;
+      return `function_${this.declaration.nameToken.content}`;
     }
   }
 }

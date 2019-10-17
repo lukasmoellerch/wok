@@ -1,6 +1,7 @@
 import { Token } from "../../Lexer/Token";
 import { Expression } from "./Expression";
 export class PrefixUnaryOperatorExpression extends Expression {
+  public name = "PrefixUnaryOperatorExpression";
   public operand: Expression;
   public operator: Token;
   constructor(operand: Expression, operator: Token) {

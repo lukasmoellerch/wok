@@ -6,6 +6,7 @@ import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class VariableReferenceExpression extends Expression implements ILValue {
+  public name = "VariableReferenceExpression";
   public rhsType: ITypeCheckingType | undefined;
   public lvalue: undefined = undefined;
   public variableToken: Token;

@@ -5,6 +5,7 @@ import { ImplictConversionExpression } from "./ImplictConversionExpression";
 import { Statement } from "./Statement";
 
 export class AssignmentStatement extends Statement {
+  public name = "AssignmentStatement";
   public target: ILValue;
   public assignmentOperator: Token;
   public value: Expression;

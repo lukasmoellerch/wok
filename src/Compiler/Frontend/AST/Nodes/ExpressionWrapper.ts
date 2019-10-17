@@ -6,6 +6,7 @@ import { Expression } from "./Expression";
 import { ImplictConversionExpression } from "./ImplictConversionExpression";
 import { Statement } from "./Statement";
 export class ExpressionWrapper extends Statement {
+  public name = "ExpressionWrapper";
   public parsed: boolean = false;
   public tokens: Token[];
   public expression: Expression | AssignmentStatement | undefined = undefined;

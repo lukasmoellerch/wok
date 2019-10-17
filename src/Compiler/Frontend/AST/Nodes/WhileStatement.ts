@@ -4,6 +4,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class WhileStatement extends Statement {
+  public name = "WhileStatement";
   public whileKeyword: Token;
   public condition: ExpressionWrapper;
   public block: Block;

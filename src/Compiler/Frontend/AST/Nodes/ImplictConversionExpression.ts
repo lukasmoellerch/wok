@@ -2,6 +2,7 @@ import { ITypeCheckingType } from "../ExpressionType";
 import { Expression } from "./Expression";
 
 export class ImplictConversionExpression extends Expression {
+  public name = "ImplictConversionExpression";
   public from: ITypeCheckingType;
   public to: ITypeCheckingType;
   public value: Expression;

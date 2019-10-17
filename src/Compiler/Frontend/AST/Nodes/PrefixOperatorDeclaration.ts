@@ -3,6 +3,7 @@ import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
 
 export class PrefixOperatorDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "PrefixOperatorDeclaration";
   public topLevelDeclarable: void;
   public prefixKeywordToken: Token;
   public operatorKeywordToken: Token;

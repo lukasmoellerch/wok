@@ -2,6 +2,7 @@ import { Token } from "../../Lexer/Token";
 import { ASTNode } from "../ASTNode";
 import { Statement } from "./Statement";
 export class Block extends ASTNode {
+  public name = "Block";
   public startToken: Token;
   public endToken: Token;
   public statements: Statement[];

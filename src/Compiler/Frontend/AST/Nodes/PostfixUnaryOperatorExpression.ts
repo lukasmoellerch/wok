@@ -1,6 +1,7 @@
 import { Token } from "../../Lexer/Token";
 import { Expression } from "./Expression";
 export class PostfixUnaryOperatorExpression extends Expression {
+  public name = "PostfixUnaryOperatorExpression";
   public operand: Expression;
   public operator: Token;
   constructor(operand: Expression, operator: Token) {

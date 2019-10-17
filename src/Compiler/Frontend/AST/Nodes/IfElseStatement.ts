@@ -4,6 +4,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class IfElseStatement extends Statement {
+  public name = "IfElseStatement";
   public ifKeyword: Token;
   public condition: ExpressionWrapper;
   public trueBlock: Block;

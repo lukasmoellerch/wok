@@ -7,6 +7,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class VariableDeclaration extends Statement implements ITopLevelDeclaration {
+  public name = "VariableDeclaration";
   public topLevelDeclarable: void = undefined;
   public variableKeyword: Token;
   public identifierToken: Token;

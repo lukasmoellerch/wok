@@ -6,6 +6,7 @@ import { ASTNode } from "../ASTNode";
 import { DeclarationBlock } from "./DeclarationBlock";
 
 export class StructDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "StructDeclarations";
   public topLevelDeclarable: void;
   public structKeyword: Token;
   public nameToken: Token;

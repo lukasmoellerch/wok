@@ -27,7 +27,7 @@ export class TypeResolver extends ASTWalker {
   }
   public resolveTypeExpressionToNode(expression: TypeExpression, node: TypeTreeNode): TypeTreeNode | undefined {
     if (expression instanceof TypeReferenceExpression) {
-      const name = expression.name.content;
+      const name = expression.nameToken.content;
       const args: TypeTreeNode[] = [];
       for (const parameter of expression.parameters) {
         const parameterNode = this.resolveTypeExpressionToNode(parameter, node);
@@ -38,7 +38,7 @@ export class TypeResolver extends ASTWalker {
       }
       const entry = node.resolve(name, args);
       if (entry === undefined) {
-        this.errors.push(new UndeclaredTypeUsageError(expression.name.range, name));
+        this.errors.push(new UndeclaredTypeUsageError(expression.nameToken.range, name));
         return undefined;
       }
       return entry;

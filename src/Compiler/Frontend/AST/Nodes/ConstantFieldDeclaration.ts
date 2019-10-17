@@ -3,6 +3,7 @@ import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionW
 import { ASTNode } from "../ASTNode";
 
 export class ConstantFieldDeclaration extends ASTNode {
+  public name = "ConstantFieldDeclaration";
   public keywordToken: Token;
   public nameToken: Token;
   public typeHint: TypeExpressionWrapper;

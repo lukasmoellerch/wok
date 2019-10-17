@@ -7,6 +7,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { Statement } from "./Statement";
 
 export class ConstantDeclaration extends Statement implements ITopLevelDeclaration {
+  public name = "ConstantDeclaration";
   public topLevelDeclarable: void = undefined;
   public constantKeyword: Token;
   public identifierToken: Token;

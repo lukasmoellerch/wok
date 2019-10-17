@@ -4,6 +4,7 @@ import { ASTNode } from "../ASTNode";
 import { TypeAttribute } from "../Attributes/TypeAttribute";
 
 export class FunctionResultDeclaration extends ASTNode {
+  public name = "FunctionResultDeclaration";
   public type: TypeExpressionWrapper;
   constructor(type: TypeExpression) {
     super();

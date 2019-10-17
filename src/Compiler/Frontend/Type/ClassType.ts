@@ -39,7 +39,7 @@ export class TypeCheckingClassType implements ITypeCheckingType {
     }
     for (const decl of declaration.declarationBlock.declarations) {
       if (decl instanceof MethodDeclaration) {
-        this.memberMap.set(decl.name.content, decl);
+        this.memberMap.set(decl.nameToken.content, decl);
       }
       if (decl instanceof VariableFieldDeclaration) {
         this.memberMap.set(decl.nameToken.content, decl);
@@ -51,7 +51,7 @@ export class TypeCheckingClassType implements ITypeCheckingType {
       }
     }
   }
-  applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+  public applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
     return this;
   }
   public equals(other: ITypeCheckingType): boolean {
@@ -163,12 +163,12 @@ export class ClassType implements IType {
         this.properties.push(type);
         this.propertyNames.push(decl.nameToken.content);
       } else if (decl instanceof MethodDeclaration) {
-        const t = typeCheckingType.typeOfMember(decl.name.content);
+        const t = typeCheckingType.typeOfMember(decl.nameToken.content);
         if (t === undefined) {
           throw new Error();
         }
-        this.methodDeclarationMap.set(decl.name.content, decl);
-        this.memberTypeMap.set(decl.name.content, t.compilationType(provider, this.genericVariableScope));
+        this.methodDeclarationMap.set(decl.nameToken.content, decl);
+        this.memberTypeMap.set(decl.nameToken.content, t.compilationType(provider, this.genericVariableScope));
       }
     }
     this.constructorType = provider.specialize(functionTemplate, [provider.voidIdentifier, thisRef]);

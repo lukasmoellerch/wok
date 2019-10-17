@@ -3,6 +3,7 @@ import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
 
 export class PostfixOperatorDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "PostfixOperatorDeclaration";
   public topLevelDeclarable: void;
   public postfixKeywordToken: Token;
   public operatorKeywordToken: Token;

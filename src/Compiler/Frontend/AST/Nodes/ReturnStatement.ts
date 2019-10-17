@@ -4,6 +4,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { ImplictConversionExpression } from "./ImplictConversionExpression";
 import { Statement } from "./Statement";
 export class ReturnStatement extends Statement {
+  public name = "ReturnStatement";
   public returnToken: Token;
   public value: ExpressionWrapper | undefined;
   constructor(returnToken: Token, value: ExpressionWrapper | undefined) {

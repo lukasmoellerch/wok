@@ -30,7 +30,7 @@ export class VariableScopeBuilder extends ASTWalker {
     this.scopes = [globalScope];
     for (const declaration of this.sourceFile.topLevelDeclarations) {
       if (declaration instanceof UnboundFunctionDeclaration) {
-        const str = declaration.name.content;
+        const str = declaration.nameToken.content;
         const entryType = VariableScopeEntryType.globalUnboundFunction;
         const type = declaration.getFunctionType(this.rootTypeTreeNode);
         const entry = new VariableScopeEntry(str, entryType, declaration, type);
@@ -126,7 +126,7 @@ export class VariableScopeBuilder extends ASTWalker {
     super.walkConstantDeclaration(constantDeclaration);
   }
   public walkArgumentDeclaration(argumentDeclaration: FunctionArgumentDeclaration) {
-    const str = argumentDeclaration.name.content;
+    const str = argumentDeclaration.nameToken.content;
     const entryType = VariableScopeEntryType.argument;
     const type = argumentDeclaration.type;
     const entry = new VariableScopeEntry(str, entryType, argumentDeclaration, type.type);

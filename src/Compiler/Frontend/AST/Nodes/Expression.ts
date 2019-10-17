@@ -3,6 +3,7 @@ import { TypeAttribute } from "../Attributes/TypeAttribute";
 import { ITypeCheckingType } from "../ExpressionType";
 import { ImplictConversionExpression } from "./ImplictConversionExpression";
 export class Expression extends ASTNode {
+  public name = "Expression";
   public type: ITypeCheckingType | undefined;
   public implictConversionTargetType: ITypeCheckingType | undefined;
   public setType(type: ITypeCheckingType) {

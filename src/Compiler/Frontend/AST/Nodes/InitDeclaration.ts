@@ -10,6 +10,7 @@ import { ExpressionWrapper } from "./ExpressionWrapper";
 import { FunctionArgumentDeclaration } from "./FunctionArgumentDeclaration";
 
 export class InitDeclaration extends ASTNode {
+  public name = "InitDeclaration";
   public decorators: Decorator[];
   public decoratorMap: Map<string, ExpressionWrapper[]> = new Map();
   public argumentDeclarations: FunctionArgumentDeclaration[];
@@ -21,7 +22,7 @@ export class InitDeclaration extends ASTNode {
     super();
     this.decorators = decorators;
     for (const decorator of decorators) {
-      this.decoratorMap.set(decorator.name.content, decorator.parameters);
+      this.decoratorMap.set(decorator.nameToken.content, decorator.parameters);
     }
     this.argumentDeclarations = argumentDeclarations;
     this.block = block;

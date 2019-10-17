@@ -6,6 +6,7 @@ import { VariableScopeEntryAttribute } from "./Attributes/VariableScopeEntryAttr
 const astNodeNameStyle = chalk.default.red;
 
 export interface IASTNode {
+  name: string;
   attributes: Map<keyof IAttributeMap, IAttribute>;
   children: IASTNode[];
   range: SourceRange;
@@ -21,6 +22,7 @@ export interface IAttribute {
   toString(): string;
 }
 export class ASTNode implements IASTNode {
+  public name = "ASTNode";
   public attributes: Map<keyof IAttributeMap, IAttribute> = new Map();
   public children: IASTNode[] = [];
   public getAttribute<T extends keyof IAttributeMap>(kind: T): IAttributeMap[T] {
@@ -72,7 +74,7 @@ export class ASTNode implements IASTNode {
       }
     }
 
-    str += astNodeNameStyle(this.constructor.name);
+    str += this.name;
 
     str += " ";
     for (const attribute of this.attributes.values()) {

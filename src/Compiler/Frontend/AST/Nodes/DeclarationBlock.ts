@@ -7,6 +7,7 @@ import { VariableFieldDeclaration } from "./VariableFieldDeclaration";
 
 export type Declaration = ConstantFieldDeclaration | VariableFieldDeclaration | MethodDeclaration | InitDeclaration;
 export class DeclarationBlock extends ASTNode {
+  public name = "DeclarationBlock";
   public startToken: Token;
   public endToken: Token;
   public declarations: Declaration[];

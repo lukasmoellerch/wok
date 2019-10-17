@@ -2,6 +2,7 @@ import { Token } from "../../Lexer/Token";
 import { Expression } from "./Expression";
 
 export class MemberCallExpression extends Expression {
+  public name = "MemberCallExpression";
   public lhs: Expression;
   public memberToken: Token;
   public args: Expression[];

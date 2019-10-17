@@ -13,11 +13,12 @@ import { FunctionArgumentDeclaration } from "./FunctionArgumentDeclaration";
 import { FunctionResultDeclaration } from "./FunctionResultDeclaration";
 
 export class MethodDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "MethodDeclaration";
   public decorators: Decorator[];
   public decoratorMap: Map<string, ExpressionWrapper[]> = new Map();
   public functionNameToken: Token;
   public topLevelDeclarable: void;
-  public name: Token;
+  public nameToken: Token;
   public argumentDeclarations: FunctionArgumentDeclaration[];
   public block: Block | undefined;
   public entry: VariableScopeEntry | undefined;
@@ -28,10 +29,10 @@ export class MethodDeclaration extends ASTNode implements ITopLevelDeclaration {
     super();
     this.decorators = decorators;
     for (const decorator of decorators) {
-      this.decoratorMap.set(decorator.name.content, decorator.parameters);
+      this.decoratorMap.set(decorator.nameToken.content, decorator.parameters);
     }
     this.functionNameToken = functionNameToken;
-    this.name = name;
+    this.nameToken = name;
     this.argumentDeclarations = argumentDeclarations;
     this.block = block;
     this.resultDeclaration = resultDeclaration;

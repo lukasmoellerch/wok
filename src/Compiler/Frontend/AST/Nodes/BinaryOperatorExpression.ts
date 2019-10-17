@@ -1,6 +1,7 @@
 import { Token } from "../../Lexer/Token";
 import { Expression } from "./Expression";
 export class BinaryOperatorExpression extends Expression {
+  public name = "AssignmentStatement";
   public lhs: Expression;
   public rhs: Expression;
   public operator: Token;

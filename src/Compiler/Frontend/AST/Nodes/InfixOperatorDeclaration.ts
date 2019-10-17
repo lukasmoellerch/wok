@@ -3,6 +3,7 @@ import { ITopLevelDeclaration } from "../AST";
 import { ASTNode } from "../ASTNode";
 
 export class InfixOperatorDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "InfixOperatorDeclaration";
   public topLevelDeclarable: void;
   public infixKeywordToken: Token;
   public operatorKeywordToken: Token;

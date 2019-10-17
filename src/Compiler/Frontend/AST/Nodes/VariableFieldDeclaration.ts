@@ -3,6 +3,7 @@ import { TypeExpressionWrapper } from "../../Type/UnresolvedType/TypeExpressionW
 import { ASTNode } from "../ASTNode";
 
 export class VariableFieldDeclaration extends ASTNode {
+  public name = "VariableFieldDeclaration";
   public keywordToken: Token;
   public nameToken: Token;
   public typeHint: TypeExpressionWrapper;

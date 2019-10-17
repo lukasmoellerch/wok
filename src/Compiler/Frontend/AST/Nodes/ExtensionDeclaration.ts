@@ -5,6 +5,7 @@ import { ASTNode } from "../ASTNode";
 import { DeclarationBlock } from "./DeclarationBlock";
 
 export class ExtensionDeclaration extends ASTNode implements ITopLevelDeclaration {
+  public name = "ExtensionDeclaration";
   public topLevelDeclarable: void = undefined;
   public extensionKeywordToken: Token;
   public typeExpression: TypeExpressionWrapper;

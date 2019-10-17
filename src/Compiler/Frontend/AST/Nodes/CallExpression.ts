@@ -1,6 +1,7 @@
 import { Expression } from "./Expression";
 
 export class CallExpression extends Expression {
+  public name = "CallExpression";
   public lhs: Expression;
   public args: Expression[];
   constructor(lhs: Expression, args: Expression[]) {
