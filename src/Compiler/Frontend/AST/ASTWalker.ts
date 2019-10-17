@@ -20,6 +20,7 @@ import { IfElseStatement } from "./Nodes/IfElseStatement";
 import { IfStatement } from "./Nodes/IfStatement";
 import { ImplictConversionExpression } from "./Nodes/ImplictConversionExpression";
 import { InfixOperatorDeclaration } from "./Nodes/InfixOperatorDeclaration";
+import { InitDeclaration } from "./Nodes/InitDeclaration";
 import { IntegerLiteralExpression } from "./Nodes/IntegerLiteralExpression";
 import { MemberCallExpression } from "./Nodes/MemberCallExpression";
 import { MemberReferenceExpression } from "./Nodes/MemberReferenceExpression";
@@ -111,6 +112,10 @@ export class ASTWalker {
       this.walkMethodDeclaration(declaration);
       return;
     }
+    if (declaration instanceof InitDeclaration) {
+      this.walkInitDeclaration(declaration);
+      return;
+    }
     throw new Error();
   }
   protected walkConstantFieldDeclaration(constantFieldDeclaration: ConstantFieldDeclaration) {
@@ -144,6 +149,18 @@ export class ASTWalker {
     const resultDeclaration = declaration.resultDeclaration;
     if (resultDeclaration !== undefined) {
       this.walkResultDeclaration(resultDeclaration);
+    }
+  }
+  protected walkInitDeclaration(declaration: InitDeclaration) {
+    for (const decorator of declaration.decorators) {
+      this.walkDecorator(decorator);
+    }
+    for (const argumentDeclaration of declaration.argumentDeclarations) {
+      this.walkArgumentDeclaration(argumentDeclaration);
+    }
+    const block = declaration.block;
+    if (block !== undefined) {
+      this.walkBlock(block);
     }
   }
   protected walkUnboundFunctionDeclaration(unboundFunctionDeclaration: UnboundFunctionDeclaration) {

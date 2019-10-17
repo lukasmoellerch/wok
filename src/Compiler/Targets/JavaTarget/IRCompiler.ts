@@ -476,25 +476,24 @@ export function compileIR(ir: ICompilationUnit, writeExternal: (name: string, ja
             if (statement[0] === InstructionType.load) {
               const t = statement[3];
               if (t === MemoryIRType.si8 || t === MemoryIRType.ui8) {
-                java.writeLine(`${variableNames[statement[1]]} = bb.getChar(${variableNames[statement[2]]});`);
-              }
-              if (t === MemoryIRType.si16 || t === MemoryIRType.ui16) {
+                java.writeLine(`${variableNames[statement[1]]} = bb.get(${variableNames[statement[2]]});`);
+              } else if (t === MemoryIRType.si16 || t === MemoryIRType.ui16) {
                 java.writeLine(`${variableNames[statement[1]]} = bb.getShort(${variableNames[statement[2]]});`);
-              }
-              if (t === MemoryIRType.si32 || t === MemoryIRType.ui32 || t === MemoryIRType.funcptr || t === MemoryIRType.ptr) {
+              } else if (t === MemoryIRType.si32 || t === MemoryIRType.ui32 || t === MemoryIRType.funcptr || t === MemoryIRType.ptr) {
                 java.writeLine(`${variableNames[statement[1]]} = bb.getInt(${variableNames[statement[2]]});`);
-              }
-              if (t === MemoryIRType.si64 || t === MemoryIRType.ui64) {
+              } else if (t === MemoryIRType.si64 || t === MemoryIRType.ui64) {
                 java.writeLine(`${variableNames[statement[1]]} = bb.getLong(${variableNames[statement[2]]});`);
+              } else {
+                throw new Error()
               }
             }
             if (statement[0] === InstructionType.store) {
               const t = statement[3];
               if (t === MemoryIRType.si8 || t === MemoryIRType.ui8) {
-                java.writeLine(`bb.putChar(${variableNames[statement[1]]}, ${variableNames[statement[2]]});`);
+                java.writeLine(`bb.put(${variableNames[statement[1]]},  (byte) ${variableNames[statement[2]]});`);
               }
               if (t === MemoryIRType.si16 || t === MemoryIRType.ui16) {
-                java.writeLine(`bb.putShort(${variableNames[statement[1]]}, ${variableNames[statement[2]]});`);
+                java.writeLine(`bb.putShort(${variableNames[statement[1]]}, (short) ${variableNames[statement[2]]});`);
               }
               if (t === MemoryIRType.si32 || t === MemoryIRType.ui32 || t === MemoryIRType.funcptr || t === MemoryIRType.ptr) {
                 java.writeLine(`bb.putInt(${variableNames[statement[1]]}, ${variableNames[statement[2]]});`);

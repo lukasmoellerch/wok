@@ -137,7 +137,7 @@ class AnalyzeConstructor extends AnalyzerTaskBase {
     if (!(other instanceof AnalyzeConstructor)) {
       return false;
     }
-    if (this.type === other.type) {
+    if (this.type !== other.type) {
       return false;
     }
     if (this.arity !== other.arity) {
@@ -207,7 +207,7 @@ export class DependencyAnalyzer extends ASTWalker {
 
   public compilerTasks: CompilerTask[] = [];
   public indirectlyReferencedTask: Task[] = [];
-  protected genericTypeVariableScopeStack: GenericTypeVariableScope[] = [];
+  protected genericTypeVariableScopeStack: GenericTypeVariableScope[] = [new GenericTypeVariableScope()];
   private typeArray: IType[] = [];
   private typeMapIndexMapping: Map<IType, number> = new Map();
   private memoryDependencies: Map<number, Set<IType>> = new Map(); // A has every B as a dependency
@@ -266,16 +266,17 @@ export class DependencyAnalyzer extends ASTWalker {
       } else if (task instanceof AnalyzeOperator) {
         // Do nothing
       } else if (task instanceof AnalyzeMember) {
-        // Do nothing
         const type = task.type;
         if (type instanceof StructType) {
           const declaration = type.methodDeclarationMap.get(task.memberName);
           if (declaration !== undefined) {
+            this.genericTypeVariableScopeStack.push(type.genericVariableScope);
             this.walkMethodDeclaration(declaration);
           }
         } else if (type instanceof ClassType) {
           const declaration = type.methodDeclarationMap.get(task.memberName);
           if (declaration !== undefined) {
+            // this.genericTypeVariableScopeStack.push(type.genericVariableScope);
             this.walkMethodDeclaration(declaration);
           }
         }
@@ -371,10 +372,15 @@ export class DependencyAnalyzer extends ASTWalker {
     if (typeCheckingType === undefined) {
       return;
     }
-    const type = this.getCompilationType(typeCheckingType);
+    try {
+      const type = this.getCompilationType(typeCheckingType);
 
-    const task = new AnalyzeType(type);
-    this.tasks.push(task);
+      const task = new AnalyzeType(type);
+      this.tasks.push(task);
+    } catch (e) {
+      return;
+    }
+
   }
   protected walkIdentifierCallExpression(identifierCallExpression: IdentifierCallExpression): void {
     const called = identifierCallExpression.lhs;
@@ -396,8 +402,12 @@ export class DependencyAnalyzer extends ASTWalker {
     super.walkBinaryOperatorExpression(binaryOperatorExpression);
     const lhs = binaryOperatorExpression.lhs;
     const type = lhs.forceType();
-    const task = new AnalyzeOperator(this.getCompilationType(type), binaryOperatorExpression.operator.content, 2);
-    this.tasks.push(task);
+    try {
+      const task = new AnalyzeOperator(this.getCompilationType(type), binaryOperatorExpression.operator.content, 2);
+      this.tasks.push(task);
+    } catch (_e) {
+      return;
+    }
   }
   protected walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression: PrefixUnaryOperatorExpression): void {
     super.walkPrefixUnaryOperatorExpression(prefixUnaryOperatorExpression);
@@ -408,20 +418,35 @@ export class DependencyAnalyzer extends ASTWalker {
   protected walkMemberCallExpression(memberCallExpression: MemberCallExpression): void {
     super.walkMemberCallExpression(memberCallExpression);
     const type = memberCallExpression.lhs.forceType();
-    const task = new AnalyzeMember(this.getCompilationType(type), memberCallExpression.memberToken.content);
-    this.tasks.push(task);
+    try {
+      const t = this.getCompilationType(type);
+      const task = new AnalyzeMember(t, memberCallExpression.memberToken.content);
+      this.tasks.push(task);
+    } catch (_e) {
+      return;
+    }
   }
   protected walkMemberReferenceExpression(memberReferenceExpression: MemberReferenceExpression): void {
     super.walkMemberReferenceExpression(memberReferenceExpression);
     const type = memberReferenceExpression.lhs.forceType();
-    const task = new AnalyzeMember(this.getCompilationType(type), memberReferenceExpression.memberToken.content);
-    this.tasks.push(task);
+    try {
+      const task = new AnalyzeMember(this.getCompilationType(type), memberReferenceExpression.memberToken.content);
+      this.tasks.push(task);
+    } catch (_e) {
+      return;
+    }
   }
   protected walkConstructorCallExpression(constructorCallExpression: ConstructorCallExpression): void {
     super.walkConstructorCallExpression(constructorCallExpression);
     const called = constructorCallExpression.constructedType;
-    const task = new AnalyzeConstructor(this.getCompilationType(called), constructorCallExpression.args.length);
-    this.tasks.push(task);
+    try {
+      const compilationType = this.getCompilationType(called);
+      const task = new AnalyzeConstructor(compilationType, constructorCallExpression.args.length);
+      this.tasks.push(task);
+    } catch (e) {
+      return;
+    }
+
   }
   protected walkVariableReferenceExpression(variableReferenceExpression: VariableReferenceExpression): void {
     const entry = variableReferenceExpression.entry;

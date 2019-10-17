@@ -2,7 +2,6 @@ prefix operator -
 infix operator + 3 right
 infix operator - 3 right
 infix operator * 4 right
-infix operator / 4 right
 infix operator % 4 right
 infix operator == 2 right
 infix operator != 2 right
@@ -11,34 +10,8 @@ infix operator < 2 right
 infix operator >= 2 right
 infix operator <= 2 right
 
-@foreign("print") func print(str: String)
-@foreign("printInt") func printInt(i: Int)
-func printBinary(a: Int) {
-  var arg = a
-  var two = 1
-  while two < arg {
-    two = two * 2
-  }
-  two = two / 2
-  while two >= 1 {
-    if arg >= two {
-      print("1")
-      arg = arg - two
-    }else{
-      print("0")
-    }
-    two = two / 2
-  }
-  return
-}
-let str = "test"
-let t = str.get(0)
-printInt(str.length)
-printBinary(1235)
-
-// Classes can't have methods in the moment and they will never be deallocated. They sort of only work as special structs. Struct have generics, generics for classes are planned. Generics have no restrictions in the moment so they only can be saved and restored
-
-// Just some memory management functions (Library files can't be loaded using the current driver although the frontend would support it) - needed for classes to work
+@foreign("printInt") func printInt(num: Int)
+@foreign("printInt") func printUInt(num: UInt)
 struct Block {
   var size: UInt32
   var nextBlockAddr: UInt32
@@ -101,7 +74,7 @@ func realloc(old: UInt32, newSize: UInt32): UInt32 {
 func memcpy(a: UInt32, b: UInt32, amount: UInt32): UInt32 {
   var i = 0
   while i < amount {
-    Pointer<UInt8>(b + i).store(Pointer<UInt8>(a).load())
+    Pointer<UInt8>(newPointer + i).store(Pointer<UInt8>(old).load())
     i = i + 1
   }
 }
@@ -111,7 +84,6 @@ func memcpy(a: UInt32, b: UInt32, amount: UInt32): UInt32 {
   header.flag = 1
   Pointer<Block>(headerPtr).store(header)
 }
-// A simple Vector "class", should be converted to class in the future or with reference semantics
 struct Vector<T> {
   let capacity: Int
   let total: Int
@@ -142,3 +114,6 @@ struct Vector<T> {
     return self.items.offsetBy(index * 12).load()
   }
 }
+let i = Vector<Int>()
+i.append(12)
+printInt(i.get(0))

@@ -1,6 +1,7 @@
 import { Type } from "../../IR/AST";
 import { GenericTypeVariableScope, ITypeCheckingType, TypeVariable } from "../AST/ExpressionType";
 import { ConstantFieldDeclaration } from "../AST/Nodes/ConstantFieldDeclaration";
+import { InitDeclaration } from "../AST/Nodes/InitDeclaration";
 import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
 import { VariableFieldDeclaration } from "../AST/Nodes/VariableFieldDeclaration";
@@ -16,7 +17,9 @@ class StructGenericTypeTemplate implements IGenericTypeTemplate {
     public argsNeeded: number,
     private argNames: string[],
     private declaration: StructDeclaration,
-  ) { }
+  ) {
+
+  }
   public createWithArguments(provider: TypeProvider, thisRef: SpecializedTypeReference, args: SpecializedTypeReference[]): IType {
     return new StructType(provider, this.declaration, this.argNames, args, this.typeCheckingType, thisRef);
   }
@@ -28,16 +31,15 @@ export class TypeCheckingStructType implements ITypeCheckingType {
   public node: TypeTreeNode;
   public name: string;
   public memberMap: Map<string, MethodDeclaration | VariableFieldDeclaration | ConstantFieldDeclaration> = new Map();
+  public initDeclaration: InitDeclaration | undefined;
   public operatorMap: Map<string, ITypeCheckingType> = new Map();
   public propertyTypeExpressions: TypeExpressionWrapper[] = [];
-  private genericAssignment: Map<string, ITypeCheckingType> = new Map();
-  constructor(node: TypeTreeNode, declaration: StructDeclaration) {
-    this.name = node.toString();
+  private rawTypeCheckingType: TypeCheckingStructType;
+  constructor(node: TypeTreeNode, declaration: StructDeclaration, private genericAssignment: Map<string, ITypeCheckingType>, rawTypeCheckingType?: TypeCheckingStructType) {
+    this.rawTypeCheckingType = rawTypeCheckingType === undefined ? this : rawTypeCheckingType;
+    this.name = declaration.nameToken.content + "<" + [...genericAssignment.entries()].map(([a, b]) => `${a}: ${b.name}`).join(", ") + ">";
     this.node = node;
     this.declaration = declaration;
-    for (let i = 0; i < this.node.args.length; i++) {
-      this.genericAssignment.set(declaration.genericVariables[i].content, this.node.args[i].typeCheckingType as ITypeCheckingType);
-    }
     for (const decl of declaration.declarationBlock.declarations) {
       if (decl instanceof MethodDeclaration) {
         this.memberMap.set(decl.name.content, decl);
@@ -50,7 +52,18 @@ export class TypeCheckingStructType implements ITypeCheckingType {
         this.memberMap.set(decl.nameToken.content, decl);
         this.propertyTypeExpressions.push(decl.typeHint);
       }
+      if (decl instanceof InitDeclaration) {
+        this.initDeclaration = decl;
+      }
     }
+  }
+  public applyMapping(other: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    const map: Map<string, ITypeCheckingType> = new Map();
+    for (const [a, b] of this.genericAssignment.entries()) {
+      map.set(a, b.applyMapping(other));
+    }
+
+    return new TypeCheckingStructType(this.node, this.declaration, map, this.rawTypeCheckingType);
   }
   public equals(other: ITypeCheckingType): boolean {
     if (!(other instanceof TypeCheckingStructType)) {
@@ -71,6 +84,10 @@ export class TypeCheckingStructType implements ITypeCheckingType {
     return true;
   }
   public typeOfConstructor(): TypeCheckingFunctionType | undefined {
+    const decl = this.initDeclaration;
+    if (decl !== undefined) {
+      return decl.getFunctionType(this.node, this).applyMapping(this.genericAssignment);
+    }
     return new TypeCheckingFunctionType(this.node, this.propertyTypeExpressions.map((a) => this.resolveGeneric(a.type as ITypeCheckingType)), this);
   }
   public typeOfMember(str: string): ITypeCheckingType | undefined {
@@ -79,7 +96,7 @@ export class TypeCheckingStructType implements ITypeCheckingType {
       return undefined;
     }
     if (declaration instanceof MethodDeclaration) {
-      return declaration.getFunctionType(this.node, this);
+      return declaration.getFunctionType(this.node, this).applyMapping(this.genericAssignment);
     } else {
       return this.resolveGeneric(declaration.typeHint.type as ITypeCheckingType);
     }
@@ -88,6 +105,17 @@ export class TypeCheckingStructType implements ITypeCheckingType {
     throw new Error("Method not implemented.");
   }
   public compilationType(provider: TypeProvider, scope: GenericTypeVariableScope): SpecializedTypeReference {
+    const map: Map<string, SpecializedTypeReference> = new Map();
+    for (const [a, b] of scope.map.entries()) {
+      map.set(a, b);
+    }
+    for (const [a, b] of this.genericAssignment.entries()) {
+      try {
+        map.set(a, b.compilationType(provider, scope));
+      } catch (e) {
+        //
+      }
+    }
     const tct = this.declaration.typeCheckingType;
     if (tct === undefined) {
       throw new Error();
@@ -96,24 +124,18 @@ export class TypeCheckingStructType implements ITypeCheckingType {
     const identifier = TypeCheckingStructType.declarationIdentifierMap.get(name) || new GenericTypeIdentifier(name);
     TypeCheckingStructType.declarationIdentifierMap.set(name, identifier);
 
-    provider.ensureGeneric(new StructGenericTypeTemplate(this, identifier, this.declaration.genericVariables.length, this.declaration.genericVariables.map((token) => token.content), this.declaration));
+    provider.ensureGeneric(new StructGenericTypeTemplate(this.rawTypeCheckingType, identifier, this.declaration.genericVariables.length, this.declaration.genericVariables.map((token) => token.content), this.declaration));
 
-    return provider.specializeGeneric(identifier, this.declaration.genericVariables.map((token) => this.genericAssignment.get(token.content) as ITypeCheckingType).map((a) => a.compilationType(provider, scope)));
+    return provider.specializeGeneric(identifier, this.declaration.genericVariables.map((token) => map.get(token.content) as SpecializedTypeReference));
   }
   private resolveGeneric(t: ITypeCheckingType): ITypeCheckingType {
-    if (t instanceof TypeVariable) {
-      const res = this.genericAssignment.get(t.name);
-      if (res === undefined) {
-        return t;
-      }
-      return res;
-    }
-    return t;
+    return t.applyMapping(this.genericAssignment);
   }
+
 }
 export class StructType implements IType {
   public name: string;
-  public constructorDeclaration: undefined;
+  public constructorDeclaration: undefined | InitDeclaration;
   public methodDeclarationMap: Map<string, MethodDeclaration> = new Map();
 
   public properties: SpecializedTypeReference[] = [];
@@ -121,16 +143,16 @@ export class StructType implements IType {
   public propertyTypeMap: Map<string, SpecializedTypeReference> = new Map();
   public propertyIrVariableIndexMapping: Map<string, number[]> = new Map();
 
+  public genericVariableScope: GenericTypeVariableScope = new GenericTypeVariableScope();
+
   private constructorType: SpecializedTypeReference;
   private memberTypeMap: Map<string, SpecializedTypeReference> = new Map();
   private irVariableTypesCache: Type[] = [];
 
   private memoryMapData: MemoryLocation[] = [];
   private sizeData: number = NaN;
-
-  private genericVariableScope: GenericTypeVariableScope = new GenericTypeVariableScope();
-  constructor(private provider: TypeProvider, public declaration: StructDeclaration, names: string[], args: SpecializedTypeReference[], typeCheckingType: TypeCheckingStructType, thisRef: SpecializedTypeReference) {
-    this.name = declaration.nameToken.content;
+  constructor(private provider: TypeProvider, public declaration: StructDeclaration, names: string[], args: SpecializedTypeReference[], public typeCheckingType: TypeCheckingStructType, thisRef: SpecializedTypeReference) {
+    this.name = declaration.nameToken.content + "<" + args.map((a) => a.index.toString()).join(", ") + ">";
 
     for (let i = 0; i < names.length; i++) {
       this.genericVariableScope.map.set(names[i], args[i]);
@@ -163,9 +185,20 @@ export class StructType implements IType {
         }
         this.methodDeclarationMap.set(decl.name.content, decl);
         this.memberTypeMap.set(decl.name.content, t.compilationType(provider, this.genericVariableScope));
+      } else if (decl instanceof InitDeclaration) {
+        this.constructorDeclaration = decl;
       }
     }
-    this.constructorType = provider.specialize(functionTemplate, [provider.voidIdentifier, thisRef, ...this.properties);
+    const initDecl = this.constructorDeclaration;
+    if (initDecl === undefined) {
+      this.constructorType = provider.specialize(functionTemplate, [provider.voidIdentifier, thisRef, ...this.properties]);
+    } else {
+      const t = typeCheckingType.typeOfConstructor();
+      if (t === undefined) {
+        throw new Error();
+      }
+      this.constructorType = t.compilationType(provider, this.genericVariableScope);
+    }
   }
   public typeReferences(): Set<IType> {
     const typeReferences: Set<IType> = new Set();
@@ -222,7 +255,7 @@ export class StructType implements IType {
     return this.irVariableTypesCache;
   }
   public toString(): string {
-    return (this.declaration.typeCheckingType as ITypeCheckingType).node.toString();
+    return this.name;
   }
   public typeOfMember(str: string): IType | undefined {
     const ref = this.memberTypeMap.get(str);

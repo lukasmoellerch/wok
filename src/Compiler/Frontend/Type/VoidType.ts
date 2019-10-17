@@ -11,6 +11,9 @@ export class TypeCheckingVoidType implements ITypeCheckingType {
   ) {
 
   }
+  public applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    return this;
+  }
   public equals(other: ITypeCheckingType): boolean {
     return other instanceof TypeCheckingVoidType;
   }

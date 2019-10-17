@@ -27,6 +27,9 @@ export class TypeCheckingPointerType implements ITypeCheckingType {
   ) {
 
   }
+  public applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    return this;
+  }
   public compilationType(provider: TypeProvider, scope: GenericTypeVariableScope): SpecializedTypeReference {
     const stored = this.stored.compilationType(provider, scope);
     return provider.specialize(pointerTemplate, [stored]);
@@ -47,6 +50,9 @@ export class TypeCheckingPointerType implements ITypeCheckingType {
     if (str === "store") {
       return new TypeCheckingFunctionType(this.node, [this.stored], new TypeCheckingVoidType(this.node), this);
     }
+    if (str === "offsetBy") {
+      return new TypeCheckingFunctionType(this.node, [new TypeCheckingNativeIntegerType(this.node, false, 4)], this, this);
+    }
     return undefined;
   }
   public typeOfOperator(_str: string): ITypeCheckingType | undefined {
@@ -61,6 +67,7 @@ export class PointerType implements IType {
   private constructorType: SpecializedTypeReference;
   private storeMemberType: SpecializedTypeReference;
   private loadMemberType: SpecializedTypeReference;
+  private offsetByMemberType: SpecializedTypeReference;
   constructor(private provider: TypeProvider, thisRef: SpecializedTypeReference, stored: SpecializedTypeReference) {
     this.stored = stored;
     const uint32 = provider.specialize(uint32Template);
@@ -68,9 +75,10 @@ export class PointerType implements IType {
       throw new Error();
     }
     const voidType = provider.voidIdentifier;
-    this.constructorType = provider.specialize(functionTemplate, [voidType, thisRef]);
+    this.constructorType = provider.specialize(functionTemplate, [voidType, thisRef, uint32]);
     this.storeMemberType = provider.specialize(functionTemplate, [thisRef, voidType, stored]);
     this.loadMemberType = provider.specialize(functionTemplate, [thisRef, stored]);
+    this.offsetByMemberType = provider.specialize(functionTemplate, [thisRef, thisRef, uint32]);
   }
   public typeReferences(): Set<IType> {
     return new Set();
@@ -103,6 +111,9 @@ export class PointerType implements IType {
     if (str === "load") {
       return this.provider.get(this.loadMemberType);
     }
+    if (str === "offsetBy") {
+      return this.provider.get(this.offsetByMemberType);
+    }
     return undefined;
   }
   public hasMemberCalled(str: string): boolean {
@@ -131,6 +142,9 @@ export class TypeCheckingStringType implements ITypeCheckingType {
   constructor(
     public node: TypeTreeNode,
   ) { }
+  public applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    return this;
+  }
   public equals(other: ITypeCheckingType): boolean {
     return other instanceof TypeCheckingStringType;
   }
@@ -139,7 +153,9 @@ export class TypeCheckingStringType implements ITypeCheckingType {
   }
   public typeOfMember(str: string): ITypeCheckingType | undefined {
     if (str === "length") {
-      return new TypeCheckingFunctionType(this.node, [], new TypeCheckingNativeIntegerType(this.node, false, 4), this);
+      return new TypeCheckingNativeIntegerType(this.node, false, 4);
+    } else if (str === "get") {
+      return new TypeCheckingFunctionType(this.node, [new TypeCheckingNativeIntegerType(this.node, false, 4)], new TypeCheckingNativeIntegerType(this.node, false, 1), this);
     }
     return undefined;
   }
@@ -227,6 +243,9 @@ export class TypeCheckingNativeIntegerType implements ITypeCheckingType {
     const prefix = signed ? "Int" : "UInt";
     const width = bytes * 8 + "";
     this.name = prefix + width;
+  }
+  public applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    return this;
   }
   public equals(other: ITypeCheckingType): boolean {
     if (!(other instanceof TypeCheckingNativeIntegerType)) {

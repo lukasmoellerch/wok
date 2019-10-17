@@ -51,6 +51,9 @@ export class TypeCheckingClassType implements ITypeCheckingType {
       }
     }
   }
+  applyMapping(_map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    return this;
+  }
   public equals(other: ITypeCheckingType): boolean {
     if (!(other instanceof TypeCheckingClassType)) {
       return false;

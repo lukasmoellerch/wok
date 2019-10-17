@@ -1,8 +1,8 @@
 import chalk from "chalk";
 import { Block, BlockType, ICompilationUnit, IExternalFunctionDeclaration, IInternalFunctionDeclaration, IMutableGlobal, InstructionType, MemoryIRType, SSAStatement, Type } from "./AST";
-
+chalk.enabled = false;
 export class IRPrinter {
-  private compilationUnit: ICompilationUnit | undefined;
+  public compilationUnit: ICompilationUnit | undefined;
   public stringifyCompilationUnit(compilationUnit: ICompilationUnit): string {
     this.compilationUnit = compilationUnit;
     let buffer = "";
@@ -108,7 +108,7 @@ export class IRPrinter {
     } else if (type === MemoryIRType.ptr) {
       return chalk.yellowBright("ptr");
     }
-    throw new Error("Invlid type");
+    return "ERROR"
   }
   public stringifyMutableGlobal(mutableGlobal: IMutableGlobal): string {
     return `mutable global ${mutableGlobal.identifier}: ${mutableGlobal}`;

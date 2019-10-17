@@ -36,7 +36,7 @@ export class Lexer {
   protected stringLiteralRegex = /\"(([^\"]|\\\")*[^\\])?\"/g;
   protected booleanLiteralRegex = /(true|false)/g;
   protected nilLiteralRegex = /nil/g;
-  protected operatorRegex = /[=+!*%<>&|^~?-]+/g;
+  protected operatorRegex = /[=+!%*<>&|^~?\/-]+/g;
   protected dotOperatorRegex = /\./g;
   protected leftParenthesisRegex = /\(/g;
   protected rightParenthesisRegex = /\)/g;

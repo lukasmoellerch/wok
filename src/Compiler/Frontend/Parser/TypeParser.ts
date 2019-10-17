@@ -19,6 +19,7 @@ export class TypeParser {
     const nameToken = this.lexer.identifier() || new PlaceholderToken(this.lexer);
     if (nameToken instanceof PlaceholderToken) {
       this.errors.push(new WrongTokenError(nameToken.range, [TokenTag.identifier]));
+      this.lexer.errorAdvance();
     }
     const less = this.lexer.character("<");
     if (less !== undefined) {

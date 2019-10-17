@@ -27,6 +27,20 @@ export interface ITypeCheckingType {
   typeOfMember(str: string): ITypeCheckingType | undefined;
   typeOfOperator(str: string): ITypeCheckingType | undefined;
   compilationType(provider: TypeProvider, scope: GenericTypeVariableScope): SpecializedTypeReference;
+  applyMapping(map: Map<string, ITypeCheckingType>): ITypeCheckingType;
+}
+export function applyGenericTypeVariableScope(map: Map<string, ITypeCheckingType>, type: ITypeCheckingType): ITypeCheckingType {
+  if (type instanceof TypeVariable) {
+    const name = type.name;
+    const t = map.get(name);
+    if (t === undefined) {
+      return type;
+    } else {
+      return type;
+    }
+  } else {
+    return type;
+  }
 }
 export class TypeVariable implements ITypeCheckingType {
   constructor(
@@ -34,6 +48,13 @@ export class TypeVariable implements ITypeCheckingType {
     public name: string,
     private constraints?: ITypeCheckingType,
   ) { }
+  public applyMapping(map: Map<string, ITypeCheckingType>): ITypeCheckingType {
+    const t = map.get(this.name);
+    if (t !== undefined) {
+      return t;
+    }
+    return this;
+  }
   public compilationType(_provider: TypeProvider, scope: GenericTypeVariableScope): SpecializedTypeReference {
     const s = scope.reolve(this.name);
     if (s === undefined) {

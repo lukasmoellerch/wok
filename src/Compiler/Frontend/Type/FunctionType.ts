@@ -32,6 +32,14 @@ export class TypeCheckingFunctionType implements ITypeCheckingType {
     public result: ITypeCheckingType,
     public thisType?: ITypeCheckingType) {
   }
+  public applyMapping(map: Map<string, ITypeCheckingType>): TypeCheckingFunctionType {
+    const thisType = this.thisType;
+    if (thisType === undefined) {
+      return new TypeCheckingFunctionType(this.node, this.args.map((arg) => arg.applyMapping(map)), this.result.applyMapping(map), undefined);
+    } else {
+      return new TypeCheckingFunctionType(this.node, this.args.map((arg) => arg.applyMapping(map)), this.result.applyMapping(map), thisType.applyMapping(map));
+    }
+  }
   public compilationType(provider: TypeProvider, scope: GenericTypeVariableScope): SpecializedTypeReference {
     const thisType = this.thisType;
     const res = this.result.compilationType(provider, scope);

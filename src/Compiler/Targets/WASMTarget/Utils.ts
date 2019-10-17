@@ -620,10 +620,10 @@ export function mapReadVariables(statement: SSAStatement, map: ((arg: number) =>
     return [statement[0], statement[1], map(statement[2])];
   }
   if (statement[0] === InstructionType.load) {
-    return [statement[0], statement[1], map(statement[2]), map(statement[3])];
+    return [statement[0], statement[1], map(statement[2]), statement[3]];
   }
   if (statement[0] === InstructionType.store) {
-    return [statement[0], map(statement[1]), map(statement[2]), map(statement[3])];
+    return [statement[0], map(statement[1]), map(statement[2]), statement[3]];
   }
   if (statement[0] === InstructionType.convert) {
     return [statement[0], statement[1], map(statement[2]), statement[3]];

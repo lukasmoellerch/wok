@@ -32,7 +32,7 @@ import { TypeProvider } from "../Type Scope/TypeProvider";
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { ClassType } from "../Type/ClassType";
 import { functionTemplate, FunctionType } from "../Type/FunctionType";
-import { NativeIntegerType, PointerType, StringType, TypeCheckingNativeIntegerType } from "../Type/NativeType";
+import { NativeIntegerType, PointerType, StringType, TypeCheckingNativeIntegerType, TypeCheckingPointerType } from "../Type/NativeType";
 import { StructType } from "../Type/StructType";
 import { IType } from "../Type/Type";
 import { VariableScopeEntry, VariableScopeEntryType } from "../VariableScope/VariableScope";
@@ -421,6 +421,7 @@ export class IRCompiler {
         const operator = getMapDefault(type, task.str, new Map<number, CompileOperator>());
         operator.set(task.arity, task);
       } else if (task instanceof CompileMethod) {
+        console.log(task.toString());
         const type = getMapDefault(this.methodTaskMap, task.type, new Map<string, Map<number, CompileMethod>>());
         const method = getMapDefault(type, task.str, new Map<number, CompileMethod>());
         method.set(task.arity, task);
@@ -546,11 +547,10 @@ export class IRCompiler {
     if (functionType === undefined) {
       throw new Error();
     }
-    console.log(functionType);
     const environment = new IRFunctionCompilationEnvironment(this.typeProvider, identifier, functionType, tableEleemnt);
     if (type instanceof StructType) {
+      environment.genericTypeVariableScope = type.genericVariableScope;
       const declaration = type.constructorDeclaration;
-      console.log(this.typeProvider.lazyMapping);
       if (declaration === undefined) {
         const properties = type.propertyNames;
         const args: IRValue[] = [];
@@ -564,9 +564,58 @@ export class IRCompiler {
           args.push(value);
         }
         environment.writeStatement([IR.InstructionType.return, ([] as number[]).concat.apply([], args.map((arg) => arg.irVariables))]);
+      } else {
+        const block = declaration.block;
+        if (block === undefined) {
+          throw new Error();
+        }
+        const entries = declaration.variables;
+        for (const entry of entries) {
+          if (entry.entryType === VariableScopeEntryType.argument) {
+            environment.generateValueForEntry(entry);
+          }
+        }
+        let selfValue: IRValue | undefined;
+        for (const entry of entries) {
+          if (entry.entryType === VariableScopeEntryType.self) {
+            const index = entry.index;
+            if (type === undefined) {
+              throw new Error();
+            }
+            const irValue = environment.generateValueOfType(type);
+            irValue.name = entry.str;
+            environment.entryIndexValueIndexMapping.set(index, irValue.index);
+            selfValue = irValue;
+          }
+        }
+        for (const entry of entries) {
+          if (entry.entryType === VariableScopeEntryType.constant) {
+            environment.generateValueForEntry(entry);
+          }
+        }
+        for (const entry of entries) {
+          if (entry.entryType === VariableScopeEntryType.variable) {
+            environment.generateValueForEntry(entry);
+          }
+        }
+        const e = declaration.thisEntry;
+        if (e === undefined) {
+          throw new Error();
+        }
+        const saved = e.type;
+        e.type = type.typeCheckingType;
+        this.compileBlock(environment, block);
+        if (selfValue === undefined) {
+          throw new Error();
+        }
+        environment.writeStatement([IR.InstructionType.return, selfValue.irVariables]);
+        e.type = saved;
       }
     } else if (type instanceof ClassType) {
       return;
+    } else if (type instanceof PointerType) {
+      const arg = environment.generateValueOfType(functionType.args[0]);
+      environment.writeStatement([IR.InstructionType.return, arg.irVariables]);
     }
     environment.finalize();
 
@@ -602,6 +651,12 @@ export class IRCompiler {
         const resultValue = environment.generateValueOfType(this.typeProvider.get(type.stored));
         generateLoadInstructions(environment, this.typeProvider.get(type.stored), resultValue, thisValue.irVariables[0]);
         environment.writeStatement([IR.InstructionType.return, resultValue.irVariables]);
+      } else if (name === "offsetBy") {
+        const thisValue = environment.generateValueOfType(type);
+        const arg = environment.generateValueOfType(functionType.args[0]);
+        const resultValue = environment.generateValueOfType(type);
+        environment.writeStatement([IR.InstructionType.add, resultValue.irVariables[0], thisValue.irVariables[0], arg.irVariables[0]]);
+        environment.writeStatement([IR.InstructionType.return, resultValue.irVariables]);
       }
     } else if (type instanceof StructType) {
 
@@ -614,14 +669,23 @@ export class IRCompiler {
       if (thisEntry !== undefined) {
         thisEntry.type = type;
       }*/
+      environment.genericTypeVariableScope = type.genericVariableScope;
       const block = declaration.block;
       if (block === undefined) {
         throw new Error();
       }
       const entries = declaration.variables;
+      let selfValue: IRValue | undefined;
       for (const entry of entries) {
         if (entry.entryType === VariableScopeEntryType.self) {
-          environment.generateValueForEntry(entry);
+          const index = entry.index;
+          if (type === undefined) {
+            throw new Error();
+          }
+          const irValue = environment.generateValueOfType(type);
+          irValue.name = entry.str;
+          environment.entryIndexValueIndexMapping.set(index, irValue.index);
+          selfValue = irValue;
         }
       }
       for (const entry of entries) {
@@ -676,6 +740,19 @@ export class IRCompiler {
         }
       }
       this.compileBlock(environment, block);
+    } else if (type instanceof StringType) {
+      if (name === "get") {
+        // this argument
+        const thisValue = environment.generateValueOfType(type);
+        const arg = environment.generateValueOfType(functionType.args[0]);
+        const resultValue = environment.generateValueOfType(functionType.result);
+        const ptr = environment.addIRLocal(IR.Type.ptr);
+        environment.writeStatement([IR.InstructionType.add, ptr, thisValue.irVariables[type.pointerIndex], arg.irVariables[0]]);
+        environment.writeStatement([IR.InstructionType.load, resultValue.irVariables[0], ptr, IR.MemoryIRType.ui8]);
+        environment.writeStatement([IR.InstructionType.return, resultValue.irVariables]);
+      }
+    } else {
+      throw new Error();
     }
 
     environment.finalize();
@@ -1233,9 +1310,12 @@ export class IRCompiler {
           propertyIndex++;
         }
         return;
+      } else {
+        const name = this.getConstructorFunctionName(constructedType);
+        const args = expression.args.map((e) => this.getExpressionAsValue(env, e).getAsIRValue());
+        this.compileCall(env, name, undefined, args, target);
+        return;
       }
-      throw new Error();
-      // TODO: Handle custom constructor
     } else if (constructedType instanceof PointerType) {
       if (target === undefined) {
         return;
@@ -1408,6 +1488,18 @@ export class IRCompiler {
     const fromType = expression.from;
     const toType = expression.to;
     if (fromType instanceof TypeCheckingNativeIntegerType && toType instanceof TypeCheckingNativeIntegerType) {
+      const value = this.getExpressionAsValue(env, expression.value);
+      const [targetIRVariable] = target.irVariables;
+      const [valueIRVariable] = value.getAsIRValue().irVariables;
+      const [fromIRType] = env.resolve(fromType).irVariableTypes();
+      const [toIRType] = env.resolve(toType).irVariableTypes();
+      if (fromIRType === toIRType) {
+        env.writeStatement([IR.InstructionType.copy, targetIRVariable, valueIRVariable]);
+        // env.writeStatement([IR.InstructionType.phi, targetIRVariable, [valueIRVariable]]);
+      } else {
+        env.writeStatement([IR.InstructionType.convert, targetIRVariable, valueIRVariable, env.resolve(toType).irVariableTypes()[0]]);
+      }
+    } else if (fromType instanceof TypeCheckingPointerType && toType instanceof TypeCheckingNativeIntegerType) {
       const value = this.getExpressionAsValue(env, expression.value);
       const [targetIRVariable] = target.irVariables;
       const [valueIRVariable] = value.getAsIRValue().irVariables;

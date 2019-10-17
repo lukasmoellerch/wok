@@ -1,5 +1,5 @@
 import { ASTWalker } from "../AST/ASTWalker";
-import { TypeVariable } from "../AST/ExpressionType";
+import { ITypeCheckingType, TypeVariable } from "../AST/ExpressionType";
 import { Block } from "../AST/Nodes/Block";
 import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ExpressionWrapper } from "../AST/Nodes/ExpressionWrapper";
@@ -17,12 +17,17 @@ class StructTypeTreeNode implements TypeTreeNodeTemplate {
     private templateManager: TemplateManager,
     private parent: TypeTreeNode,
     private declaration: StructDeclaration,
+    private rawTct: TypeCheckingStructType,
   ) {
     this.requiredArgs = declaration.genericVariables.length;
   }
   public create(args: TypeTreeNode[]): TypeTreeNode {
     const typeTreeNode = new TypeTreeNode(this.parent, args, this.declaration.nameToken.content, "struct", undefined, this.templateManager);
-    const type = new TypeCheckingStructType(typeTreeNode, this.declaration);
+    const genericAssignment: Map<string, ITypeCheckingType> = new Map();
+    for (let i = 0; i < args.length; i++) {
+      genericAssignment.set(this.declaration.genericVariables[i].content, args[i].typeCheckingType as ITypeCheckingType);
+    }
+    const type = new TypeCheckingStructType(typeTreeNode, this.declaration, genericAssignment, this.rawTct);
     typeTreeNode.typeCheckingType = type;
     for (let i = 0; i < this.requiredArgs; i++) {
       const name = this.declaration.genericVariables[i].content;
@@ -123,7 +128,8 @@ export class TypeScopeBuilder extends ASTWalker {
   }
   private registerStruct(declaration: StructDeclaration, parent: TypeTreeNode, parentTM: TemplateManager): TemplateManager {
     const node = new TypeTreeNode(parent, [], declaration.nameToken.content, "struct");
-    const tct = new TypeCheckingStructType(node, declaration);
+    const genericAssignment: Map<string, ITypeCheckingType> = new Map();
+    const tct = new TypeCheckingStructType(node, declaration, genericAssignment);
     node.typeCheckingType = tct;
     for (let i = 0; i < declaration.genericVariables.length; i++) {
       const name = declaration.genericVariables[i].content;
@@ -133,7 +139,7 @@ export class TypeScopeBuilder extends ASTWalker {
     }
     this.scopes.push(node);
     if (declaration.genericVariables.length === 0) {
-      const type = new TypeCheckingStructType(parent, declaration);
+      const type = new TypeCheckingStructType(parent, declaration, genericAssignment, tct);
       type.node = node;
       const template = new ArgumentlessTypeTreeNodeTemplate(node);
       declaration.template = template;
@@ -143,8 +149,8 @@ export class TypeScopeBuilder extends ASTWalker {
       return node.templateManager;
     } else {
       const templateManager = new TemplateManager(parent);
-      const type = new TypeCheckingStructType(parent, declaration);
-      const template = new StructTypeTreeNode(templateManager, parent, declaration);
+      const type = new TypeCheckingStructType(parent, declaration, genericAssignment, tct);
+      const template = new StructTypeTreeNode(templateManager, parent, declaration, tct);
       type.node = node;
       declaration.template = template;
       declaration.typeCheckingType = type;

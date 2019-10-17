@@ -207,6 +207,6 @@ export class WrongTokenError extends CompilerError {
     const firstString = (this.expected.length > 1 ? this.expected.slice(0, this.expected.length - 1).map((e) => this.stringifyError(e)).join(", ") : "");
     const lastString = this.stringifyError(this.expected[this.expected.length - 1]);
     const str = firstString === "" ? lastString : `${firstString} or ${lastString}`;
-    return `Expected "${str}" but found "${this.range.sourceContent[this.range.start.offset] || "EOF"}"`;
+    return `Expected "${str}" but found ${JSON.stringify(this.range.sourceContent.substr(this.range.start.offset, 10) + "...") || "EOF"}"`;
   }
 }

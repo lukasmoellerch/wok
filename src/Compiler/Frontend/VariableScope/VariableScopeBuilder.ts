@@ -3,6 +3,7 @@ import { Block } from "../AST/Nodes/Block";
 import { ClassDeclaration } from "../AST/Nodes/ClassDeclaration";
 import { ConstantDeclaration } from "../AST/Nodes/ConstantDeclaration";
 import { FunctionArgumentDeclaration } from "../AST/Nodes/FunctionArgumentDeclaration";
+import { InitDeclaration } from "../AST/Nodes/InitDeclaration";
 import { MethodDeclaration } from "../AST/Nodes/MethodDeclaration";
 import { SourceFile } from "../AST/Nodes/SourceFile";
 import { StructDeclaration } from "../AST/Nodes/StructDeclaration";
@@ -13,7 +14,7 @@ import { CompilerError, UndeclaredVariableUsageError } from "../ErrorHandling/Co
 import { TypeTreeNode } from "../Type Scope/TypeScope";
 import { TypeCheckingNativeIntegerType } from "../Type/NativeType";
 import { VariableScope, VariableScopeEntry, VariableScopeEntryType } from "./VariableScope";
-export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration | SourceFile;
+export type FunctionDeclaration = UnboundFunctionDeclaration | MethodDeclaration | SourceFile | InitDeclaration;
 export class VariableScopeBuilder extends ASTWalker {
   public sourceFile: SourceFile;
   public scopes: VariableScope[] = [];
@@ -79,6 +80,20 @@ export class VariableScopeBuilder extends ASTWalker {
     scope.register(this.selfStack[this.selfStack.length - 1]);
     methodDeclaration.thisEntry = this.selfStack[this.selfStack.length - 1];
     super.walkMethodDeclaration(methodDeclaration);
+    this.scopes.pop();
+
+    this.functionCompilationStack.pop();
+  }
+  public walkInitDeclaration(initDeclaration: InitDeclaration) {
+    this.functionCompilationStack.push(initDeclaration);
+    initDeclaration.variables.push(this.selfStack[this.selfStack.length - 1]);
+
+    const parent = this.scopes.length > 0 ? this.scopes[this.scopes.length - 1] : undefined;
+    const scope = new VariableScope(parent);
+    this.scopes.push(scope);
+    scope.register(this.selfStack[this.selfStack.length - 1]);
+    initDeclaration.thisEntry = this.selfStack[this.selfStack.length - 1];
+    super.walkInitDeclaration(initDeclaration);
     this.scopes.pop();
 
     this.functionCompilationStack.pop();

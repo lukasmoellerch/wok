@@ -130,7 +130,7 @@ export class SSATransformer {
     let i = 1;
     let prev = previousAssignment;
     for (const block of blockArray) {
-      const returnBlock = blockArray.length > i ? blockArray[i] : lastBlockReturnsTo;
+      const returnBlock = blockArray.length >= i ? blockArray[i] : lastBlockReturnsTo;
       const newBlock = this.traverseBlockWrite(env, block, returnBlock, breaksTo, prev);
       prev = env.getVariableAssignment(newBlock);
       array.push(newBlock);
@@ -250,7 +250,7 @@ export class SSATransformer {
       block.blocks = this.traverseBlockArrayWrite(env, block.blocks, returnsToBlock, returnsToBlock, previousAssignemnt);
       return block;
     } else if (block.type === BlockType.if) {
-      block.blocks = this.traverseBlockArrayWrite(env, block.blocks, returnsToBlock, returnsToBlock, previousAssignemnt);
+      block.blocks = this.traverseBlockArrayWrite(env, block.blocks, returnsToBlock, breaksTo, previousAssignemnt);
       if (returnsToBlock !== undefined) {
         const assignment = previousAssignemnt;
         const phiNodeMapping = env.getPhiMapping(returnsToBlock);
@@ -265,11 +265,37 @@ export class SSATransformer {
       }
       return block;
     } else if (block.type === BlockType.ifelse) {
-      block.true = this.traverseBlockArrayWrite(env, block.true, returnsToBlock, returnsToBlock, previousAssignemnt);
-      block.false = this.traverseBlockArrayWrite(env, block.false, returnsToBlock, returnsToBlock, previousAssignemnt);
+      block.true = this.traverseBlockArrayWrite(env, block.true, returnsToBlock, breaksTo, previousAssignemnt);
+      block.false = this.traverseBlockArrayWrite(env, block.false, returnsToBlock, breaksTo, previousAssignemnt);
+
+      if (returnsToBlock !== undefined) {
+        const assignment = previousAssignemnt;
+        const phiNodeMapping = env.getPhiMapping(returnsToBlock);
+        for (const [v, ssa] of assignment.entries()) {
+          const arr = phiNodeMapping.get(v);
+          if (arr === undefined) {
+            phiNodeMapping.set(v, [ssa]);
+          } else {
+            arr.push(ssa);
+          }
+        }
+      }
       return block;
     } else if (block.type === BlockType.loop) {
-      block.blocks = this.traverseBlockArrayWrite(env, block.blocks, returnsToBlock, block.blocks[0], previousAssignemnt);
+      block.blocks = this.traverseBlockArrayWrite(env, block.blocks, returnsToBlock, block, previousAssignemnt);
+
+      if (returnsToBlock !== undefined) {
+        const assignment = previousAssignemnt;
+        const phiNodeMapping = env.getPhiMapping(returnsToBlock);
+        for (const [v, ssa] of assignment.entries()) {
+          const arr = phiNodeMapping.get(v);
+          if (arr === undefined) {
+            phiNodeMapping.set(v, [ssa]);
+          } else {
+            arr.push(ssa);
+          }
+        }
+      }
       return block;
     }
     env.blockStack.pop();
