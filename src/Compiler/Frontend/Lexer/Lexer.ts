@@ -30,7 +30,7 @@ export class Lexer {
   protected nonCommentLineBreakRegex = /(\r\n|\r|\n)+/g;
   protected lineBreakRegex = /((\r\n|\r|\n)([ \t]+|\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))*)+/g;
   protected commentRegex = /(\/\*(\*(?!\/)|[^*])*\*\/|\/\/(.*)(\r\n|\r|\n))+/g;
-  protected identifierRegex = /[_a-zA-Z][_a-zA-Z0-9]*/g;
+  protected identifierRegex = /([_a-zA-Z]|(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+)([_A-Za-z0-9]|(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]))*/g;
   protected integerLiteralRegex = /(0|[1-9][0-9]*|0[oO]?[0-7]+|0[xX][0-9a-fA-F]+|0[bB][01]+)[lL]?/g;
   protected floatingPointerLiteralRegex = /[+-]?([0-9]*)?\.[0-9]+/g;
   protected stringLiteralRegex = /\"(([^\"]|\\\")*[^\\])?\"/g;
